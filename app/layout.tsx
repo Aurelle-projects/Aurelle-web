@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Manrope, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-// ─── Fonts ───────────────────────────────────────────────────────────────────
-const manrope = Manrope({
+// ─── Fonts: Haute Parfumerie & Luxury Cosmetics Typography ────────────────────
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-manrope",
+  variable: "--font-sans",
   weight: ["300", "400", "500", "600", "700", "800"],
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-serif",
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
 const playfairDisplay = Playfair_Display({
@@ -114,7 +122,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${playfairDisplay.variable}`}
+      className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -128,7 +136,7 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         style={{
-          fontFamily: "var(--font-manrope, var(--font-primary))",
+          fontFamily: "var(--font-sans), -apple-system, sans-serif",
         }}
       >
         {children}

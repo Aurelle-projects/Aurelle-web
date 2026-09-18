@@ -23,11 +23,31 @@ export async function generateMetadata({ params }: CategoryPageProps) {
 
 export default async function CategoryDetailPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const category = AURELLE_CATEGORIES.find((c) => c.slug === slug);
+  const staticCategory = AURELLE_CATEGORIES.find((c) => c.slug === slug);
 
-  if (!category) {
+  if (!staticCategory) {
     notFound();
   }
+
+  // Load saved category image if available
+  let categoryImage: string | null = null;
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+    const catPath = path.join(process.cwd(), "data", "categories.json");
+    if (fs.existsSync(catPath)) {
+      const savedList = JSON.parse(fs.readFileSync(catPath, "utf-8"));
+      const matched = savedList.find((s: { slug: string }) => s.slug === slug);
+      if (matched) {
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
+        categoryImage = matched.image_public_id
+          ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_800,h_550,c_fill,g_auto/${matched.image_public_id}`
+          : matched.image_url || null;
+      }
+    }
+  } catch {}
+
+  const category = staticCategory;
 
   let products = getProductsByCategory(slug);
   // If this specific category has no products in the mock list yet, provide products from catalog to showcase layout
@@ -52,45 +72,59 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         </nav>
 
         {/* Category Hero Banner */}
-        <div className="bg-white rounded-3xl border border-[#DCCFB9]/60 p-6 md:p-10 shadow-xs space-y-4">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
-                Aurelle Category #{category.sort_order}
-              </span>
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#1D211F] mt-1">
-                {category.name}
-              </h1>
-              <p className="text-sm text-[#5C6460] max-w-2xl mt-2 leading-relaxed">
-                {category.description}
-              </p>
+        <div className="bg-white rounded-3xl border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs overflow-hidden">
+          <div className="flex flex-col md:flex-row items-stretch justify-between gap-6">
+            <div className="flex-1 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#183D2B] bg-[#183D2B]/[0.06] px-3 py-1 rounded-full">
+                    Aurelle Category #{category.sort_order}
+                  </span>
+                  <Link
+                    href="/categories"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5C6460] hover:text-[#183D2B] px-3.5 py-1.5 rounded-full border border-[#DCCFB9] hover:border-[#183D2B] transition-colors shrink-0"
+                  >
+                    <ArrowLeft size={13} />
+                    <span>All 10 Categories</span>
+                  </Link>
+                </div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#1D211F] mt-2 tracking-tight">
+                  {category.name}
+                </h1>
+                <p className="text-sm text-[#5C6460] max-w-xl mt-3 leading-relaxed">
+                  {category.description}
+                </p>
+              </div>
+
+              {/* Subcategories Filter Chips */}
+              <div className="pt-4 border-t border-[#DCCFB9]/30">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#5C6460] mb-2">
+                  Subcategories:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {category.subcategories.map((sub) => (
+                    <Link
+                      key={sub.slug}
+                      href={`/shop?category=${category.slug}&sub=${sub.slug}`}
+                      className="px-3 py-1 bg-[#F7F5EF] hover:bg-[#183D2B] hover:text-white text-xs font-semibold text-[#1D211F] rounded-lg border border-[#DCCFB9]/50 transition-colors"
+                    >
+                      {sub.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <Link
-              href="/categories"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5C6460] hover:text-[#183D2B] px-3.5 py-2 rounded-full border border-[#DCCFB9] transition-colors shrink-0"
-            >
-              <ArrowLeft size={14} />
-              <span>All 10 Categories</span>
-            </Link>
-          </div>
-
-          {/* Subcategories Filter Chips */}
-          <div className="pt-4 border-t border-[#DCCFB9]/30">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#5C6460] mb-2.5">
-              Subcategories:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {category.subcategories.map((sub) => (
-                <Link
-                  key={sub.slug}
-                  href={`/shop?category=${category.slug}&sub=${sub.slug}`}
-                  className="px-3 py-1.5 bg-[#F7F5EF] hover:bg-[#183D2B] hover:text-white text-xs font-semibold text-[#1D211F] rounded-lg border border-[#DCCFB9]/50 transition-colors"
-                >
-                  {sub.name}
-                </Link>
-              ))}
-            </div>
+            {categoryImage && (
+              <div className="relative w-full md:w-72 lg:w-80 h-52 md:h-auto rounded-2xl overflow-hidden shrink-0 border border-[#DCCFB9]/50 shadow-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={categoryImage}
+                  alt={category.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
           </div>
         </div>
 

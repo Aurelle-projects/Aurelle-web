@@ -91,7 +91,7 @@ export default function FamilyBanner({
   }, [initialTitle, initialSubtitle]);
 
   return (
-    <section className="bg-[#F7F5EF] py-12 md:py-16" aria-label="Family Collection">
+    <section className="bg-white py-12 md:py-16" aria-label="Family Collection">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="bg-white rounded-2xl md:rounded-3xl overflow-hidden border border-[#DCCFB9]/50 shadow-sm grid grid-cols-1 md:grid-cols-2">
 

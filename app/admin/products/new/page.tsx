@@ -6,7 +6,6 @@ import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
-import { createClient } from "@/lib/supabase/client";
 import {
   Save,
   ArrowLeft,
@@ -124,73 +123,33 @@ export default function NewProductPage() {
     setMessage(null);
 
     try {
-      const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: catData } = await (supabase as any)
-        .from("categories")
-        .select("id")
-        .eq("slug", formData.category_slug)
-        .single();
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          images,
+        }),
+      });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: prodData, error: prodErr } = await (supabase as any)
-        .from("products")
-        .insert({
-          name: formData.name,
-          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-          sku: formData.sku,
-          category_id: catData?.id || null,
-          description: formData.description,
-          benefits: formData.benefits,
-          ingredients: formData.ingredients,
-          usage_instructions: formData.usage_instructions,
-          retail_price: parseFloat(formData.retail_price),
-          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price) : null,
-          wholesale_moq: parseInt(formData.wholesale_moq) || 1,
-          is_published: formData.is_published,
-          is_featured: formData.is_featured,
-          is_best_seller: formData.is_best_seller,
-          is_new_arrival: formData.is_new_arrival,
-          status: formData.is_published ? "published" : "draft",
-        })
-        .select("id")
-        .single();
+      const result = await res.json();
 
-      if (prodErr) throw prodErr;
-
-      // Insert images
-      if (images.length > 0 && prodData?.id) {
-        const imageRows = images.map((img, idx) => ({
-          product_id: prodData.id,
-          cloudinary_public_id: img.public_id,
-          secure_url: img.secure_url,
-          is_primary: img.is_primary,
-          sort_order: idx,
-        }));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from("product_images").insert(imageRows);
-      }
-
-      // Insert inventory
-      if (prodData?.id) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from("inventory").insert({
-          product_id: prodData.id,
-          stock_quantity: parseInt(formData.stock_quantity) || 0,
-          low_stock_threshold: parseInt(formData.low_stock_threshold) || 5,
+      if (!res.ok || result.error) {
+        setMessage({
+          text: result.error || "Failed to save product. Check server logs.",
+          type: "error",
         });
+        return;
       }
 
       setMessage({ text: "Product published successfully to catalog!", type: "success" });
       setTimeout(() => router.push("/admin/products"), 1200);
-    } catch {
-      // Local fallback success
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       setMessage({
-        text: "Product created in local cache! Live on storefront catalog.",
-        type: "success",
+        text: err?.message || "Network error. Could not reach the server.",
+        type: "error",
       });
-      setTimeout(() => router.push("/admin/products"), 1500);
     } finally {
       setIsSaving(false);
     }

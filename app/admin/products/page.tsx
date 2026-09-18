@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { Search, Eye, Edit, Package } from "lucide-react";
+import { Search, Eye, Edit, Package, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
-import { AURELLE_PRODUCTS, ProductItem as MasterProduct } from "@/lib/products/mock-products";
 
 interface ProductRow {
   id: string;
@@ -23,7 +22,8 @@ interface ProductRow {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -63,37 +63,10 @@ export default function AdminProductsPage() {
           });
           setProducts(mapped);
         } else {
-          // Fallback to master mock catalog
-          setProducts(
-            AURELLE_PRODUCTS.map((p: MasterProduct) => ({
-              id: p.id,
-              name: p.name,
-              sku: p.sku,
-              slug: p.slug,
-              retail_price: p.retail_price,
-              wholesale_price: p.wholesale_price,
-              category_name: p.category_name,
-              status: "published",
-              image_url: p.images[0]?.url,
-              stock_quantity: p.stock_quantity,
-            }))
-          );
+          setProducts([]);
         }
       } catch {
-        setProducts(
-          AURELLE_PRODUCTS.map((p: MasterProduct) => ({
-            id: p.id,
-            name: p.name,
-            sku: p.sku,
-            slug: p.slug,
-            retail_price: p.retail_price,
-            wholesale_price: p.wholesale_price,
-            category_name: p.category_name,
-            status: "published",
-            image_url: p.images[0]?.url,
-            stock_quantity: p.stock_quantity,
-          }))
-        );
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -110,6 +83,24 @@ export default function AdminProductsPage() {
       selectedCategory === "all" || p.category_name === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/products?id=${id}`, { method: "DELETE" });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        alert(result.error || "Failed to delete product.");
+      }
+    } catch {
+      alert("Network error while deleting product.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col">
@@ -166,11 +157,33 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DCCFB9]/40 text-sm">
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-[#5C6460]">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-6 h-6 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin" />
+                        <p className="font-semibold text-xs text-[#5C6460]">Loading database products...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-[#5C6460]">
                       <Package size={36} className="mx-auto mb-2 text-[#8E9590]" />
-                      <p className="font-semibold">No products found matching criteria</p>
+                      <p className="font-semibold">No products found</p>
+                      <p className="text-xs text-[#8E9590] mt-1">
+                        {products.length === 0
+                          ? "Your catalog is empty. Create your first product to get started."
+                          : "No products match the selected filters."}
+                      </p>
+                      {products.length === 0 && (
+                        <Link
+                          href="/admin/products/new"
+                          className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-[#183D2B] text-white text-xs font-bold rounded-lg hover:bg-[#122419] transition-colors"
+                        >
+                          Add First Product
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -250,6 +263,15 @@ export default function AdminProductsPage() {
                           >
                             <Edit size={15} />
                           </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id, item.name)}
+                            disabled={deletingId === item.id}
+                            className="p-1.5 text-[#5C6460] hover:text-red-600 rounded hover:bg-red-50 disabled:opacity-50 transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
                       </td>
                     </tr>

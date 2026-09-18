@@ -44,6 +44,21 @@ interface HeroData {
   badge_4_sub: string;
   badge_5_title: string;
   badge_5_sub: string;
+  // Promotional dual banners
+  promo_left_tagline: string;
+  promo_left_title: string;
+  promo_left_discount: string;
+  promo_left_btn_text: string;
+  promo_left_btn_link: string;
+  promo_left_image_url: string | null;
+  promo_left_image_public_id: string | null;
+  promo_right_tagline: string;
+  promo_right_title: string;
+  promo_right_discount: string;
+  promo_right_btn_text: string;
+  promo_right_btn_link: string;
+  promo_right_image_url: string | null;
+  promo_right_image_public_id: string | null;
 }
 
 const DEFAULT_HERO_DATA: HeroData = {
@@ -75,6 +90,20 @@ const DEFAULT_HERO_DATA: HeroData = {
   badge_4_sub: "Support",
   badge_5_title: "Easy & Hassle-Free",
   badge_5_sub: "Returns",
+  promo_left_tagline: "MERRY",
+  promo_left_title: "Christmas",
+  promo_left_discount: "30%off",
+  promo_left_btn_text: "Shop Now",
+  promo_left_btn_link: "/shop",
+  promo_left_image_url: null,
+  promo_left_image_public_id: null,
+  promo_right_tagline: "YOUR NEXT",
+  promo_right_title: "Purchase",
+  promo_right_discount: "15%off",
+  promo_right_btn_text: "Shop Now",
+  promo_right_btn_link: "/shop",
+  promo_right_image_url: null,
+  promo_right_image_public_id: null,
 };
 
 export default function AdminHeroPage() {
@@ -550,6 +579,238 @@ export default function AdminHeroPage() {
                     persistLocally(updated);
                   }}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Promotional Dual Banners (Storefront) */}
+          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-6">
+            <div>
+              <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+                5. Promotional Dual Banners (Storefront)
+              </h2>
+              <p className="text-xs text-[#5C6460] leading-relaxed mt-1">
+                Configure the two side-by-side promotional campaign banners displayed on the homepage. Upload campaign model / product imagery and adjust text &amp; links.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Banner: Primary Campaign */}
+              <div className="p-5 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-4">
+                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-2">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#183D2B]">
+                    Primary Banner (Left / Large)
+                  </h3>
+                  <span className="text-[11px] font-semibold text-[#8C938F]">e.g. 30% Off Featured</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Top Subtitle / Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_left_tagline ?? "MERRY"}
+                      onChange={(e) => handleChange("promo_left_tagline", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="MERRY"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Main Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_left_title ?? "Christmas"}
+                      onChange={(e) => handleChange("promo_left_title", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="Christmas"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Discount / Offer
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_left_discount ?? "30%off"}
+                      onChange={(e) => handleChange("promo_left_discount", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="30%off"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Button Label
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_left_btn_text ?? "Shop Now"}
+                      onChange={(e) => handleChange("promo_left_btn_text", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="Shop Now"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Button Link
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_left_btn_link ?? "/shop"}
+                      onChange={(e) => handleChange("promo_left_btn_link", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="/shop"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <CloudinaryUploader
+                    label="Primary Banner Image (Right-Aligned Model / Product)"
+                    description="Upload campaign visual for the primary banner. Transparent PNG / clean background recommended."
+                    folder="aurelle/banners"
+                    aspectRatio="hero"
+                    value={formData.promo_left_image_url}
+                    publicId={formData.promo_left_image_public_id}
+                    onUploadSuccess={(asset: CloudinaryAsset) => {
+                      const updated = {
+                        ...formData,
+                        promo_left_image_url: asset.secure_url,
+                        promo_left_image_public_id: asset.public_id,
+                      };
+                      setFormData(updated);
+                      persistLocally(updated);
+                      setMessage({
+                        text: "Primary banner image uploaded & saved!",
+                        type: "success",
+                      });
+                    }}
+                    onRemove={() => {
+                      const updated = {
+                        ...formData,
+                        promo_left_image_url: null,
+                        promo_left_image_public_id: null,
+                      };
+                      setFormData(updated);
+                      persistLocally(updated);
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Right Banner: Secondary Campaign */}
+              <div className="p-5 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-4">
+                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-2">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#183D2B]">
+                    Secondary Banner (Right / Compact)
+                  </h3>
+                  <span className="text-[11px] font-semibold text-[#8C938F]">e.g. 15% Off Promo</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Top Subtitle / Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_right_tagline ?? "YOUR NEXT"}
+                      onChange={(e) => handleChange("promo_right_tagline", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="YOUR NEXT"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Main Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_right_title ?? "Purchase"}
+                      onChange={(e) => handleChange("promo_right_title", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="Purchase"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Discount / Offer
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_right_discount ?? "15%off"}
+                      onChange={(e) => handleChange("promo_right_discount", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="15%off"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Button Label
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_right_btn_text ?? "Shop Now"}
+                      onChange={(e) => handleChange("promo_right_btn_text", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="Shop Now"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                      Button Link
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.promo_right_btn_link ?? "/shop"}
+                      onChange={(e) => handleChange("promo_right_btn_link", e.target.value)}
+                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]"
+                      placeholder="/shop"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <CloudinaryUploader
+                    label="Secondary Banner Image (Optional)"
+                    description="Upload background or illustration for the secondary banner."
+                    folder="aurelle/banners"
+                    aspectRatio="hero"
+                    value={formData.promo_right_image_url}
+                    publicId={formData.promo_right_image_public_id}
+                    onUploadSuccess={(asset: CloudinaryAsset) => {
+                      const updated = {
+                        ...formData,
+                        promo_right_image_url: asset.secure_url,
+                        promo_right_image_public_id: asset.public_id,
+                      };
+                      setFormData(updated);
+                      persistLocally(updated);
+                      setMessage({
+                        text: "Secondary banner image uploaded & saved!",
+                        type: "success",
+                      });
+                    }}
+                    onRemove={() => {
+                      const updated = {
+                        ...formData,
+                        promo_right_image_url: null,
+                        promo_right_image_public_id: null,
+                      };
+                      setFormData(updated);
+                      persistLocally(updated);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

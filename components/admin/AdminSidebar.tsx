@@ -14,6 +14,7 @@ import {
   Settings,
   ExternalLink,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 interface NavItem {
@@ -120,6 +121,17 @@ export default function AdminSidebar() {
           <ExternalLink size={14} className="text-[#C9A84C]" />
           <span>View Live Storefront</span>
         </Link>
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch("/api/admin/auth/logout", { method: "POST" });
+            window.location.href = "/admin";
+          }}
+          className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 hover:text-red-100 bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-500/20 transition-all cursor-pointer"
+        >
+          <LogOut size={14} />
+          <span>Sign Out</span>
+        </button>
         <p className="text-[10.5px] text-center text-white/50 leading-tight">
           Aurelle Cosmetics Trading FZ-LLC
           <br />

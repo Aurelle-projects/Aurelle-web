@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/product/ProductCard";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
-import { getProductsByCategory, AURELLE_PRODUCTS } from "@/lib/products/mock-products";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { ChevronRight, ArrowLeft, Package } from "lucide-react";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +29,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     notFound();
   }
 
+  const category = staticCategory;
+
   // Load saved category image if available
   let categoryImage: string | null = null;
   try {
@@ -47,13 +49,30 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     }
   } catch {}
 
-  const category = staticCategory;
+  // Fetch real products from DB for this category — no mock fallback
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let products: any[] = [];
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createClient()) as any;
+    const { data, error } = await supabase
+      .from("products")
+      .select(`
+        id, name, slug, sku, retail_price, compare_at_price,
+        is_new_arrival, is_featured, is_best_seller,
+        brand:brands(name),
+        category:categories(name, slug),
+        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+        inventory(stock_status)
+      `)
+      .eq("status", "published")
+      .eq("category.slug", slug)
+      .order("created_at", { ascending: false });
 
-  let products = getProductsByCategory(slug);
-  // If this specific category has no products in the mock list yet, provide products from catalog to showcase layout
-  if (products.length === 0) {
-    products = AURELLE_PRODUCTS.slice(0, 4);
-  }
+    if (!error && data) {
+      products = data;
+    }
+  } catch {}
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-14">
@@ -142,35 +161,30 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {products.map((prod) => (
-              <ProductCard
-                key={prod.id}
-                product={{
-                  id: prod.id,
-                  name: prod.name,
-                  slug: prod.slug,
-                  sku: prod.sku,
-                  retail_price: prod.retail_price,
-                  compare_at_price: prod.compare_at_price,
-                  is_new_arrival: prod.is_new_arrival,
-                  is_best_seller: prod.is_best_seller,
-                  is_featured: prod.is_featured,
-                  brand: { name: prod.brand_name },
-                  category: { name: prod.category_name, slug: prod.category_slug },
-                  product_images: prod.images.map((img, idx) => ({
-                    cloudinary_public_id: img.alt,
-                    secure_url: img.url,
-                    is_primary: img.is_primary,
-                    sort_order: idx,
-                  })),
-                  inventory: { stock_status: prod.stock_status },
-                  wholesale_price: prod.wholesale_price,
-                  wholesale_moq: prod.wholesale_moq,
-                }}
-              />
-            ))}
-          </div>
+          {products.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[#DCCFB9]/60 py-16 text-center">
+              <Package size={40} className="mx-auto mb-3 text-[#8E9590]" />
+              <p className="font-semibold text-[#1D211F]">No products in this category yet</p>
+              <p className="text-xs text-[#8E9590] mt-1">
+                Products will appear here once added from the admin panel.
+              </p>
+              <Link
+                href="/shop"
+                className="inline-flex items-center gap-1.5 mt-5 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-full hover:bg-[#102D20] transition-colors"
+              >
+                Browse All Products
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {products.map((prod) => (
+                <ProductCard
+                  key={prod.id}
+                  product={prod}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

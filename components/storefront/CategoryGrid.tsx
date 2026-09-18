@@ -197,7 +197,7 @@ export default function CategoryGrid({ categories: initialCategories }: Category
                 draggable={false}
               >
                 {/* ── Large Circular Category Card ─────────────────── */}
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full overflow-hidden bg-white border-[2.5px] border-[#DCCFB9] ring-2 ring-[#FAF6F0] group-hover:border-[#183D2B] group-hover:ring-[#183D2B]/20 transition-all duration-300 shadow-sm group-hover:shadow-xl group-hover:shadow-[#183D2B]/15">
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full overflow-hidden bg-white ring-2 ring-white group-hover:border-[#183D2B] group-hover:ring-[#183D2B]/20 transition-all duration-300 shadow-sm group-hover:shadow-xl group-hover:shadow-[#183D2B]/15">
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
@@ -221,7 +221,7 @@ export default function CategoryGrid({ categories: initialCategories }: Category
                 </div>
 
                 {/* ── Typography & Label (Clean: Category name only, no extra explore arrows) ─ */}
-                <span className="text-sm sm:text-base font-bold text-[#1D211F] text-center tracking-tight leading-snug group-hover:text-[#183D2B] transition-colors">
+                <span className="text-sm  text-[#1D211F] text-center tracking-tight leading-snug group-hover:text-[#183D2B] transition-colors">
                   {displayName}
                 </span>
               </Link>

@@ -211,7 +211,7 @@ function ShopContent() {
                 key={i}
                 className="bg-white rounded-2xl border border-[#DCCFB9]/40 overflow-hidden animate-pulse"
               >
-                <div className="aspect-square bg-[#F0EBE1]" />
+                <div className="aspect-[3/4] bg-[#F0EBE1]" />
                 <div className="p-4 space-y-2">
                   <div className="h-3 bg-[#F0EBE1] rounded-full w-3/4" />
                   <div className="h-3 bg-[#F0EBE1] rounded-full w-1/2" />

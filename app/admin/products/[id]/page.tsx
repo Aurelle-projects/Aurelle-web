@@ -7,7 +7,6 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 import { createClient } from "@/lib/supabase/client";
-import { AURELLE_PRODUCTS } from "@/lib/products/mock-products";
 import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2 } from "lucide-react";
 
 interface UploadedImage {
@@ -21,29 +20,31 @@ export default function EditProductPage() {
   const router = useRouter();
   const id = params?.id as string;
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "Sample Product",
-    slug: "sample-product",
-    sku: "AUR-001",
+    name: "",
+    slug: "",
+    sku: "",
     category_slug: AURELLE_CATEGORIES[0]?.slug ?? "cosmetics-makeup",
     subcategory_slug: "",
     description: "",
     benefits: "",
     ingredients: "",
     usage_instructions: "",
-    retail_price: "120.00",
-    compare_at_price: "150.00",
-    wholesale_price: "75.00",
+    retail_price: "",
+    compare_at_price: "",
+    wholesale_price: "",
     wholesale_moq: "12",
-    stock_quantity: "45",
+    stock_quantity: "0",
     low_stock_threshold: "5",
     is_published: true,
     is_featured: false,
     is_best_seller: false,
-    is_new_arrival: true,
+    is_new_arrival: false,
     is_wholesale_available: true,
   });
 
@@ -83,7 +84,7 @@ export default function EditProductPage() {
             compare_at_price: p.compare_at_price?.toString() ?? "",
             wholesale_price: p.wholesale_price?.toString() ?? "",
             wholesale_moq: p.wholesale_moq?.toString() ?? "12",
-            stock_quantity: p.inventory?.[0]?.stock_quantity?.toString() ?? "50",
+            stock_quantity: p.inventory?.[0]?.stock_quantity?.toString() ?? "0",
             low_stock_threshold: p.inventory?.[0]?.low_stock_threshold?.toString() ?? "5",
             is_published: p.is_published ?? true,
             is_featured: p.is_featured ?? false,
@@ -101,42 +102,19 @@ export default function EditProductPage() {
             })));
           }
         } else {
-          // Check mock products fallback
-          const mockMatch = AURELLE_PRODUCTS.find((m) => m.id === id || m.slug === id);
-          if (mockMatch) {
-            setFormData({
-              name: mockMatch.name,
-              slug: mockMatch.slug,
-              sku: mockMatch.sku,
-              category_slug: mockMatch.category_slug,
-              subcategory_slug: mockMatch.subcategory,
-              description: mockMatch.description,
-              benefits: mockMatch.short_description,
-              ingredients: mockMatch.ingredients || "",
-              usage_instructions: mockMatch.how_to_use || "",
-              retail_price: mockMatch.retail_price.toString(),
-              compare_at_price: mockMatch.compare_at_price?.toString() || "",
-              wholesale_price: mockMatch.wholesale_price.toString(),
-              wholesale_moq: mockMatch.wholesale_moq.toString(),
-              stock_quantity: mockMatch.stock_quantity.toString(),
-              low_stock_threshold: "5",
-              is_published: true,
-              is_featured: mockMatch.is_featured,
-              is_best_seller: mockMatch.is_best_seller,
-              is_new_arrival: mockMatch.is_new_arrival,
-              is_wholesale_available: true,
-            });
-            setImages(
-              mockMatch.images.map((img) => ({
-                public_id: img.alt,
-                secure_url: img.url,
-                is_primary: img.is_primary,
-              }))
-            );
-          }
+          setMessage({
+            text: "Product not found in database.",
+            type: "error",
+          });
         }
-      } catch {
-        // Ignore
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        setMessage({
+          text: err?.message || "Failed to load product from database.",
+          type: "error",
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
     loadProduct();
@@ -185,44 +163,76 @@ export default function EditProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      setMessage({ text: "Product name is required.", type: "error" });
+      return;
+    }
     setIsSaving(true);
     setMessage(null);
 
     try {
-      const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("products")
-        .update({
-          name: formData.name,
-          slug: formData.slug,
-          sku: formData.sku,
-          description: formData.description,
-          benefits: formData.benefits,
-          ingredients: formData.ingredients,
-          usage_instructions: formData.usage_instructions,
-          retail_price: parseFloat(formData.retail_price),
-          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-          wholesale_price: formData.wholesale_price ? parseFloat(formData.wholesale_price) : null,
-          wholesale_moq: parseInt(formData.wholesale_moq) || 1,
-          is_published: formData.is_published,
-          is_featured: formData.is_featured,
-          is_best_seller: formData.is_best_seller,
-          is_new_arrival: formData.is_new_arrival,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+      const res = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...formData, images }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        setMessage({
+          text: result.error || "Failed to update product. Check server logs.",
+          type: "error",
+        });
+        return;
+      }
 
       setMessage({ text: "Product changes saved successfully!", type: "success" });
       setTimeout(() => router.push("/admin/products"), 1200);
-    } catch {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       setMessage({
-        text: "Product updated in local cache! Live on storefront catalog.",
-        type: "success",
+        text: err?.message || "Network error. Could not reach the server.",
+        type: "error",
       });
-      setTimeout(() => router.push("/admin/products"), 1500);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Are you sure you want to permanently delete "${formData.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`/api/admin/products?id=${id}`, {
+        method: "DELETE",
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        setMessage({
+          text: result.error || "Failed to delete product.",
+          type: "error",
+        });
+        return;
+      }
+
+      setMessage({ text: "Product deleted successfully.", type: "success" });
+      setTimeout(() => router.push("/admin/products"), 1000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setMessage({
+        text: err?.message || "Network error while deleting product.",
+        type: "error",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -243,31 +253,50 @@ export default function EditProductPage() {
             <span>Back to Products Catalog</span>
           </Link>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
-          >
-            <Save size={16} />
-            <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting || isSaving}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={15} />
+              <span>{isDeleting ? "Deleting..." : "Delete Product"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSaving || isDeleting}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold rounded-lg shadow-sm transition-colors disabled:opacity-50"
+            >
+              <Save size={16} />
+              <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+            </button>
+          </div>
         </div>
 
-        {message && (
-          <div
-            className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${
-              message.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                : "bg-red-50 border-red-200 text-red-900"
-            }`}
-          >
-            {message.type === "success" ? <Check size={18} /> : <AlertCircle size={18} />}
-            <span>{message.text}</span>
+        {isLoading ? (
+          <div className="bg-white p-12 rounded-xl border border-[#DCCFB9]/60 shadow-xs text-center">
+            <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="font-semibold text-sm text-[#5C6460]">Loading product details from database...</p>
           </div>
-        )}
+        ) : (
+          <>
+            {message && (
+              <div
+                className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${
+                  message.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-red-50 border-red-200 text-red-900"
+                }`}
+              >
+                {message.type === "success" ? <Check size={18} /> : <AlertCircle size={18} />}
+                <span>{message.text}</span>
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">
@@ -607,6 +636,8 @@ export default function EditProductPage() {
             </div>
           </div>
         </form>
+          </>
+        )}
       </div>
     </div>
   );

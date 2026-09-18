@@ -140,11 +140,6 @@ const BADGES = [
     subtitle: "Payments",
   },
   {
-    icon: SupportHeadsetIcon,
-    title: "Trusted & Professional",
-    subtitle: "Support",
-  },
-  {
     icon: ReturnsVanIcon,
     title: "Easy & Hassle-Free",
     subtitle: "Returns",
@@ -154,41 +149,58 @@ const BADGES = [
 export default function TrustBadges() {
   return (
     <section
-      className="bg-[#FAF6F0] border-b border-[#E8DFC8]/60 py-4 sm:py-4.5"
+      className="bg-white py-6 sm:py-16"
       aria-label="Customer Guarantees"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Horizontally scrollable on small mobile, 5-column flex/grid on desktop */}
-        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div
-            className="flex lg:grid lg:grid-cols-5 gap-5 sm:gap-6 lg:gap-4 items-center justify-between"
-            style={{ minWidth: "max-content" }}
-          >
-            {BADGES.map((badge) => {
-              const Icon = badge.icon;
-              return (
-                <div
-                  key={badge.title}
-                  className="flex items-center gap-3 group cursor-default"
-                >
-                  {/* Circular Line Art Draw Container */}
-                  <div className="w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-full border-[1.75px] border-[#1D211F] bg-transparent text-[#1D211F] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-108">
-                    <Icon className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" />
-                  </div>
-
-                  {/* Text labels matching exact typography */}
-                  <div className="flex flex-col">
-                    <p className="text-[12px] sm:text-[12.5px] font-bold text-[#1D211F] leading-tight tracking-tight whitespace-nowrap">
-                      {badge.title}
-                    </p>
-                    <p className="text-[10.5px] sm:text-[11px] text-[#5C6460] leading-tight mt-0.5 whitespace-nowrap">
-                      {badge.subtitle}
-                    </p>
-                  </div>
+        {/* Mobile: 2×2 centered stacked cells with dividers */}
+        <div className="grid grid-cols-2 sm:hidden divide-x divide-y divide-[#E8E3DA]">
+          {BADGES.map((badge) => {
+            const Icon = badge.icon;
+            return (
+              <div
+                key={badge.title}
+                className="flex flex-col items-center justify-center gap-2 py-5 px-3 text-center"
+              >
+                <div className="w-10 h-10 rounded-full border-[1.5px] border-[#1D211F] bg-transparent text-[#1D211F] flex items-center justify-center shrink-0">
+                  <Icon className="w-[18px] h-[18px]" />
                 </div>
-              );
-            })}
-          </div>
+                <div>
+                  <p className="text-[12px] font-bold text-[#1D211F] leading-tight tracking-tight">
+                    {badge.title}
+                  </p>
+                  <p className="text-[10.5px] text-[#5C6460] leading-tight mt-0.5">
+                    {badge.subtitle}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: horizontal icon+text row */}
+        <div className="hidden sm:grid sm:grid-cols-4 gap-6 items-center justify-items-center">
+          {BADGES.map((badge) => {
+            const Icon = badge.icon;
+            return (
+              <div
+                key={badge.title}
+                className="flex items-center gap-3 group cursor-default"
+              >
+                <div className="w-[40px] h-[40px] rounded-full border-[1.5px] border-[#1D211F] bg-transparent text-[#1D211F] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <Icon className="w-[19px] h-[19px]" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <p className="text-[12.5px] font-bold text-[#1D211F] leading-tight tracking-tight">
+                    {badge.title}
+                  </p>
+                  <p className="text-[11px] text-[#5C6460] leading-tight mt-0.5">
+                    {badge.subtitle}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

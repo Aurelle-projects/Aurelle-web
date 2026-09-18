@@ -66,35 +66,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // ─── Protect admin routes ─────────────────────────────────────────────────
-  const isAdminRoute = ADMIN_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  if (isAdminRoute) {
-    // In development, allow instant admin access so the owner can configure the platform
-    if (process.env.NODE_ENV !== "development") {
-      if (!user) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-
-      // Fetch user role from profiles table
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      const isAdmin =
-        profile?.role === "admin" || profile?.role === "super_admin";
-
-      if (!isAdmin) {
-        // Not an admin — redirect to homepage
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    }
-  }
+  // ─── Admin routes ──────────────────────────────────────────────────────────
+  // Handled directly by AdminLayout which serves the dedicated AdminLoginPanel
+  // when unauthenticated, so admins log in directly on /admin without customer redirect.
 
   // ─── Protect wholesale portal routes ──────────────────────────────────────
   const isWholesalePortal = WHOLESALE_PORTAL_ROUTES.some((route) =>

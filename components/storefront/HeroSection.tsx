@@ -68,6 +68,24 @@ export default function HeroSection({
     }
   }, []);
 
+  const [headerHeight, setHeaderHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const headerEl =
+        document.getElementById("sticky-header-wrapper") ||
+        document.querySelector("header")?.parentElement ||
+        document.querySelector("header");
+      if (headerEl) {
+        setHeaderHeight(headerEl.offsetHeight);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, []);
+
   const data = heroData as {
     background_image_public_id?: string;
     background_image_url?: string;
@@ -136,9 +154,11 @@ export default function HeroSection({
 
   return (
     <section
-      className="relative overflow-hidden bg-[#122419] text-white"
+      className="relative overflow-hidden bg-[#122419] text-white flex flex-col justify-end sm:justify-center"
       aria-label="Aurelle Hero"
-      style={{ minHeight: "clamp(520px, 62vw, 680px)" }}
+      style={{
+        minHeight: headerHeight ? `calc(100dvh - ${headerHeight}px)` : "calc(100dvh - 140px)",
+      }}
     >
       {/* ── 1. Full-Bleed Banner Image (Edge-to-Edge across entire Hero) ── */}
       {heroImg ? (
@@ -151,63 +171,53 @@ export default function HeroSection({
             sizes="100vw"
             className="object-cover object-[75%_center] sm:object-[70%_center] lg:object-[65%_center] xl:object-center"
           />
-          {/* Seamless left-to-right gradient overlay so white text on left is always 100% crisp & readable */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#122419]/95 via-[#122419]/80 via-35% sm:via-45% lg:via-42% to-transparent pointer-events-none" />
-          {/* Subtle top and bottom atmospheric vignette */}
-          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#122419]/40 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#122419]/50 to-transparent pointer-events-none" />
+          {/* Soft green shading — left-to-right on desktop, bottom-up on mobile */}
+          <div className="hidden sm:block absolute inset-y-0 left-0 w-full sm:w-[75%] lg:w-[60%] bg-gradient-to-r from-[#122419]/88 via-[#122419]/60 via-45% to-transparent pointer-events-none" />
+          <div className="sm:hidden absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[#122419]/95 via-[#122419]/70 via-60% to-transparent pointer-events-none" />
         </div>
       ) : (
-        /* Fallback dark botanical organic gradient when no image uploaded */
-        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#122419] via-[#162F21] to-[#122419]" />
-          <div className="absolute -left-24 -top-24 w-[600px] h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(40,78,54,0.45)_0%,transparent_70%)]" />
-        </div>
+        /* Fallback clean background when no image uploaded */
+        <div className="absolute inset-0 z-0 pointer-events-none bg-[#122419]" aria-hidden="true" />
       )}
 
-      {/* ── 2. Brand Pillars on Top Right (Care, Beauty, Wellness, Lifestyle) ── */}
-      <div className="hidden sm:flex absolute right-6 lg:right-12 xl:right-16 top-8 lg:top-12 z-20 flex-col items-end gap-1.5 sm:gap-2 pointer-events-none drop-shadow-md">
-        {["CARE", "BEAUTY", "WELLNESS", "LIFESTYLE"].map((word) => (
-          <span
-            key={word}
-            className="font-serif text-[11px] lg:text-[13px] tracking-[0.26em] text-[#E0D7C6]/90 uppercase font-medium"
-          >
-            {word}
-          </span>
-        ))}
-      </div>
 
       {/* ── 3. Content Container ── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center min-h-[520px] sm:min-h-[560px] lg:min-h-[620px] py-12 md:py-16">
-        <div className="max-w-[560px]">
-          {/* Overline */}
-          <p className="text-[11px] sm:text-[12px] font-bold tracking-[0.22em] uppercase text-[#A8B7A3] mb-3 sm:mb-4 drop-shadow-xs">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full
+        flex items-end justify-center pb-10
+        sm:items-center sm:justify-start sm:my-auto sm:py-14 lg:py-16">
+        <div className="max-w-[560px] w-full sm:w-auto text-center sm:text-left">
+          {/* Overline — hidden on mobile */}
+          <p className="hidden sm:block text-[9px] font-bold tracking-[0.22em] uppercase text-[#A8B7A3] mb-3 sm:mb-4 drop-shadow-xs">
             {overline}
           </p>
 
-          {/* Headline matching exact reference design */}
+          {/* Headline */}
           <h1
-            className="font-serif font-extrabold text-white leading-[1.03] tracking-tight mb-4 sm:mb-5 uppercase drop-shadow-lg"
-            style={{ fontSize: "clamp(2.5rem, 5.2vw, 4.25rem)" }}
+            className="font-serif text-2xl sm:text-3xl md:text-6xl font-extrabold text-white leading-[1.03] tracking-tight mb-4 sm:mb-5 uppercase drop-shadow-lg"
           >
-            <span className="block">{line1}</span>
-            {line2 && <span className="block">{line2}</span>}
-            {line3 && <span className="block">{line3}</span>}
+            {/* Mobile: line1 + line2 on same line, line3 below */}
+            <span className="block sm:hidden">
+              {line1}{line2 ? ` ${line2}` : ""}
+            </span>
+            {line3 && <span className="block sm:hidden">{line3}</span>}
+            {/* Desktop: each line separate */}
+            <span className="hidden sm:block">{line1}</span>
+            {line2 && <span className="hidden sm:block">{line2}</span>}
+            {line3 && <span className="hidden sm:block">{line3}</span>}
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-[#E2DFD8] text-sm sm:text-[15px] leading-relaxed mb-7 sm:mb-8 max-w-[430px] font-light drop-shadow-sm">
+          {/* Subtitle — hidden on mobile */}
+          <p className="hidden sm:block text-sm mb-7 sm:mb-8 max-w-[430px] drop-shadow-sm">
             {heroSubtitle}
           </p>
 
           {/* CTA Button */}
-          <div>
+          <div className="flex justify-center sm:justify-start">
             <Link
               href={ctaHref}
-              className="inline-flex items-center gap-2.5 bg-white text-[#183D2B] hover:bg-[#F7F5EF] px-8 py-3.5 sm:py-4 rounded-full text-[11px] sm:text-xs font-extrabold tracking-[0.14em] uppercase transition-all duration-200 shadow-md hover:shadow-2xl hover:-translate-y-0.5 group"
+              className="inline-flex items-center gap-2.5 bg-white text-[#183D2B] hover:bg-[#F7F5EF] px-8 py-3.5 sm:py-4 text-[11px] sm:text-xs font-extrabold tracking-[0.14em] uppercase transition-all duration-200 shadow-md hover:shadow-2xl hover:-translate-y-0.5 group"
             >
               <span>{cleanCtaText}</span>
-              <ArrowRight size={15} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>

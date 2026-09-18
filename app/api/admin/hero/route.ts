@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,20 @@ const DEFAULT_HERO = {
   badge_4_sub: "Support",
   badge_5_title: "Easy & Hassle-Free",
   badge_5_sub: "Returns",
+  promo_left_tagline: "MERRY",
+  promo_left_title: "Christmas",
+  promo_left_discount: "30%off",
+  promo_left_btn_text: "Shop Now",
+  promo_left_btn_link: "/shop",
+  promo_left_image_url: null,
+  promo_left_image_public_id: null,
+  promo_right_tagline: "YOUR NEXT",
+  promo_right_title: "Purchase",
+  promo_right_discount: "15%off",
+  promo_right_btn_text: "Shop Now",
+  promo_right_btn_link: "/shop",
+  promo_right_image_url: null,
+  promo_right_image_public_id: null,
 };
 
 function ensureFile() {
@@ -49,6 +64,40 @@ export async function GET() {
     ensureFile();
     const raw = fs.readFileSync(HERO_FILE, "utf-8");
     const data = JSON.parse(raw);
+
+    // Also attempt to load fresh DB data if available
+    try {
+      const supabase = (await createClient()) as any;
+      const { data: dbPromo } = await supabase
+        .from("homepage_sections")
+        .select("data")
+        .eq("section_key", "promo_dual_banners")
+        .single();
+
+      if (dbPromo?.data) {
+        if (dbPromo.data.left) {
+          data.promo_left_tagline = dbPromo.data.left.tagline ?? data.promo_left_tagline;
+          data.promo_left_title = dbPromo.data.left.title ?? data.promo_left_title;
+          data.promo_left_discount = dbPromo.data.left.discount ?? data.promo_left_discount;
+          data.promo_left_btn_text = dbPromo.data.left.btn_text ?? data.promo_left_btn_text;
+          data.promo_left_btn_link = dbPromo.data.left.btn_link ?? data.promo_left_btn_link;
+          data.promo_left_image_url = dbPromo.data.left.image_url ?? data.promo_left_image_url;
+          data.promo_left_image_public_id = dbPromo.data.left.image_public_id ?? data.promo_left_image_public_id;
+        }
+        if (dbPromo.data.right) {
+          data.promo_right_tagline = dbPromo.data.right.tagline ?? data.promo_right_tagline;
+          data.promo_right_title = dbPromo.data.right.title ?? data.promo_right_title;
+          data.promo_right_discount = dbPromo.data.right.discount ?? data.promo_right_discount;
+          data.promo_right_btn_text = dbPromo.data.right.btn_text ?? data.promo_right_btn_text;
+          data.promo_right_btn_link = dbPromo.data.right.btn_link ?? data.promo_right_btn_link;
+          data.promo_right_image_url = dbPromo.data.right.image_url ?? data.promo_right_image_url;
+          data.promo_right_image_public_id = dbPromo.data.right.image_public_id ?? data.promo_right_image_public_id;
+        }
+      }
+    } catch {
+      // Non-blocking fallback to hero.json
+    }
+
     return NextResponse.json({ success: true, hero: data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to read hero data";
@@ -64,6 +113,46 @@ export async function POST(req: NextRequest) {
     const current = JSON.parse(raw);
     const updated = { ...current, ...body };
     fs.writeFileSync(HERO_FILE, JSON.stringify(updated, null, 2), "utf-8");
+
+    // Also sync to Supabase database (homepage_sections table)
+    try {
+      const supabase = (await createClient()) as any;
+      await supabase
+        .from("homepage_sections")
+        .upsert(
+          {
+            section_key: "promo_dual_banners",
+            title: "Promotional Dual Banners",
+            subtitle: "Two side-by-side promotional campaign banners",
+            data: {
+              left: {
+                tagline: updated.promo_left_tagline,
+                title: updated.promo_left_title,
+                discount: updated.promo_left_discount,
+                btn_text: updated.promo_left_btn_text,
+                btn_link: updated.promo_left_btn_link,
+                image_url: updated.promo_left_image_url,
+                image_public_id: updated.promo_left_image_public_id,
+              },
+              right: {
+                tagline: updated.promo_right_tagline,
+                title: updated.promo_right_title,
+                discount: updated.promo_right_discount,
+                btn_text: updated.promo_right_btn_text,
+                btn_link: updated.promo_right_btn_link,
+                image_url: updated.promo_right_image_url,
+                image_public_id: updated.promo_right_image_public_id,
+              },
+            },
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "section_key" }
+        );
+    } catch {
+      // Non-blocking if DB connection is offline
+    }
+
     return NextResponse.json({ success: true, hero: updated });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to save hero data";

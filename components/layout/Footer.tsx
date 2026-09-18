@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, MapPin, ArrowUpRight } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 interface FooterProps {
   settings?: Record<string, unknown>;
@@ -17,7 +17,6 @@ const FOOTER_SHOP = [
 
 const FOOTER_INFO = [
   { href: "/about", label: "About Aurelle" },
-  { href: "/wholesale", label: "Wholesale" },
   { href: "/contact", label: "Contact Us" },
   { href: "/shipping-policy", label: "Shipping" },
   { href: "/return-policy", label: "Returns" },
@@ -38,26 +37,26 @@ export default function Footer({ settings = {} }: FooterProps) {
   const tiktok = settings["social_tiktok"] as string | null;
 
   return (
-    <footer className="bg-[#1D211F] text-white pt-12 md:pt-16 pb-8 border-t border-white/10" role="contentinfo">
+    <footer className="bg-black text-white pt-12 md:pt-16 pb-8 border-t border-white/10" role="contentinfo">
       {/* ── Main Footer ──────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.5fr] gap-10 pb-12 border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr] gap-10 pb-12 border-b border-white/10">
         {/* Brand Column */}
         <div className="flex flex-col">
           <Link href="/" className="inline-block mb-4 hover:scale-[1.02] transition-transform" aria-label="Aurelle Home">
             <Image
               src="/logo.png"
               alt="Aurelle Cosmetics Trading FZ-LLC"
-              width={180}
-              height={90}
-              className="h-12 w-auto max-w-[180px] object-contain block drop-shadow-md"
+              width={220}
+              height={95}
+              className="h-14 w-auto max-w-[200px] object-contain block drop-shadow-md"
             />
           </Link>
-          <p className="text-sm text-white/65 leading-relaxed mb-5 max-w-[300px]">
+          <p className="text-sm text-white/80 leading-relaxed mb-5 max-w-[300px]">
             Everyday essentials, elevated. Beauty, personal care and lifestyle
             products for everyone.
           </p>
 
-          <address className="flex flex-col gap-2.5 not-italic mb-6 text-sm text-white/70">
+          <address className="flex flex-col gap-2.5 not-italic mb-6 text-sm text-white/80">
             {contactEmail && (
               <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail size={15} strokeWidth={1.75} aria-hidden="true" />
@@ -122,11 +121,11 @@ export default function Footer({ settings = {} }: FooterProps) {
 
         {/* Shop Column */}
         <div>
-          <h3 className="text-xs font-bold tracking-widest uppercase text-white/50 mb-4">Shop</h3>
+          <h3 className="text-xs font-bold tracking-widest uppercase text-white/70 mb-4">Shop</h3>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
             {FOOTER_SHOP.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link href={link.href} className="text-sm text-white/90 hover:text-white transition-colors">
                   {link.label}
                 </Link>
               </li>
@@ -136,37 +135,21 @@ export default function Footer({ settings = {} }: FooterProps) {
 
         {/* Info Column */}
         <div>
-          <h3 className="text-xs font-bold tracking-widest uppercase text-white/50 mb-4">Company</h3>
+          <h3 className="text-xs font-bold tracking-widest uppercase text-white/70 mb-4">Company</h3>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0">
             {FOOTER_INFO.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link href={link.href} className="text-sm text-white/90 hover:text-white transition-colors">
                   {link.label}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
-
-        {/* Wholesale CTA */}
-        <div>
-          <h3 className="text-xs font-bold tracking-widest uppercase text-white/50 mb-4">Wholesale</h3>
-          <p className="text-sm text-white/60 leading-relaxed mb-4">
-            Are you a business? Apply for a wholesale account to access
-            exclusive pricing and MOQ benefits.
-          </p>
-          <Link
-            href="/wholesale"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-[#183D2B] bg-white hover:bg-[#FAF8F5] rounded-sm transition-colors"
-          >
-            Apply for Wholesale
-            <ArrowUpRight size={16} strokeWidth={2} aria-hidden="true" />
-          </Link>
-        </div>
       </div>
 
       {/* ── Bottom Bar ───────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/45">
+      <div className="max-w-7xl mx-auto px-4 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/70">
         <p>
           &copy; {new Date().getFullYear()} Aurelle Cosmetics Trading
           FZ-LLC. All rights reserved.

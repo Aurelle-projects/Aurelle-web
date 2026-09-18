@@ -113,35 +113,55 @@ export default function CartPage() {
 
               {/* Items List */}
               <div className="bg-white rounded-2xl border border-[#DCCFB9]/60 shadow-xs divide-y divide-[#DCCFB9]/40 overflow-hidden">
-                {items.map((item) => (
-                  <div key={item.id} className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    {/* Item Thumbnail */}
-                    <Link
-                      href={`/products/${item.product.slug}`}
-                      className="w-20 h-20 rounded-xl overflow-hidden bg-[#FAF8F5] border border-[#DCCFB9]/40 shrink-0 block"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.product.images[0]?.url}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </Link>
+                {items.map((item) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const prod = item.product as any;
+                  const itemImageUrl =
+                    prod.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+                    prod.product_images?.[0]?.secure_url ||
+                    prod.images?.[0]?.url ||
+                    prod.image_url ||
+                    "";
+                  const categoryName =
+                    prod.category?.name ||
+                    prod.category_name ||
+                    "Aurelle";
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#183D2B]">
-                        {item.product.category_name}
-                      </span>
-                      <Link href={`/products/${item.product.slug}`}>
-                        <h3 className="font-bold text-sm text-[#1D211F] hover:text-[#183D2B] transition-colors truncate">
-                          {item.product.name}
-                        </h3>
+                  return (
+                    <div key={item.id} className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      {/* Item Thumbnail */}
+                      <Link
+                        href={`/products/${item.product.slug}`}
+                        className="w-20 h-20 rounded-xl overflow-hidden bg-[#FAF8F5] border border-[#DCCFB9]/40 shrink-0 block flex items-center justify-center"
+                      >
+                        {itemImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={itemImageUrl}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#F7F5EF] text-[#8E9590] text-xs font-bold">
+                            {item.product.name?.charAt(0) || "A"}
+                          </div>
+                        )}
                       </Link>
-                      <p className="text-xs text-[#5C6460] mt-0.5">
-                        AED {item.product.retail_price.toFixed(2)} each
-                      </p>
-                    </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#183D2B]">
+                          {categoryName}
+                        </span>
+                        <Link href={`/products/${item.product.slug}`}>
+                          <h3 className="font-bold text-sm text-[#1D211F] hover:text-[#183D2B] transition-colors truncate">
+                            {item.product.name}
+                          </h3>
+                        </Link>
+                        <p className="text-xs text-[#5C6460] mt-0.5">
+                          AED {item.product.retail_price?.toFixed(2)} each
+                        </p>
+                      </div>
 
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
@@ -181,7 +201,8 @@ export default function CartPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
             </div>
 

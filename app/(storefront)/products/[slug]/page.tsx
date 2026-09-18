@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, use, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import { getProductBySlug, AURELLE_PRODUCTS } from "@/lib/products/mock-products";
 import ProductCard from "@/components/product/ProductCard";
 import { useCart } from "@/context/CartContext";
+import { createClient } from "@/lib/supabase/client";
 import {
   ChevronRight,
   Star,
@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ShoppingBag,
   Briefcase,
+  Package,
 } from "lucide-react";
 
 interface ProductPageProps {
@@ -27,32 +28,68 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const router = useRouter();
   const cart = useCart();
 
-  const product = getProductBySlug(slug) || AURELLE_PRODUCTS[0];
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [product, setProduct] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "ingredients" | "shipping">("details");
 
-  if (!product) {
-    notFound();
-  }
+  useEffect(() => {
+    async function loadProduct() {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabase = createClient() as any;
+        const { data: p, error } = await supabase
+          .from("products")
+          .select(`
+            id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
+            retail_price, compare_at_price, wholesale_price, wholesale_moq,
+            is_published, is_featured, is_best_seller, is_new_arrival,
+            brand:brands(name),
+            category:categories(name, slug),
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+            inventory(stock_status, stock_quantity)
+          `)
+          .eq("slug", slug)
+          .eq("status", "published")
+          .single();
 
-  const primaryImage =
-    product.images[selectedImageIdx] ||
-    product.images[0] || {
-      url: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80",
-      alt: product.name,
-      is_primary: true,
-    };
-  const isOnSale = product.compare_at_price && product.compare_at_price > product.retail_price;
-  const discountPct = isOnSale
-    ? Math.round(((product.compare_at_price! - product.retail_price) / product.compare_at_price!) * 100)
-    : 0;
+        if (!error && p) {
+          setProduct(p);
 
-  const relatedProducts = AURELLE_PRODUCTS.filter(
-    (p) => p.id !== product.id && p.category_slug === product.category_slug
-  ).slice(0, 4);
+          // Load related products from the same category
+          if (p.category_id) {
+            const { data: related } = await supabase
+              .from("products")
+              .select(`
+                id, name, slug, sku, retail_price, compare_at_price,
+                is_new_arrival, is_featured, is_best_seller,
+                brand:brands(name),
+                category:categories(name, slug),
+                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+                inventory(stock_status)
+              `)
+              .eq("status", "published")
+              .eq("category_id", p.category_id)
+              .neq("id", p.id)
+              .limit(4);
+            setRelatedProducts(related ?? []);
+          }
+        } else {
+          notFound();
+        }
+      } catch {
+        notFound();
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProduct();
+  }, [slug]);
 
   function handleAddToCart() {
     if (!product) return;
@@ -67,6 +104,57 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
     router.push("/checkout");
   }
 
+  if (isLoading) {
+    return (
+      <div className="bg-[#FAF8F5] min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-semibold text-[#5C6460]">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="bg-[#FAF8F5] min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Package size={48} className="mx-auto mb-4 text-[#8E9590]" />
+          <p className="text-lg font-bold text-[#1D211F]">Product not found</p>
+          <Link
+            href="/shop"
+            className="inline-flex items-center mt-4 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-full hover:bg-[#102D20] transition-colors"
+          >
+            Browse All Products
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Normalise image list from DB shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const images: { url: string; alt: string; is_primary: boolean }[] = (product.product_images ?? [])
+    .slice()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .sort((a: any, b: any) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((img: any) => ({
+      url: img.secure_url,
+      alt: img.alt_text || product.name,
+      is_primary: img.is_primary ?? false,
+    }));
+
+  const primaryImage = images[selectedImageIdx] ?? images[0] ?? null;
+  const isOnSale = product.compare_at_price && product.compare_at_price > product.retail_price;
+  const discountPct = isOnSale
+    ? Math.round(((product.compare_at_price - product.retail_price) / product.compare_at_price) * 100)
+    : 0;
+
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
@@ -80,13 +168,17 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             Shop
           </Link>
           <ChevronRight size={13} />
-          <Link
-            href={`/categories/${product.category_slug}`}
-            className="hover:text-[#183D2B] transition-colors"
-          >
-            {product.category_name}
-          </Link>
-          <ChevronRight size={13} />
+          {product.category && (
+            <>
+              <Link
+                href={`/categories/${product.category.slug}`}
+                className="hover:text-[#183D2B] transition-colors"
+              >
+                {product.category.name}
+              </Link>
+              <ChevronRight size={13} />
+            </>
+          )}
           <span className="font-semibold text-[#1D211F] truncate max-w-[200px]">
             {product.name}
           </span>
@@ -98,12 +190,18 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           <div className="space-y-4">
             {/* Main Stage Image */}
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#FAF8F5] border border-[#DCCFB9]/40 group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={primaryImage.url}
-                alt={primaryImage.alt || product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
+              {primaryImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={primaryImage.url}
+                  alt={primaryImage.alt || product.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#8E9590]">
+                  <Package size={64} />
+                </div>
+              )}
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
@@ -126,9 +224,9 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </div>
 
             {/* Thumbnail Selectors */}
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="flex items-center gap-3 overflow-x-auto pb-2">
-                {product.images.map((img, idx) => (
+                {images.map((img, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -152,7 +250,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
-                  {product.brand_name}
+                  {product.brand?.name || "Aurelle"}
                 </span>
                 <span className="text-xs font-mono text-[#8E9590]">SKU: {product.sku}</span>
               </div>
@@ -161,30 +259,15 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                 {product.name}
               </h1>
 
-              {/* Star Rating */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={16}
-                      className={i < Math.floor(product.rating) ? "fill-current" : "opacity-30"}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs font-bold text-[#1D211F]">{product.rating.toFixed(1)}</span>
-                <span className="text-xs text-[#5C6460]">({product.reviews_count} verified reviews)</span>
-              </div>
-
               {/* Price Block */}
               <div className="p-4 bg-[#F7F5EF]/80 rounded-2xl border border-[#DCCFB9]/50 flex items-baseline justify-between">
                 <div className="flex items-baseline gap-3">
                   <span className="text-2xl sm:text-3xl font-extrabold text-[#183D2B]">
-                    AED {product.retail_price.toFixed(2)}
+                    AED {Number(product.retail_price).toFixed(2)}
                   </span>
                   {isOnSale && product.compare_at_price && (
                     <span className="text-base text-[#8E9590] line-through">
-                      AED {product.compare_at_price.toFixed(2)}
+                      AED {Number(product.compare_at_price).toFixed(2)}
                     </span>
                   )}
                 </div>
@@ -193,23 +276,27 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                 </span>
               </div>
 
-              <p className="text-sm text-[#5C6460] leading-relaxed">
-                {product.short_description || product.description}
-              </p>
+              {(product.benefits || product.description) && (
+                <p className="text-sm text-[#5C6460] leading-relaxed">
+                  {product.benefits || product.description}
+                </p>
+              )}
 
               {/* B2B Wholesale Box */}
-              <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/70 flex items-start gap-3">
-                <Briefcase size={18} className="text-[#C9A84C] shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <p className="font-bold text-[#1D211F]">B2B Wholesale Trade Pricing</p>
-                  <p className="text-[#5C6460] mt-0.5">
-                    MOQ {product.wholesale_moq} units @ AED {product.wholesale_price}/unit.{" "}
-                    <Link href="/wholesale" className="text-[#183D2B] font-bold hover:underline">
-                      Apply for Wholesale Account →
-                    </Link>
-                  </p>
+              {product.wholesale_price && (
+                <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/70 flex items-start gap-3">
+                  <Briefcase size={18} className="text-[#C9A84C] shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-bold text-[#1D211F]">B2B Wholesale Trade Pricing</p>
+                    <p className="text-[#5C6460] mt-0.5">
+                      MOQ {product.wholesale_moq} units @ AED {Number(product.wholesale_price).toFixed(2)}/unit.{" "}
+                      <Link href="/wholesale" className="text-[#183D2B] font-bold hover:underline">
+                        Apply for Wholesale Account →
+                      </Link>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Quantity and Actions */}
@@ -335,11 +422,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           <div className="text-sm text-[#5C6460] leading-relaxed">
             {activeTab === "details" && (
               <div className="space-y-4">
-                <p>{product.description}</p>
-                {product.how_to_use && (
+                <p>{product.description || "No description available."}</p>
+                {product.usage_instructions && (
                   <div>
                     <h4 className="font-bold text-[#1D211F] mb-1">Recommended Application:</h4>
-                    <p>{product.how_to_use}</p>
+                    <p>{product.usage_instructions}</p>
                   </div>
                 )}
               </div>
@@ -349,7 +436,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               <div className="space-y-2">
                 <h4 className="font-bold text-[#1D211F]">Full Ingredient List:</h4>
                 <p className="font-mono text-xs bg-[#F7F5EF] p-4 rounded-xl border border-[#DCCFB9]/40 leading-relaxed">
-                  {product.ingredients || "Aqua, Glycerin, Botanical Extracts, Tocopherol (Vitamin E)."}
+                  {product.ingredients || "Ingredient list not yet available for this product."}
                 </p>
               </div>
             )}
@@ -369,7 +456,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </div>
         </div>
 
-        {/* Related Products */}
+        {/* Related Products — only shown when DB has related items */}
         {relatedProducts.length > 0 && (
           <div className="space-y-6 pt-4">
             <h2 className="text-2xl font-serif font-bold text-[#1D211F]">
@@ -379,28 +466,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               {relatedProducts.map((p) => (
                 <ProductCard
                   key={p.id}
-                  product={{
-                    id: p.id,
-                    name: p.name,
-                    slug: p.slug,
-                    sku: p.sku,
-                    retail_price: p.retail_price,
-                    compare_at_price: p.compare_at_price,
-                    is_new_arrival: p.is_new_arrival,
-                    is_best_seller: p.is_best_seller,
-                    is_featured: p.is_featured,
-                    brand: { name: p.brand_name },
-                    category: { name: p.category_name, slug: p.category_slug },
-                    product_images: p.images.map((img, idx) => ({
-                      cloudinary_public_id: img.alt,
-                      secure_url: img.url,
-                      is_primary: img.is_primary,
-                      sort_order: idx,
-                    })),
-                    inventory: { stock_status: p.stock_status },
-                    wholesale_price: p.wholesale_price,
-                    wholesale_moq: p.wholesale_moq,
-                  }}
+                  product={p}
                 />
               ))}
             </div>

@@ -18,7 +18,10 @@
 
 import type { ImageSize } from "@/types/product";
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME ?? process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "";
+const CLOUD_NAME =
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+  process.env.CLOUDINARY_CLOUD_NAME ||
+  "korjax8u";
 
 // ─── Dimension map ────────────────────────────────────────────────────────────
 const SIZE_MAP: Record<ImageSize, { w: number; h: number }> = {
@@ -74,8 +77,12 @@ export function getHeroImageUrl(
  * Build a Cloudinary delivery URL for a category card image.
  */
 export function getCategoryImageUrl(publicId: string): string {
-  if (!publicId || !CLOUD_NAME) return "";
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_600,h_400,c_fill,g_auto/${publicId}`;
+  if (!publicId) return "";
+  if (publicId.startsWith("http://") || publicId.startsWith("https://")) {
+    return publicId;
+  }
+  const cloudName = CLOUD_NAME || "korjax8u";
+  return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_600,h_400,c_fill,g_auto/${publicId}`;
 }
 
 /**

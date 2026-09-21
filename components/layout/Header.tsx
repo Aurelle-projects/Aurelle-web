@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   ShoppingBag,
@@ -15,38 +16,85 @@ import {
 } from "lucide-react";
 import type { UserRole } from "@/types/database";
 import { useCart } from "@/context/CartContext";
+import AnnouncementBar from "@/components/layout/AnnouncementBar";
+
+export interface NavDropdownItem {
+  href: string;
+  label: string;
+}
+
+export interface NavItem {
+  href: string;
+  label: string;
+  dropdown?: NavDropdownItem[];
+}
+
+export interface NavBrand {
+  slug: string;
+  name: string;
+}
+
+export interface NavCategory {
+  slug: string;
+  name: string;
+}
 
 interface HeaderProps {
   userRole?: UserRole | null;
   cartCount?: number;
   wishlistCount?: number;
+  navBrands?: NavBrand[];
+  navCategories?: NavCategory[];
 }
 
-const CATEGORY_NAV_LINKS = [
-  { href: "/shop", label: "Shop All" },
-  { href: "/categories/skincare-body-care", label: "Skincare" },
-  { href: "/categories/hair-care", label: "Hair Care" },
-  { href: "/categories/personal-care-hygiene", label: "Personal Care" },
-  { href: "/categories/cosmetics-makeup", label: "Makeup" },
-  { href: "/categories/perfumes-fragrances", label: "Fragrance" },
-  { href: "/categories/baby-care", label: "Baby Care" },
-  { href: "/categories/health-wellness", label: "Wellness" },
-  { href: "/categories/household-lifestyle", label: "Household" },
-  { href: "/shop?filter=brands", label: "Brands" },
-];
+/** Builds the shared nav link structure from DB data. */
+function buildNavLinks(
+  navBrands: NavBrand[],
+  navCategories: NavCategory[]
+): NavItem[] {
+  const brandDropdown: NavDropdownItem[] = [
+    ...navBrands.map((b) => ({
+      href: `/shop?brand=${b.slug}`,
+      label: b.name,
+    })),
+    { href: "/shop?filter=brands", label: "View All Brands" },
+  ];
 
-const SCROLLED_NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop" },
-  { href: "/shop?filter=brands", label: "Brand" },
-  { href: "/about", label: "About" },
-];
+  const categoryDropdown: NavDropdownItem[] = [
+    ...navCategories.map((c) => ({
+      href: `/categories/${c.slug}`,
+      label: c.name,
+    })),
+    { href: "/categories", label: "All Categories" },
+  ];
+
+  return [
+    { href: "/", label: "Home" },
+    { href: "/new-arrivals", label: "New Arrivals" },
+    { href: "/shop", label: "Products" },
+    { href: "/shop?filter=brands", label: "Shop by Brand", dropdown: brandDropdown },
+    { href: "/categories", label: "Shop by Category", dropdown: categoryDropdown },
+    { href: "/about", label: "About Us" },
+  ];
+}
+
+/** Splits an array into chunks of a given size. */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
 
 export default function Header({
   userRole,
   cartCount = 0,
   wishlistCount = 0,
+  navBrands = [],
+  navCategories = [],
 }: HeaderProps) {
+  const navLinks = buildNavLinks(navBrands, navCategories);
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,9 +102,21 @@ export default function Header({
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrolledSearchInputRef = useRef<HTMLInputElement>(null);
+
+  function openDropdown(key: string) {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setActiveDropdown(key);
+  }
+
+  function closeDropdown() {
+    hoverTimer.current = setTimeout(() => setActiveDropdown(null), 120);
+  }
 
   // Scroll listener with hysteresis deadband and requestAnimationFrame to eliminate any jitter/shaking
   useEffect(() => {
@@ -95,33 +155,6 @@ export default function Header({
   } catch {
     // context not present in preview
   }
-
-  const [announcement, setAnnouncement] = useState({
-    text: "Free Shipping Across UAE on AED 199+ | 100% Authentic Products | Skincare, Fragrance, Wellness",
-    link: "/shop",
-    country: "UAE | AED",
-  });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem("aurelle_admin_settings");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.announcement_text) {
-            setAnnouncement((prev) => ({
-              ...prev,
-              text: parsed.announcement_text,
-              link: parsed.announcement_link || prev.link,
-            }));
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Close mobile menu and search dropdown on route change
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -169,22 +202,93 @@ export default function Header({
   function renderCategoryNav() {
     return (
       <nav className="w-full flex items-center justify-center pt-0.5" aria-label="Category navigation">
-        <ul className="flex items-center justify-center gap-3.5 lg:gap-5 xl:gap-5.5 list-none m-0 p-0 whitespace-nowrap uppercase">
-          {CATEGORY_NAV_LINKS.map((link) => {
+        <ul className="flex items-center justify-center gap-4 lg:gap-5 xl:gap-6 list-none m-0 p-0 whitespace-nowrap">
+          {navLinks.map((link) => {
+            const hasDropdown = !!link.dropdown;
+            const catKey = `cat-${link.label}`;
+            const isOpen = activeDropdown === catKey;
             const isActive =
-              pathname === link.href ||
-              (link.href !== "/shop" && pathname.startsWith(link.href) && !link.href.includes("?"));
+              link.href === "/"
+                ? pathname === "/"
+                : link.href.includes("?")
+                  ? pathname === link.href.split("?")[0]
+                  : pathname.startsWith(link.href) && link.href !== "/shop";
             return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-0.5 relative transition-colors ${isActive
-                      ? "text-[#183D2B] font-semibold"
-                      : "text-[#1D211F] hover:text-[#183D2B]"
+              <li
+                key={link.href}
+                className="relative"
+                onMouseEnter={() => hasDropdown && openDropdown(catKey)}
+                onMouseLeave={() => hasDropdown && closeDropdown()}
+              >
+                {hasDropdown ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-0.5 uppercase transition-colors ${
+                        isActive || isOpen
+                          ? "text-[#183D2B] font-semibold"
+                          : "text-[#1D211F] hover:text-[#183D2B]"
+                      }`}
+                      aria-expanded={isOpen}
+                      aria-haspopup="true"
+                    >
+                      {link.label}
+                      <ChevronDown
+                        size={11}
+                        strokeWidth={2.5}
+                        className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div
+                          key={catKey}
+                          initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                          transition={{ duration: 0.18, ease: "easeOut" }}
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden"
+                          onMouseEnter={() => openDropdown(catKey)}
+                          onMouseLeave={() => closeDropdown()}
+                        >
+                          <div className="flex">
+                            {chunkArray(link.dropdown ?? [], 10).map((chunk, colIdx) => (
+                              <React.Fragment key={colIdx}>
+                                {colIdx > 0 && (
+                                  <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
+                                )}
+                                <ul className="list-none m-0 p-1">
+                                  {chunk.map((item) => (
+                                    <li key={item.href}>
+                                      <Link
+                                        href={item.href}
+                                        onClick={() => setActiveDropdown(null)}
+                                        className="block px-3 py-1.5 text-[12px] text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors whitespace-nowrap"
+                                      >
+                                        {item.label}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                ) : (
+                  <Link
+                    href={link.href}
+                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-0.5 relative transition-colors ${
+                      isActive
+                        ? "text-[#183D2B] font-semibold"
+                        : "text-[#1D211F] hover:text-[#183D2B]"
                     }`}
-                >
-                  {link.label}
-                </Link>
+                  >
+                    {link.label}
+                  </Link>
+                )}
               </li>
             );
           })}
@@ -195,26 +299,93 @@ export default function Header({
 
   function renderScrolledNav() {
     return (
-      <nav className="w-full flex items-center justify-center" aria-label="Main navigation">
-        <ul className="flex items-center justify-center gap-6 md:gap-4 list-none m-0 p-0 whitespace-nowrap uppercase">
-          {SCROLLED_NAV_LINKS.map((link) => {
+      <nav className="w-full flex items-center justify-center" aria-label="Main navigation" ref={dropdownRef}>
+        <ul className="flex items-center justify-center gap-5 md:gap-4 list-none m-0 p-0 whitespace-nowrap">
+          {navLinks.map((link) => {
+            const hasDropdown = !!link.dropdown;
             const isActive =
               link.href === "/"
                 ? pathname === "/"
                 : link.href.includes("?")
                   ? pathname === link.href.split("?")[0]
                   : pathname.startsWith(link.href);
+            const isOpen = activeDropdown === link.label;
             return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-1 px-1 relative transition-colors ${isActive
-                      ? "text-[#183D2B] font-semibold"
-                      : "text-[#1D211F] hover:text-[#183D2B]"
+              <li
+                key={link.href}
+                className="relative"
+                onMouseEnter={() => hasDropdown && openDropdown(link.label)}
+                onMouseLeave={() => hasDropdown && closeDropdown()}
+              >
+                {hasDropdown ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-1 px-1 uppercase transition-colors ${
+                        isActive || isOpen
+                          ? "text-[#183D2B] font-semibold"
+                          : "text-[#1D211F] hover:text-[#183D2B]"
+                      }`}
+                      aria-expanded={isOpen}
+                      aria-haspopup="true"
+                    >
+                      {link.label}
+                      <ChevronDown
+                        size={11}
+                        strokeWidth={2.5}
+                        className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.div
+                          key={link.label}
+                          initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                          transition={{ duration: 0.18, ease: "easeOut" }}
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden"
+                          onMouseEnter={() => openDropdown(link.label)}
+                          onMouseLeave={() => closeDropdown()}
+                        >
+                          <div className="flex">
+                            {chunkArray(link.dropdown ?? [], 10).map((chunk, colIdx) => (
+                              <React.Fragment key={colIdx}>
+                                {colIdx > 0 && (
+                                  <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
+                                )}
+                                <ul className="list-none m-0 p-1">
+                                  {chunk.map((item) => (
+                                    <li key={item.href}>
+                                      <Link
+                                        href={item.href}
+                                        onClick={() => setActiveDropdown(null)}
+                                        className="block px-3 py-1.5 text-[12px] text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors whitespace-nowrap"
+                                      >
+                                        {item.label}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                ) : (
+                  <Link
+                    href={link.href}
+                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-1 px-1 relative transition-colors ${
+                      isActive
+                        ? "text-[#183D2B] font-semibold"
+                        : "text-[#1D211F] hover:text-[#183D2B]"
                     }`}
-                >
-                  {link.label}
-                </Link>
+                  >
+                    {link.label}
+                  </Link>
+                )}
               </li>
             );
           })}
@@ -228,44 +399,18 @@ export default function Header({
       {/* ─── Sticky Header Wrapper (Shows top header and main header at all times) ─── */}
       <div id="sticky-header-wrapper" className="sticky top-0 left-0 right-0 z-40 bg-white">
         {/* ─── Top Announcement Bar ──────────────────────────────────── */}
-        <div className="bg-[#183D2B] text-white text-[11px] tracking-wide border-b border-white/10" role="region" aria-label="Announcement">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-[34px]">
-            <div className="flex items-center overflow-hidden text-ellipsis whitespace-nowrap">
-              <Link href={announcement.link} className="text-white/90 hover:text-white hover:underline transition-colors font-medium">
-                <span>{announcement.text}</span>
-              </Link>
-            </div>
-
-            <div className="hidden md:flex items-center gap-3 shrink-0">
-              <div className="text-white/85 hover:text-white transition-colors font-medium flex items-center gap-1 cursor-pointer">
-                <span>{announcement.country}</span>
-                <ChevronDown size={13} strokeWidth={2} />
-              </div>
-
-              <span className="text-white/25 text-[10px]" aria-hidden="true">|</span>
-
-              <Link href="/contact" className="text-white/85 hover:text-white transition-colors font-medium">
-                Help
-              </Link>
-
-              <span className="text-white/25 text-[10px]" aria-hidden="true">|</span>
-
-              <Link href="/account/orders" className="text-white/85 hover:text-white transition-colors font-medium">
-                Track Order
-              </Link>
-            </div>
-          </div>
-        </div>
+        <AnnouncementBar />
 
         {/* ─── Main Header ───────────────────────────────────────────── */}
         <header className={`bg-white border-b border-[#DCCFB9]/40 ${isScrolled ? "shadow-md" : "shadow-xs"}`} role="banner">
           <div className="max-w-7xl mx-auto px-4">
-            <div className={`flex items-center gap-5 lg:gap-7 ${isScrolled ? "py-2" : "py-2.5"}`}>
+            <div className={`flex items-center gap-5 lg:gap-7 ${isScrolled ? "py-3" : "py-2.5"}`}>
               {/* Logo — Stable container width avoids horizontal layout shift */}
               <Link
                 href="/"
                 className="flex items-center shrink-0 w-[150px] sm:w-[180px] md:w-[210px] hover:scale-[1.02] transition-transform"
                 aria-label="Aurelle Home"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               >
                 <Image
                   src="/logo.png"
@@ -519,7 +664,7 @@ export default function Header({
             <div className="flex items-center justify-between p-4 border-b border-[#DCCFB9]/40">
               <Link
                 href="/"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className="flex items-center"
                 aria-label="Aurelle Home"
               >
@@ -545,10 +690,11 @@ export default function Header({
                 Categories
               </p>
               <ul className="flex flex-col gap-0.5 list-none p-0 m-0 mb-4">
-                {CATEGORY_NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
                       className="block px-3 py-2 text-sm font-medium text-[#1D211F] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
                     >
                       {link.label}

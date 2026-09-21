@@ -33,6 +33,7 @@ const SHORT_NAMES: Record<string, string> = {
   "general-consumer-goods": "General",
 };
 
+
 export default function CategoryGrid({ categories: initialCategories }: CategoryGridProps) {
   const [categories, setCategories] = useState<CategoryItem[]>(initialCategories || []);
   const [isPaused, setIsPaused] = useState(false);
@@ -43,34 +44,22 @@ export default function CategoryGrid({ categories: initialCategories }: Category
   const scrollLeftRef = useRef(0);
   const hasDraggedRef = useRef(false);
 
-  // Pick up any image updates saved from Admin Panel
+  // Pick up any image updates from DB / Admin Panel
   useEffect(() => {
-    const timer = setTimeout(() => {
+    async function loadLiveCategories() {
       try {
-        const saved = localStorage.getItem("aurelle_categories_data");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCategories((prev: CategoryItem[]) =>
-              prev.map((cat: CategoryItem) => {
-                const matched = parsed.find((p: { slug: string }) => p.slug === cat.slug);
-                if (matched && (matched.image_public_id || matched.image_url)) {
-                  return {
-                    ...cat,
-                    image_public_id: matched.image_public_id || cat.image_public_id,
-                    image_url: matched.image_url || cat.image_url,
-                  };
-                }
-                return cat;
-              })
-            );
+        const res = await fetch("/api/admin/categories");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.categories) && data.categories.length > 0) {
+            setCategories(data.categories);
           }
         }
       } catch {
         // Ignore
       }
-    }, 0);
-    return () => clearTimeout(timer);
+    }
+    loadLiveCategories();
   }, []);
 
   // Sync when server data updates
@@ -181,9 +170,9 @@ export default function CategoryGrid({ categories: initialCategories }: Category
           aria-label="Product categories slider"
         >
           {displayItems.map((category: CategoryItem, idx: number) => {
-            const imageUrl = category.image_public_id
-              ? getCategoryImageUrl(category.image_public_id)
-              : category.image_url ?? null;
+            const imageUrl =
+              category.image_url ||
+              (category.image_public_id ? getCategoryImageUrl(category.image_public_id) : null);
 
             const displayName = SHORT_NAMES[category.slug] ?? category.name;
 

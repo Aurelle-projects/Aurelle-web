@@ -123,7 +123,7 @@ function ReturnsVanIcon({ className = "w-[19px] h-[19px]" }: { className?: strin
   );
 }
 
-const BADGES = [
+const DEFAULT_BADGES = [
   {
     icon: TruckDeliveryIcon,
     title: "UAE-Wide Delivery",
@@ -146,21 +146,51 @@ const BADGES = [
   },
 ];
 
-export default function TrustBadges() {
+// Icon map for matching DB badge data to icon components
+const ICON_MAP: Record<number, React.FC<{ className?: string }>> = {
+  0: TruckDeliveryIcon,
+  1: AuthenticShieldIcon,
+  2: SecureHexIcon,
+  3: ReturnsVanIcon,
+};
+
+interface BadgeData {
+  title: string;
+  subtitle: string;
+}
+
+interface TrustBadgesProps {
+  badges?: BadgeData[];
+}
+
+export default function TrustBadges({ badges }: TrustBadgesProps) {
+  const validBadges = badges && badges.length > 0
+    ? badges.filter((b) => b.title || b.subtitle)
+    : [];
+
+  if (validBadges.length === 0) {
+    return null;
+  }
+
+  const BADGES = validBadges.map((b, i) => ({
+    icon: ICON_MAP[i] || TruckDeliveryIcon,
+    title: b.title || "",
+    subtitle: b.subtitle || "",
+  }));
   return (
     <section
       className="bg-white py-6 sm:py-16"
       aria-label="Customer Guarantees"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
         {/* Mobile: 2×2 centered stacked cells with dividers */}
-        <div className="grid grid-cols-2 sm:hidden divide-x divide-y divide-[#E8E3DA]">
+        <div className="grid grid-cols-2 sm:hidden">
           {BADGES.map((badge) => {
             const Icon = badge.icon;
             return (
               <div
                 key={badge.title}
-                className="flex flex-col items-center justify-center gap-2 py-5 px-3 text-center"
+                className="flex min-h-[94px] flex-col items-center justify-center gap-1.5 py-3 px-2 text-center"
               >
                 <div className="w-10 h-10 rounded-full border-[1.5px] border-[#1D211F] bg-transparent text-[#1D211F] flex items-center justify-center shrink-0">
                   <Icon className="w-[18px] h-[18px]" />

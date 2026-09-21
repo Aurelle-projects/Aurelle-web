@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
-import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -18,76 +17,85 @@ import {
   FolderTree,
   Layers,
   Search,
-  ExternalLink,
+  Filter,
 } from "lucide-react";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  description: string | null;
-  image_url: string | null;
-  image_public_id: string | null;
+}
+
+interface Subcategory {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id: string;
   sort_order: number;
   is_active: boolean;
-  subcategories_count?: number;
+  parent_name?: string;
 }
 
 function slugify(str: string) {
   return str.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-const EMPTY_CAT_FORM = {
+const EMPTY_SUB_FORM = {
+  parent_id: "",
   name: "",
   slug: "",
-  description: "",
-  image_url: null as string | null,
-  image_public_id: null as string | null,
   sort_order: 0,
   is_active: true,
 };
 
-export default function AdminCategoriesPage() {
+function SubcategoriesContent() {
+  const searchParams = useSearchParams();
+  const initialCategoryFilter = searchParams.get("category") || "all";
+
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategoriesCount, setSubcategoriesCount] = useState<number>(0);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Subcategory | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryFilter);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
   // Modal form state
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...EMPTY_CAT_FORM });
+  const [form, setForm] = useState({ ...EMPTY_SUB_FORM });
+
+
 
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    loadCategories();
+    loadData();
   }, []);
 
-  async function loadCategories() {
+  async function loadData() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/categories");
       const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || "Failed to load categories.");
+      if (!res.ok || result.error) throw new Error(result.error || "Failed to load subcategories.");
 
       const cats: Category[] = result.categories ?? [];
-      const subs: { id: string; parent_id: string }[] = result.subcategories ?? [];
+      const subs: Subcategory[] = result.subcategories ?? [];
 
-      setSubcategoriesCount(subs.length);
+      setCategories(cats);
 
-      const mapped: Category[] = cats.map((cat) => ({
-        ...cat,
-        subcategories_count: subs.filter((s) => s.parent_id === cat.id).length,
+      const catMap = new Map(cats.map((c) => [c.id, c.name]));
+      const mapped: Subcategory[] = subs.map((s) => ({
+        ...s,
+        parent_name: catMap.get(s.parent_id) || "Unknown Category",
       }));
 
-      setCategories(mapped);
+      setSubcategories(mapped);
     } catch (err: any) {
-      showMsg(err?.message || "Failed to load categories from database.", "error");
+      showMsg(err?.message || "Failed to load subcategories from database.", "error");
     } finally {
       setLoading(false);
     }
@@ -100,26 +108,30 @@ export default function AdminCategoriesPage() {
   }
 
   function openCreate() {
-    setForm({ ...EMPTY_CAT_FORM, sort_order: categories.length + 1 });
+    const defaultParentId = selectedCategory !== "all" ? selectedCategory : (categories[0]?.id ?? "");
+    setForm({
+      ...EMPTY_SUB_FORM,
+      parent_id: defaultParentId,
+      sort_order: subcategories.length + 1,
+    });
     setEditingId(null);
     setShowModal(true);
   }
 
-  function openEdit(cat: Category) {
+  function openEdit(sub: Subcategory) {
     setForm({
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description ?? "",
-      image_url: cat.image_url,
-      image_public_id: cat.image_public_id,
-      sort_order: cat.sort_order,
-      is_active: cat.is_active,
+      parent_id: sub.parent_id,
+      name: sub.name,
+      slug: sub.slug,
+      sort_order: sub.sort_order,
+      is_active: sub.is_active,
     });
-    setEditingId(cat.id);
+    setEditingId(sub.id);
     setShowModal(true);
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
       setForm((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
@@ -134,7 +146,8 @@ export default function AdminCategoriesPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim()) return showMsg("Category name is required.", "error");
+    if (!form.parent_id) return showMsg("Please select a parent category.", "error");
+    if (!form.name.trim()) return showMsg("Subcategory name is required.", "error");
     if (!form.slug.trim()) return showMsg("Slug is required.", "error");
 
     setSaving(true);
@@ -142,12 +155,9 @@ export default function AdminCategoriesPage() {
       const payload = {
         name: form.name.trim(),
         slug: slugify(form.slug),
-        description: form.description.trim() || null,
-        image_url: form.image_url,
-        image_public_id: form.image_public_id,
+        parent_id: form.parent_id,
         sort_order: form.sort_order,
         is_active: form.is_active,
-        parent_id: null,
       };
 
       const res = await fetch("/api/admin/categories", {
@@ -157,14 +167,14 @@ export default function AdminCategoriesPage() {
       });
 
       const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || "Failed to save category.");
+      if (!res.ok || result.error) throw new Error(result.error || "Failed to save subcategory.");
 
-      showMsg(editingId ? "Category updated successfully." : "Category created successfully.", "success");
+      showMsg(editingId ? "Subcategory updated successfully." : "Subcategory created successfully.", "success");
       setShowModal(false);
-      await loadCategories();
+      await loadData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      showMsg(err?.message || "Failed to save category.", "error");
+      showMsg(err?.message || "Failed to save subcategory.", "error");
     } finally {
       setSaving(false);
     }
@@ -180,58 +190,65 @@ export default function AdminCategoriesPage() {
         method: "DELETE",
       });
       const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || "Failed to delete category.");
+      if (!res.ok || result.error) throw new Error(result.error || "Failed to delete subcategory.");
 
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-      showMsg(`Category "${name}" deleted successfully.`, "success");
+      setSubcategories((prev) => prev.filter((s) => s.id !== id));
+      showMsg(`Subcategory "${name}" deleted successfully.`, "success");
       setDeleteTarget(null);
-      await loadCategories();
+      await loadData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      showMsg(err?.message || "Failed to delete category.", "error");
+      showMsg(err?.message || "Failed to delete subcategory.", "error");
     } finally {
       setDeleting(null);
     }
   }
 
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.slug.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSubcategories = subcategories.filter((s) => {
+    const matchesCategory = selectedCategory === "all" || s.parent_id === selectedCategory;
+    const matchesSearch =
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.slug.toLowerCase().includes(search.toLowerCase()) ||
+      (s.parent_name && s.parent_name.toLowerCase().includes(search.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="flex flex-col pb-16">
       <AdminHeader
-        title="Category Management"
-        subtitle="Manage main categories. Create and organize top-level categories fetched directly from database."
+        title="Subcategory Management"
+        subtitle="Create, edit, and organize subcategories under their parent categories. All data is fetched from database."
       />
 
       <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-        {/* Navigation Tabs (Categories vs Subcategories) */}
+        {/* Navigation Tabs */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#183D2B]/10 pb-4">
           <div className="flex items-center gap-2 p-1 bg-[#F0EBE1] rounded-xl">
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#183D2B] text-white shadow-sm transition-all"
+            <Link
+              href="/admin/categories"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#5C6460] hover:text-[#183D2B] hover:bg-white/60 transition-all"
             >
               <Layers size={16} />
               <span>Categories ({categories.length})</span>
-            </button>
-            <Link
-              href="/admin/subcategories"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#5C6460] hover:text-[#183D2B] hover:bg-white/60 transition-all"
+            </Link>
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#183D2B] text-white shadow-sm transition-all"
             >
               <FolderTree size={16} />
-              <span>Subcategories ({subcategoriesCount})</span>
-            </Link>
+              <span>Subcategories ({subcategories.length})</span>
+            </button>
           </div>
 
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#183D2B] hover:bg-[#122e20] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
-          >
-            <Plus size={16} />
-            <span>Add Category</span>
-          </button>
+          <div className="flex items-center gap-2">
+
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#183D2B] hover:bg-[#122e20] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+            >
+              <Plus size={16} />
+              <span>Add Subcategory</span>
+            </button>
+          </div>
         </div>
 
         {/* Message Banner */}
@@ -257,44 +274,65 @@ export default function AdminCategoriesPage() {
           </div>
         )}
 
-        {/* Search Bar */}
-        <div className="relative max-w-md">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5C6460]" />
-          <input
-            type="text"
-            placeholder="Search categories by name or slug..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
-          />
+        {/* Filters: Search & Category Dropdown */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5C6460]" />
+            <input
+              type="text"
+              placeholder="Search subcategories..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-[#5C6460] shrink-0" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B] font-medium text-[#1A1A1A]"
+            >
+              <option value="all">All Categories ({subcategories.length})</option>
+              {categories.map((cat) => {
+                const count = subcategories.filter((s) => s.parent_id === cat.id).length;
+                return (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
 
         {/* Content Table */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-[#5C6460] space-y-3">
             <Loader2 size={32} className="animate-spin text-[#183D2B]" />
-            <p className="text-sm font-medium">Loading categories from database...</p>
+            <p className="text-sm font-medium">Loading subcategories from database...</p>
           </div>
-        ) : filteredCategories.length === 0 ? (
+        ) : filteredSubcategories.length === 0 ? (
           <div className="bg-white rounded-2xl border border-[#183D2B]/10 p-12 text-center max-w-md mx-auto space-y-4 shadow-sm">
             <div className="w-14 h-14 bg-[#183D2B]/5 rounded-2xl flex items-center justify-center mx-auto text-[#183D2B]">
-              <Layers size={28} />
+              <FolderTree size={28} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#1A1A1A]">No categories found</h3>
+              <h3 className="text-base font-bold text-[#1A1A1A]">No subcategories found</h3>
               <p className="text-xs text-[#5C6460] mt-1">
-                {search ? "No categories matched your search criteria." : "Get started by adding your first category."}
+                {search || selectedCategory !== "all"
+                  ? "No subcategories matched your filter criteria."
+                  : "Get started by adding your first subcategory."}
               </p>
             </div>
-            {!search && (
-              <button
-                onClick={openCreate}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#183D2B] text-white text-sm font-semibold rounded-xl"
-              >
-                <Plus size={16} />
-                <span>Add Category</span>
-              </button>
-            )}
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#183D2B] text-white text-sm font-semibold rounded-xl"
+            >
+              <Plus size={16} />
+              <span>Add Subcategory</span>
+            </button>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-[#183D2B]/10 overflow-hidden shadow-sm">
@@ -302,86 +340,61 @@ export default function AdminCategoriesPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#FAF8F5] border-b border-[#183D2B]/10 text-[11px] font-bold uppercase tracking-wider text-[#5C6460]">
-                    <th className="py-3.5 px-4 w-16">Image</th>
-                    <th className="py-3.5 px-4">Category Name</th>
-                    <th className="py-3.5 px-4">Subcategories</th>
+                    <th className="py-3.5 px-4">Subcategory Name</th>
+                    <th className="py-3.5 px-4">Parent Category</th>
                     <th className="py-3.5 px-4">Sort Order</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#183D2B]/5 text-sm">
-                  {filteredCategories.map((cat) => (
-                    <tr key={cat.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
-                      {/* Image Thumbnail */}
-                      <td className="py-3 px-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#F0EBE1] overflow-hidden border border-[#183D2B]/10 flex items-center justify-center relative shrink-0">
-                          {cat.image_url ? (
-                            <Image
-                              src={cat.image_url}
-                              alt={cat.name}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <Layers size={18} className="text-[#5C6460]/40" />
-                          )}
-                        </div>
+                  {filteredSubcategories.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                      {/* Name */}
+                      <td className="py-3.5 px-4 font-semibold text-[#1A1A1A]">
+                        {sub.name}
                       </td>
 
-                      {/* Name & Description */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[#1A1A1A]">{cat.name}</div>
-                        {cat.description && (
-                          <p className="text-xs text-[#5C6460] line-clamp-1 mt-0.5 max-w-xs">
-                            {cat.description}
-                          </p>
-                        )}
-                      </td>
-
-                      {/* Subcategories count link */}
-                      <td className="py-3 px-4">
-                        <Link
-                          href={`/admin/subcategories?category=${cat.id}`}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#183D2B]/10 hover:bg-[#183D2B]/20 text-[#183D2B] text-xs font-semibold transition-colors"
-                        >
-                          <span>{cat.subcategories_count ?? 0} subcategories</span>
-                          <ExternalLink size={11} />
-                        </Link>
+                      {/* Parent Category Badge */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#183D2B]/10 text-[#183D2B] text-xs font-semibold">
+                          <Layers size={12} />
+                          <span>{sub.parent_name}</span>
+                        </span>
                       </td>
 
                       {/* Sort Order */}
-                      <td className="py-3 px-4 text-xs font-semibold text-[#5C6460]">
-                        #{cat.sort_order}
+                      <td className="py-3.5 px-4 text-xs font-semibold text-[#5C6460]">
+                        #{sub.sort_order}
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4">
+                      <td className="py-3.5 px-4">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                            cat.is_active
+                            sub.is_active
                               ? "bg-emerald-100 text-emerald-800"
                               : "bg-gray-100 text-gray-600"
                           }`}
                         >
-                          {cat.is_active ? "Active" : "Inactive"}
+                          {sub.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => openEdit(cat)}
+                            onClick={() => openEdit(sub)}
                             className="p-2 text-[#5C6460] hover:text-[#183D2B] hover:bg-[#183D2B]/10 rounded-lg transition-colors"
-                            title="Edit Category"
+                            title="Edit Subcategory"
                           >
                             <Edit2 size={15} />
                           </button>
                           <button
-                            onClick={() => setDeleteTarget(cat)}
+                            onClick={() => setDeleteTarget(sub)}
                             className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Category"
+                            title="Delete Subcategory"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -396,13 +409,13 @@ export default function AdminCategoriesPage() {
         )}
       </div>
 
-      {/* Create / Edit Category Modal */}
+      {/* Create / Edit Subcategory Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#183D2B]/10 p-6 space-y-5">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-[#183D2B]/10 p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[#183D2B]/10 pb-4">
               <h3 className="text-lg font-bold text-[#1A1A1A]">
-                {editingId ? "Edit Category" : "Add New Category"}
+                {editingId ? "Edit Subcategory" : "Add New Subcategory"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -413,17 +426,41 @@ export default function AdminCategoriesPage() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
-              {/* Category Name */}
+              {/* Category Dropdown List (Parent Category) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#5C6460] mb-1.5">
-                  Category Name <span className="text-red-500">*</span>
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="parent_id"
+                  value={form.parent_id}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-[#FAF8F5] text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B] font-medium text-[#1A1A1A]"
+                >
+                  <option value="">-- Select Parent Category --</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-[#5C6460] mt-1">
+                  Choose which category this subcategory belongs to.
+                </p>
+              </div>
+
+              {/* Subcategory Name */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#5C6460] mb-1.5">
+                  Subcategory Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="e.g. Cosmetics & Makeup, Skincare, Hair Care"
+                  placeholder="e.g. Face Wash, Lip Care, Shampoo, Serums"
                   required
                   className="w-full px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-[#FAF8F5] text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
                 />
@@ -439,55 +476,9 @@ export default function AdminCategoriesPage() {
                   name="slug"
                   value={form.slug}
                   onChange={handleChange}
-                  placeholder="e.g. cosmetics-makeup"
+                  placeholder="e.g. face-wash"
                   required
                   className="w-full px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-[#FAF8F5] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#5C6460] mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Brief description of products in this category..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-[#FAF8F5] text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
-                />
-              </div>
-
-
-
-              {/* Category Image Upload */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#5C6460] mb-1.5">
-                  Category Image
-                </label>
-                <CloudinaryUploader
-                  label="Category Cover Image"
-                  description="Upload a representative banner or icon for this category."
-                  aspectRatio="square"
-                  folder="categories"
-                  value={form.image_url || undefined}
-                  publicId={form.image_public_id || undefined}
-                  onUploadSuccess={(asset: CloudinaryAsset) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      image_url: asset.secure_url,
-                      image_public_id: asset.public_id,
-                    }));
-                  }}
-                  onRemove={() => {
-                    setForm((prev) => ({
-                      ...prev,
-                      image_url: null,
-                      image_public_id: null,
-                    }));
-                  }}
                 />
               </div>
 
@@ -535,7 +526,7 @@ export default function AdminCategoriesPage() {
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#183D2B] hover:bg-[#122e20] text-white text-sm font-semibold rounded-xl transition-all shadow-sm disabled:opacity-50"
                 >
                   {saving && <Loader2 size={16} className="animate-spin" />}
-                  <span>{editingId ? "Save Changes" : "Create Category"}</span>
+                  <span>{editingId ? "Save Changes" : "Create Subcategory"}</span>
                 </button>
               </div>
             </form>
@@ -549,10 +540,24 @@ export default function AdminCategoriesPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
         itemName={deleteTarget?.name}
-        itemType="category"
-        warningNote="Deleting this category will also remove any subcategories assigned to it and unlink any products."
+        itemType="subcategory"
+        warningNote="Any products assigned to this subcategory will have their subcategory unlinked."
         isLoading={!!deleting}
       />
     </div>
+  );
+}
+
+export default function AdminSubcategoriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 size={32} className="animate-spin text-[#183D2B]" />
+        </div>
+      }
+    >
+      <SubcategoriesContent />
+    </Suspense>
   );
 }

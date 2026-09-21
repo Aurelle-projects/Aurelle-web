@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
+import type { NavBrand, NavCategory } from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import StorefrontProviders from "@/components/providers/StorefrontProviders";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,8 @@ export default async function StorefrontLayout({
 }) {
   let userRole: UserRole | null = null;
   let cartCount = 0;
+  let navBrands: NavBrand[] = [];
+  let navCategories: NavCategory[] = [];
   const settings: Record<string, unknown> = {};
 
   try {
@@ -65,13 +68,43 @@ export default async function StorefrontLayout({
         settings[s.key] = s.value;
       }
     }
+
+    // Fetch active brands for "Shop by Brand" dropdown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: brandsData } = await (supabase as any)
+      .from("brands")
+      .select("name, slug")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (Array.isArray(brandsData)) {
+      navBrands = brandsData as NavBrand[];
+    }
+
+    // Fetch top-level (parent) active categories for "Shop by Category" dropdown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: categoriesData } = await (supabase as any)
+      .from("categories")
+      .select("name, slug")
+      .eq("is_active", true)
+      .is("parent_id", null)
+      .order("sort_order", { ascending: true });
+
+    if (Array.isArray(categoriesData)) {
+      navCategories = categoriesData as NavCategory[];
+    }
   } catch {
     // No Supabase credentials yet — render with defaults
   }
 
   return (
     <StorefrontProviders>
-      <Header userRole={userRole} cartCount={cartCount} />
+      <Header
+        userRole={userRole}
+        cartCount={cartCount}
+        navBrands={navBrands}
+        navCategories={navCategories}
+      />
       <main id="main-content" tabIndex={-1}>
         {children}
       </main>

@@ -5,15 +5,18 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 import { createClient } from "@/lib/supabase/client";
-import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2 } from "lucide-react";
 
 interface UploadedImage {
   public_id: string;
   secure_url: string;
   is_primary: boolean;
 }
+
+interface DbCategory { id: string; name: string; slug: string; }
+interface DbSubcategory { id: string; name: string; slug: string; parent_id: string; }
+interface DbBrand { id: string; name: string; slug: string; }
 
 export default function EditProductPage() {
   const params = useParams();
@@ -24,13 +27,20 @@ export default function EditProductPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [images, setImages] = useState<UploadedImage[]>([]);
+
+  // DB option lists
+  const [dbBrands, setDbBrands] = useState<DbBrand[]>([]);
+  const [dbCategories, setDbCategories] = useState<DbCategory[]>([]);
+  const [dbAllSubs, setDbAllSubs] = useState<DbSubcategory[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
     sku: "",
-    category_slug: AURELLE_CATEGORIES[0]?.slug ?? "cosmetics-makeup",
-    subcategory_slug: "",
+    brand_id: "",
+    category_id: "",
+    subcategory_id: "",
     description: "",
     benefits: "",
     ingredients: "",
@@ -48,13 +58,29 @@ export default function EditProductPage() {
     is_wholesale_available: true,
   });
 
-  const [images, setImages] = useState<UploadedImage[]>([]);
-
   useEffect(() => {
-    async function loadProduct() {
+    async function init() {
+      const supabase = createClient();
+      let subsData: DbSubcategory[] = [];
+      try {
+        const [{ data: brands }, { data: cats }, { data: subs }] = await Promise.all([
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("brands").select("id, name, slug").eq("is_active", true).order("name"),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("categories").select("id, name, slug").is("parent_id", null).eq("is_active", true).order("sort_order"),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("categories").select("id, name, slug, parent_id").not("parent_id", "is", null).eq("is_active", true).order("sort_order"),
+        ]);
+        if (brands) setDbBrands(brands);
+        if (cats) setDbCategories(cats);
+        if (subs) {
+          subsData = subs;
+          setDbAllSubs(subs);
+        }
+      } catch { /* silent */ }
+
       if (!id) return;
       try {
-        const supabase = createClient();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: p, error } = await (supabase as any)
           .from("products")
@@ -62,7 +88,9 @@ export default function EditProductPage() {
             id, name, slug, sku, description, benefits, ingredients, usage_instructions,
             retail_price, compare_at_price, wholesale_price, wholesale_moq,
             is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
-            category:categories(slug),
+            brand_id,
+            category_id,
+            specifications,
             product_images(cloudinary_public_id, secure_url, is_primary),
             inventory(stock_quantity, low_stock_threshold)
           `)
@@ -70,12 +98,25 @@ export default function EditProductPage() {
           .single();
 
         if (!error && p) {
+          let resolvedCatId = p.category_id ?? "";
+          let resolvedSubId = (p.specifications as any)?.subcategory_id ?? "";
+
+          // If category_id in DB is actually a subcategory, resolve parent
+          if (resolvedCatId && subsData.length > 0) {
+            const subMatch = subsData.find((s) => s.id === resolvedCatId);
+            if (subMatch) {
+              resolvedSubId = subMatch.id;
+              resolvedCatId = subMatch.parent_id;
+            }
+          }
+
           setFormData({
             name: p.name ?? "",
             slug: p.slug ?? "",
             sku: p.sku ?? "",
-            category_slug: p.category?.slug ?? AURELLE_CATEGORIES[0]?.slug ?? "cosmetics-makeup",
-            subcategory_slug: "",
+            brand_id: p.brand_id ?? "",
+            category_id: resolvedCatId,
+            subcategory_id: resolvedSubId,
             description: p.description ?? "",
             benefits: p.benefits ?? "",
             ingredients: p.ingredients ?? "",
@@ -102,22 +143,16 @@ export default function EditProductPage() {
             })));
           }
         } else {
-          setMessage({
-            text: "Product not found in database.",
-            type: "error",
-          });
+          setMessage({ text: "Product not found in database.", type: "error" });
         }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        setMessage({
-          text: err?.message || "Failed to load product from database.",
-          type: "error",
-        });
+      } catch {
+        setMessage({ text: "Failed to load product from database.", type: "error" });
       } finally {
         setIsLoading(false);
       }
     }
-    loadProduct();
+
+    init();
   }, [id]);
 
   function handleChange(
@@ -128,9 +163,15 @@ export default function EditProductPage() {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prev) => {
+        const next = { ...prev, [name]: value };
+        if (name === "category_id") next.subcategory_id = "";
+        return next;
+      });
     }
   }
+
+  const filteredSubs = dbAllSubs.filter((s) => s.parent_id === formData.category_id);
 
   function handleImageUploaded(asset: CloudinaryAsset) {
     setImages((prev) => [
@@ -159,7 +200,7 @@ export default function EditProductPage() {
     });
   }
 
-  const currentCategory = AURELLE_CATEGORIES.find((c) => c.slug === formData.category_slug);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -345,41 +386,35 @@ export default function EditProductPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Brand / Category / Subcategory */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                    Category *
-                  </label>
-                  <select
-                    name="category_slug"
-                    value={formData.category_slug}
-                    onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer"
-                  >
-                    {AURELLE_CATEGORIES.map((cat) => (
-                      <option key={cat.slug} value={cat.slug}>
-                        {cat.name}
-                      </option>
-                    ))}
+                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">Brand</label>
+                  <select name="brand_id" value={formData.brand_id} onChange={handleChange}
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer">
+                    <option value="">No brand</option>
+                    {dbBrands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                    Subcategory
-                  </label>
-                  <select
-                    name="subcategory_slug"
-                    value={formData.subcategory_slug}
-                    onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer"
-                  >
-                    <option value="">Select subcategory...</option>
-                    {currentCategory?.subcategories.map((sub) => (
-                      <option key={sub.slug} value={sub.slug}>
-                        {sub.name}
-                      </option>
-                    ))}
+                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">Category *</label>
+                  <select name="category_id" value={formData.category_id} onChange={handleChange}
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer">
+                    <option value="">Select category...</option>
+                    {dbCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">Subcategory</label>
+                  <select name="subcategory_id" value={formData.subcategory_id} onChange={handleChange}
+                    disabled={!formData.category_id || filteredSubs.length === 0}
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer disabled:opacity-50">
+                    <option value="">
+                      {!formData.category_id ? "Select a category first" : filteredSubs.length === 0 ? "No subcategories" : "Select subcategory..."}
+                    </option>
+                    {filteredSubs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>

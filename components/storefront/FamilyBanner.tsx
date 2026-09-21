@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
@@ -12,83 +12,19 @@ interface FamilyBannerProps {
 }
 
 export default function FamilyBanner({
-  title: initialTitle = "FOR THE WHOLE FAMILY",
-  subtitle: initialSubtitle = "Everyday beauty, personal care and lifestyle essentials for every member of the family.",
-  imageUrl: initialImageUrl,
+  title,
+  subtitle,
+  imageUrl,
 }: FamilyBannerProps) {
-  const [content, setContent] = useState({
-    title: initialTitle,
-    subtitle: initialSubtitle,
-    imageUrl: initialImageUrl ?? null,
-  });
+  if (!title && !subtitle && !imageUrl) {
+    return null;
+  }
 
-  useEffect(() => {
-    async function loadFamilyData() {
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
-
-      // 1. Try server API first (permanent data/hero.json)
-      try {
-        const res = await fetch("/api/admin/hero");
-        const data = await res.json();
-        if (data.success && data.hero) {
-          const h = data.hero;
-          if (h.family_title || h.family_image_public_id || h.family_image_url) {
-            setContent({
-              title: h.family_title || initialTitle,
-              subtitle: h.family_subtitle || initialSubtitle,
-              imageUrl: h.family_image_public_id
-                ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_900,h_700,c_fill,g_auto/${h.family_image_public_id}`
-                : h.family_image_url || null,
-            });
-            return;
-          }
-        }
-      } catch {
-        // Fall through to localStorage
-      }
-
-      // 2. Fallback: check localStorage (aurelle_storefront_ui has full data)
-      try {
-        const saved = localStorage.getItem("aurelle_storefront_ui");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.family_title || parsed.family_image_public_id || parsed.family_image_url) {
-            setContent({
-              title: parsed.family_title || initialTitle,
-              subtitle: parsed.family_subtitle || initialSubtitle,
-              imageUrl: parsed.family_image_public_id
-                ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_900,h_700,c_fill,g_auto/${parsed.family_image_public_id}`
-                : parsed.family_image_url || null,
-            });
-            return;
-          }
-        }
-      } catch {
-        // Ignore
-      }
-
-      // 3. Legacy fallback: aurelle_admin_settings
-      try {
-        const saved = localStorage.getItem("aurelle_admin_settings");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.family_title || parsed.family_image_public_id) {
-            setContent((prev) => ({
-              title: parsed.family_title || prev.title,
-              subtitle: parsed.family_subtitle || prev.subtitle,
-              imageUrl: parsed.family_image_public_id
-                ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_900,h_700,c_fill,g_auto/${parsed.family_image_public_id}`
-                : prev.imageUrl,
-            }));
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    }
-
-    loadFamilyData();
-  }, [initialTitle, initialSubtitle]);
+  const content = {
+    title: title || "",
+    subtitle: subtitle || "",
+    imageUrl: imageUrl ?? null,
+  };
 
   return (
     <section className="bg-white py-12 md:py-16" aria-label="Family Collection">

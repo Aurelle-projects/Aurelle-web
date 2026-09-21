@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import HeroSection from "@/components/storefront/HeroSection";
 import TrustBadges from "@/components/storefront/TrustBadges";
-import CategoryGrid from "@/components/storefront/CategoryGrid";
+import BrandSection from "@/components/storefront/BrandSection";
+import CategorySection from "@/components/storefront/CategorySection";
 import ProductSection from "@/components/storefront/ProductSection";
 import PromoBanners from "@/components/storefront/PromoBanners";
+import BrandShowcase from "@/components/storefront/BrandShowcase";
+import HomeBanners from "@/components/storefront/HomeBanners";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 
 export const metadata: Metadata = {
@@ -17,11 +21,8 @@ export const metadata: Metadata = {
 // Dynamic fresh data on every request
 export const revalidate = 0;
 
-type HeroContent = {
-  title: string | null;
-  subtitle: string | null;
-  data: Record<string, unknown> | null;
-};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SiteSettingsRow = { key: string; value: any };
 
 type CategoryItem = {
   id: string;
@@ -33,64 +34,105 @@ type CategoryItem = {
   sort_order: number;
 };
 
+type BrandItem = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+};
+
 export default async function HomePage() {
-  let heroContent: HeroContent | null = null;
   let categories: CategoryItem[] = [];
-  let publishedProducts: unknown[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let dbPromoData: Record<string, any> | null = null;
+  let newArrivalProducts: unknown[] = [];
+  let bestSellingProducts: unknown[] = [];
+  let brands: BrandItem[] = [];
+  let siteSettings: SiteSettingsRow[] = [];
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createClient()) as any;
+    let supabase: any;
+    try {
+      supabase = createAdminClient();
+    } catch {
+      supabase = await createClient();
+    }
+
     try {
       const [
-        heroResult,
         categoriesResult,
-        productsResult,
-        promoResult,
+        newArrivalsResult,
+        bestSellersResult,
+        brandsResult,
+        settingsResult,
       ] = await Promise.all([
         supabase
-          .from("homepage_sections")
-          .select("title, subtitle, data")
-          .eq("section_key", "hero")
-          .eq("is_active", true)
-          .single(),
-
-        supabase
           .from("categories")
-          .select("id, name, slug, description, image_url, image_public_id, sort_order")
-          .eq("is_active", true)
-          .is("parent_id", null)
+          .select(
+            "id, name, slug, description, image_url, image_public_id, sort_order, is_active",
+          )
           .order("sort_order", { ascending: true })
-          .limit(10),
+          .limit(20),
 
         supabase
           .from("products")
-          .select(`
+          .select(
+            `
             id, name, slug, sku, retail_price, compare_at_price,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
             inventory(stock_status)
-          `)
+          `,
+          )
           .eq("status", "published")
+          .eq("is_new_arrival", true)
           .order("created_at", { ascending: false })
-          .limit(12),
+          .limit(10),
 
         supabase
-          .from("homepage_sections")
-          .select("title, subtitle, data")
-          .eq("section_key", "promo_dual_banners")
+          .from("products")
+          .select(
+            `
+            id, name, slug, sku, retail_price, compare_at_price,
+            is_new_arrival, is_featured, is_best_seller,
+            brand:brands(name),
+            category:categories(name, slug),
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+            inventory(stock_status)
+          `,
+          )
+          .eq("status", "published")
+          .eq("is_best_seller", true)
+          .order("created_at", { ascending: false })
+          .limit(10),
+
+        supabase
+          .from("brands")
+          .select("id, name, slug, logo_url")
           .eq("is_active", true)
-          .single(),
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true }),
+
+        supabase
+          .from("site_settings")
+          .select("key, value")
+          .in("key", [
+            "hero",
+            "family_banner",
+            "promo_banners",
+            "announcement",
+            "trust_badges",
+            "showcase_section",
+            "home_banners",
+          ]),
       ]);
 
-      heroContent = (heroResult.data as HeroContent | null) ?? null;
       categories = (categoriesResult.data as CategoryItem[]) ?? [];
-      publishedProducts = (productsResult.data as unknown[]) ?? [];
-      dbPromoData = (promoResult?.data?.data as Record<string, any>) ?? null;
+      newArrivalProducts = (newArrivalsResult.data as unknown[]) ?? [];
+      bestSellingProducts = (bestSellersResult.data as unknown[]) ?? [];
+      brands = (brandsResult.data as BrandItem[]) ?? [];
+      siteSettings = (settingsResult.data as SiteSettingsRow[]) ?? [];
     } catch {
       // Graceful degradation — show layout without DB data
     }
@@ -98,109 +140,112 @@ export default async function HomePage() {
     // Supabase client creation failed — continue without DB data
   }
 
-  // ─── Permanent Server Data Loading ───────────────────────────────────────────
-  let savedCategories: CategoryItem[] = [];
-  try {
-    const fs = await import("fs");
-    const path = await import("path");
-    const catPath = path.join(process.cwd(), "data", "categories.json");
-    if (fs.existsSync(catPath)) {
-      savedCategories = JSON.parse(fs.readFileSync(catPath, "utf-8"));
-    }
-  } catch {}
+  // ─── Parse site_settings JSONB rows ───────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings: Record<string, any> = {};
+  for (const row of siteSettings) {
+    settings[row.key] = row.value;
+  }
 
-  let savedHero: Record<string, unknown> | null = null;
-  try {
-    const fs = await import("fs");
-    const path = await import("path");
-    const heroPath = path.join(process.cwd(), "data", "hero.json");
-    if (fs.existsSync(heroPath)) {
-      savedHero = JSON.parse(fs.readFileSync(heroPath, "utf-8"));
-    }
-  } catch {}
+  const heroSettings = settings.hero || {};
+  const familySettings = settings.family_banner || {};
+  const promoSettings = settings.promo_banners || {};
+  const announcementSettings = settings.announcement || {};
+  const badgeSettings = settings.trust_badges || {};
+  const showcaseSettings = settings.showcase_section || {};
+  const homeBannerSettings = settings.home_banners || {};
 
-  // Canonical 10 categories: merges permanently saved server data with DB
-  const displayCategories: CategoryItem[] = AURELLE_CATEGORIES.map((cat, idx) => {
-    const savedCat = savedCategories.find((c) => c.slug === cat.slug);
-    const dbCat = categories.find((c) => c.slug === cat.slug);
-    return {
-      id: dbCat?.id || savedCat?.id || cat.slug,
-      name: cat.name,
-      slug: cat.slug,
-      description: savedCat?.description || dbCat?.description || cat.description,
-      image_url: savedCat?.image_url ?? dbCat?.image_url ?? null,
-      image_public_id: savedCat?.image_public_id ?? dbCat?.image_public_id ?? null,
-      sort_order: cat.sort_order || idx + 1,
-    };
-  });
-
-  // Only show real DB products — no mock fallback
-  const bestSellingProducts = publishedProducts.slice(0, 4);
-
-  const mergedHeroData = {
-    ...(savedHero || {}),
-    ...(heroContent?.data || {}),
+  // Build heroData for HeroSection (flat shape expected by component)
+  const heroData = {
+    hero_title: heroSettings.hero_title || null,
+    hero_subtitle: heroSettings.hero_subtitle || null,
+    hero_tagline: heroSettings.hero_tagline || heroSettings.overline || null,
+    overline: heroSettings.hero_tagline || heroSettings.overline || null,
+    cta_primary_text: heroSettings.cta_primary_text || null,
+    cta_primary_href: heroSettings.cta_primary_href || "/shop",
+    product_image_url: heroSettings.product_image_url || null,
+    product_image_public_id: heroSettings.product_image_public_id || null,
+    background_image_url: heroSettings.background_image_url || null,
+    background_image_public_id: heroSettings.background_image_public_id || null,
+    mobile_image_url: heroSettings.mobile_image_url || null,
+    mobile_image_public_id: heroSettings.mobile_image_public_id || null,
+    // Announcement (for AnnouncementBar)
+    top_announcement: announcementSettings.text || null,
+    currency_label: announcementSettings.currency_label || "UAE | AED",
   };
+
+  // Real DB categories only
+  const displayCategories: CategoryItem[] =
+    categories.length > 0 ? categories : (AURELLE_CATEGORIES as CategoryItem[]);
 
   return (
     <div>
       {/* ─── 1. Hero ─────────────────────────────────────────────── */}
       <HeroSection
-        title={(savedHero?.hero_title as string) || heroContent?.title || null}
-        subtitle={(savedHero?.hero_subtitle as string) || heroContent?.subtitle || null}
-        heroData={mergedHeroData}
+        title={heroData.hero_title}
+        subtitle={heroData.hero_subtitle}
+        heroData={heroData}
       />
 
       {/* ─── 2. Trust Badges ─────────────────────────────────────── */}
-      <TrustBadges />
+      <TrustBadges badges={badgeSettings.badges} />
 
-      {/* ─── 3. Shop By Category ─────────────────────────────────── */}
-      <section className="bg-white py-12 md:py-10 relative overflow-hidden" aria-labelledby="categories-heading">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-10">
-          
-            <h2
-              id="categories-heading"
-              className="text-2xl sm:text-3xl  text-[#1D211F] tracking-tight"
-            >
-              Shop by Category
-            </h2>
-          </div>
-          <CategoryGrid categories={displayCategories} />
-        </div>
-      </section>
+      {/* ─── 3. Brand Slider ─────────────────────────────────────── */}
+      <BrandSection brands={brands} />
 
-     
+      {/* ─── 4. Shop By Category ─────────────────────────────────── */}
+      <CategorySection categories={displayCategories} />
 
-      {/* ─── 5. Best Selling Section — only renders when DB has products ── */}
-      {bestSellingProducts.length > 0 && (
-        <ProductSection
-          title="Best Selling"
-          viewAllHref="/shop"
-          products={bestSellingProducts}
-          emptyMessage="No products in this collection yet."
-          background="white"
-          showBottomButton={true}
-          bottomButtonText="All Products"
-        />
-      )}
-
-      {/* ─── 4. Promotional Dual Banners (Configurable via Admin & Database) ──── */}
-      <PromoBanners
-        leftTagline={dbPromoData?.left?.tagline || (savedHero?.promo_left_tagline as string) || undefined}
-        leftTitle={dbPromoData?.left?.title || (savedHero?.promo_left_title as string) || undefined}
-        leftDiscount={dbPromoData?.left?.discount || (savedHero?.promo_left_discount as string) || undefined}
-        leftBtnText={dbPromoData?.left?.btn_text || (savedHero?.promo_left_btn_text as string) || undefined}
-        leftBtnLink={dbPromoData?.left?.btn_link || (savedHero?.promo_left_btn_link as string) || undefined}
-        leftImageUrl={dbPromoData?.left?.image_url || (savedHero?.promo_left_image_url as string) || null}
-        rightTagline={dbPromoData?.right?.tagline || (savedHero?.promo_right_tagline as string) || undefined}
-        rightTitle={dbPromoData?.right?.title || (savedHero?.promo_right_title as string) || undefined}
-        rightDiscount={dbPromoData?.right?.discount || (savedHero?.promo_right_discount as string) || undefined}
-        rightBtnText={dbPromoData?.right?.btn_text || (savedHero?.promo_right_btn_text as string) || undefined}
-        rightBtnLink={dbPromoData?.right?.btn_link || (savedHero?.promo_right_btn_link as string) || undefined}
-        rightImageUrl={dbPromoData?.right?.image_url || (savedHero?.promo_right_image_url as string) || null}
+      {/* ─── 5. New Arrivals Section — database products only ── */}
+      <ProductSection
+        title="New Arrivals"
+        viewAllHref="/shop"
+        products={newArrivalProducts}
+        maxProducts={10}
+        desktopColumns={6}
+        emptyMessage="No new arrival products yet."
+        background="white"
+        showBottomButton={true}
+        bottomButtonText="All Products"
       />
 
+      {/* ─── 8. Brand Showcase (6-Image Collage + Text) ──── */}
+      <BrandShowcase
+        heading={showcaseSettings.heading}
+        description={showcaseSettings.description}
+        images={showcaseSettings.images || []}
+      />
+
+      {/* ─── 6. Best Selling Section — database products only ── */}
+      <ProductSection
+        title="Best Selling"
+        viewAllHref="/shop"
+        products={bestSellingProducts}
+        maxProducts={10}
+        desktopColumns={5}
+        emptyMessage="No best selling products yet."
+        background="white"
+        showBottomButton={true}
+        bottomButtonText="All Products"
+      />
+
+      {/* ─── 7. Promotional Dual Banners ──── */}
+      <PromoBanners
+        leftTagline={promoSettings.left?.tagline}
+        leftTitle={promoSettings.left?.title}
+        leftDiscount={promoSettings.left?.discount}
+        leftBtnText={promoSettings.left?.btn_text}
+        leftBtnLink={promoSettings.left?.btn_link}
+        leftImageUrl={promoSettings.left?.image_url || null}
+        rightTagline={promoSettings.right?.tagline}
+        rightTitle={promoSettings.right?.title}
+        rightDiscount={promoSettings.right?.discount}
+        rightBtnText={promoSettings.right?.btn_text}
+        rightBtnLink={promoSettings.right?.btn_link}
+        rightImageUrl={promoSettings.right?.image_url || null}
+      />
+
+      <HomeBanners images={homeBannerSettings.images || []} />
     </div>
   );
 }

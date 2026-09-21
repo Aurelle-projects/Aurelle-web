@@ -14,7 +14,8 @@ import {
   Settings,
   ExternalLink,
   ChevronRight,
-  LogOut,
+  Tag,
+  FolderTree,
 } from "lucide-react";
 
 interface NavItem {
@@ -26,7 +27,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/categories", label: "Categories & Images", icon: Layers, badge: "10" },
+  { href: "/admin/categories", label: "Category & Subcategory", icon: Layers },
+  { href: "/admin/brands", label: "Brands", icon: Tag },
   { href: "/admin/hero", label: "Home Management", icon: Sliders },
   { href: "/admin/products", label: "Products Catalog", icon: Package },
   { href: "/admin/orders", label: "Customer Orders", icon: ShoppingBag },
@@ -43,21 +45,18 @@ export default function AdminSidebar() {
       aria-label="Admin Navigation"
     >
       {/* Brand Header */}
-      <div className="p-6 border-b border-white/10 flex flex-col items-center text-center">
+      <div className="p-2 border-b border-white/10 flex flex-col items-center text-center">
         <Link href="/admin" className="flex flex-col items-center gap-2.5 group">
-          <div className="p-2 bg-white/5 rounded-xl border border-white/10 group-hover:border-white/20 transition-all">
+          <div className="p-2 group-hover:border-white/20 transition-all">
             <Image
               src="/logo.png"
               alt="Aurelle Logo"
               width={130}
-              height={65}
-              className="h-9 w-auto object-contain filter brightness-110 drop-shadow-sm"
+              height={130}
+              className="h-16 w-auto object-contain filter brightness-110 drop-shadow-sm"
               priority
             />
           </div>
-          <span className="inline-block px-2.5 py-0.5 text-[10px] font-bold tracking-widest text-[#C9A84C] bg-[#C9A84C]/15 border border-[#C9A84C]/30 rounded-full uppercase">
-            ADMIN CONSOLE
-          </span>
         </Link>
       </div>
 
@@ -73,6 +72,8 @@ export default function AdminSidebar() {
             const isActive =
               item.href === "/admin"
                 ? pathname === "/admin"
+                : item.href === "/admin/categories"
+                ? pathname.startsWith("/admin/categories") || pathname.startsWith("/admin/subcategories")
                 : pathname.startsWith(item.href);
 
             return (
@@ -121,22 +122,7 @@ export default function AdminSidebar() {
           <ExternalLink size={14} className="text-[#C9A84C]" />
           <span>View Live Storefront</span>
         </Link>
-        <button
-          type="button"
-          onClick={async () => {
-            await fetch("/api/admin/auth/logout", { method: "POST" });
-            window.location.href = "/admin";
-          }}
-          className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 hover:text-red-100 bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-500/20 transition-all cursor-pointer"
-        >
-          <LogOut size={14} />
-          <span>Sign Out</span>
-        </button>
-        <p className="text-[10.5px] text-center text-white/50 leading-tight">
-          Aurelle Cosmetics Trading FZ-LLC
-          <br />
-          UAE E-Commerce Platform
-        </p>
+
       </div>
     </aside>
   );

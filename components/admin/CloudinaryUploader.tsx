@@ -121,7 +121,7 @@ export default function CloudinaryUploader({
       case "wide":
         return "w-full h-36 rounded-xl";
       default:
-        return "w-full aspect-square rounded-xl";
+        return "w-full h-32 rounded-xl";
     }
   };
 

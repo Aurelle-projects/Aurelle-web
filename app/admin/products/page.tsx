@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { Search, Eye, Edit, Package, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 
 interface ProductRow {
   id: string;
@@ -24,8 +24,10 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProductRow | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dbCategories, setDbCategories] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     async function loadProducts() {
@@ -72,7 +74,22 @@ export default function AdminProductsPage() {
       }
     }
 
+    async function loadCategories() {
+      try {
+        const supabase = createClient();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
+          .from("categories")
+          .select("id, name")
+          .is("parent_id", null)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        if (data) setDbCategories(data);
+      } catch { /* silent */ }
+    }
+
     loadProducts();
+    loadCategories();
   }, []);
 
   const filtered = products.filter((p) => {
@@ -84,14 +101,16 @@ export default function AdminProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/admin/products?id=${id}`, { method: "DELETE" });
       const result = await res.json();
       if (res.ok && result.success) {
         setProducts((prev) => prev.filter((p) => p.id !== id));
+        setDeleteTarget(null);
       } else {
         alert(result.error || "Failed to delete product.");
       }
@@ -130,9 +149,9 @@ export default function AdminProductsPage() {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="h-10 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer w-full sm:w-auto"
             >
-              <option value="all">All 10 Categories</option>
-              {AURELLE_CATEGORIES.map((cat) => (
-                <option key={cat.slug} value={cat.name}>
+              <option value="all">All Categories</option>
+              {dbCategories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
                   {cat.name}
                 </option>
               ))}
@@ -265,9 +284,8 @@ export default function AdminProductsPage() {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => handleDelete(item.id, item.name)}
-                            disabled={deletingId === item.id}
-                            className="p-1.5 text-[#5C6460] hover:text-red-600 rounded hover:bg-red-50 disabled:opacity-50 transition-colors"
+                            onClick={() => setDeleteTarget(item)}
+                            className="p-1.5 text-[#5C6460] hover:text-red-600 rounded hover:bg-red-50 transition-colors"
                             title="Delete Product"
                           >
                             <Trash2 size={15} />
@@ -282,6 +300,17 @@ export default function AdminProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        itemName={deleteTarget?.name}
+        itemType="product"
+        warningNote="This product will be permanently removed from inventory and the storefront."
+        isLoading={!!deletingId}
+      />
     </div>
   );
 }

@@ -12,6 +12,8 @@ interface ProductSectionProps {
   background?: "white" | "cream";
   showBottomButton?: boolean;
   bottomButtonText?: string;
+  maxProducts?: number;
+  desktopColumns?: 5 | 6;
 }
 
 export default function ProductSection({
@@ -23,11 +25,12 @@ export default function ProductSection({
   background = "white",
   showBottomButton = true,
   bottomButtonText = "All Products",
+  maxProducts = 4,
+  desktopColumns = 6,
 }: ProductSectionProps) {
   if (products.length === 0 && !emptyMessage) return null;
 
-  // Show 4 products across
-  const displayProducts = products.slice(0, 4);
+  const displayProducts = products.slice(0, maxProducts);
 
   return (
     <section
@@ -36,17 +39,17 @@ export default function ProductSection({
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-left mb-8 sm:mb-10">
           {overline && (
             <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-2">
               {overline}
             </p>
           )}
           <h2
-            className="text-2xl sm:text-3xl  text-[#1D211F] tracking-tight"
+            className="text-2xl sm:text-3xl  text-[#1D211F] tracking-tight uppercase font-bold"
            
           >
-           Top Picks
+            {title}
           </h2>
         </div>
 
@@ -57,7 +60,7 @@ export default function ProductSection({
           </div>
         ) : (
           <div
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+            className={`grid grid-cols-2 ${desktopColumns === 5 ? "md:grid-cols-5" : "md:grid-cols-6"} gap-4 sm:gap-6 lg:gap-8`}
             role="list"
             aria-label={`${title} products`}
           >

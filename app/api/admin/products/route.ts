@@ -1,17 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// GET /api/admin/products — Lightweight list for dropdowns (id, name, slug)
+export async function GET() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createAdminClient() as any;
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, slug, category_id, subcategory_id")
+      .eq("is_published", true)
+      .order("name", { ascending: true })
+      .limit(300);
+    if (error) throw error;
+    return NextResponse.json({ success: true, products: data ?? [] });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Failed to fetch products" }, { status: 500 });
+  }
+}
+
 // POST /api/admin/products — Create a new product (bypasses RLS via service role)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      name, slug, sku, category_slug,
+      name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
       retail_price, compare_at_price, wholesale_price, wholesale_moq,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
       stock_quantity, low_stock_threshold,
-      images,
+      images, specifications: incomingSpecs,
     } = body;
 
     if (!name?.trim()) {
@@ -24,9 +43,9 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
-    // Resolve category_id from slug
-    let category_id: string | null = null;
-    if (category_slug) {
+    // Resolve category_id (use direct category_id or lookup by slug)
+    let category_id: string | null = incomingCatId || null;
+    if (!category_id && category_slug) {
       const { data: catData } = await supabase
         .from("categories")
         .select("id")
@@ -34,6 +53,11 @@ export async function POST(req: NextRequest) {
         .single();
       category_id = catData?.id ?? null;
     }
+
+    // Specifications for subcategory metadata
+    const specifications = subcategory_id
+      ? { ...(incomingSpecs || {}), subcategory_id }
+      : (incomingSpecs || null);
 
     // Auto-generate SKU if empty (products.sku is NOT NULL in DB)
     const autoSku = sku?.trim() || `AUR-${name.trim().slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Date.now().toString(36).toUpperCase()}`;
@@ -46,7 +70,9 @@ export async function POST(req: NextRequest) {
         name: name.trim(),
         slug: autoSlug,
         sku: autoSku,
+        brand_id: brand_id || null,
         category_id,
+        specifications,
         description: description || null,
         benefits: benefits || null,
         ingredients: ingredients || null,
@@ -111,12 +137,12 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const {
       id,
-      name, slug, sku, category_slug,
+      name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
       retail_price, compare_at_price, wholesale_price, wholesale_moq,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
       stock_quantity, low_stock_threshold,
-      images,
+      images, specifications: incomingSpecs,
     } = body;
 
     if (!id) {
@@ -127,8 +153,10 @@ export async function PATCH(req: NextRequest) {
     const supabase = createAdminClient() as any;
 
     // Resolve category_id
-    let category_id: string | null = null;
-    if (category_slug) {
+    let category_id: string | null | undefined = undefined;
+    if (incomingCatId !== undefined) {
+      category_id = incomingCatId || null;
+    } else if (category_slug) {
       const { data: catData } = await supabase
         .from("categories")
         .select("id")
@@ -137,29 +165,44 @@ export async function PATCH(req: NextRequest) {
       category_id = catData?.id ?? null;
     }
 
+    // Build update payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updatePayload: any = {
+      name: name?.trim(),
+      slug,
+      sku,
+      description: description || null,
+      benefits: benefits || null,
+      ingredients: ingredients || null,
+      usage_instructions: usage_instructions || null,
+      retail_price: parseFloat(retail_price),
+      compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
+      wholesale_price: wholesale_price ? parseFloat(wholesale_price) : null,
+      wholesale_moq: parseInt(wholesale_moq) || 1,
+      is_published: !!is_published,
+      is_featured: !!is_featured,
+      is_best_seller: !!is_best_seller,
+      is_new_arrival: !!is_new_arrival,
+      is_wholesale_available: !!is_wholesale_available,
+      status: is_published ? "published" : "draft",
+      updated_at: new Date().toISOString(),
+    };
+
+    if (category_id !== undefined) {
+      updatePayload.category_id = category_id;
+    }
+    if (brand_id !== undefined) {
+      updatePayload.brand_id = brand_id || null;
+    }
+    if (subcategory_id !== undefined) {
+      updatePayload.specifications = subcategory_id
+        ? { ...(incomingSpecs || {}), subcategory_id }
+        : null;
+    }
+
     const { error: prodErr } = await supabase
       .from("products")
-      .update({
-        name: name?.trim(),
-        slug,
-        sku,
-        category_id,
-        description: description || null,
-        benefits: benefits || null,
-        ingredients: ingredients || null,
-        usage_instructions: usage_instructions || null,
-        retail_price: parseFloat(retail_price),
-        compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
-        wholesale_price: wholesale_price ? parseFloat(wholesale_price) : null,
-        wholesale_moq: parseInt(wholesale_moq) || 1,
-        is_published: !!is_published,
-        is_featured: !!is_featured,
-        is_best_seller: !!is_best_seller,
-        is_new_arrival: !!is_new_arrival,
-        is_wholesale_available: !!is_wholesale_available,
-        status: is_published ? "published" : "draft",
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", id);
 
     if (prodErr) {

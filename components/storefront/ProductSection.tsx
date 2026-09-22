@@ -46,7 +46,7 @@ export default function ProductSection({
             </p>
           )}
           <h2
-            className="text-xl font-bold text-[#14231B] mb-6 uppercase tracking-wide"
+            className="md:text-xl text-lg font-bold text-[#14231B] mb-6 uppercase tracking-wide"
            
           >
             {title}

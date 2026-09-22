@@ -109,7 +109,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
   return (
     <section className="bg-white py-12 md:py-16" aria-labelledby="all-products-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 id="all-products-heading" className="text-xl font-bold text-[#14231B] mb-6 uppercase tracking-wide">
+        <h2 id="all-products-heading" className="md:text-xl text-lg font-bold text-[#14231B] mb-6 uppercase tracking-wide">
           All Products
         </h2>
 

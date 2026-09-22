@@ -12,7 +12,7 @@ export default function CategorySection({ categories }: CategorySectionProps) {
         <div className="text-start mb-8 sm:mb-10">
           <h2
             id="categories-heading"
-            className="text-xl font-bold text-[#14231B] sm:text-center text-start mb-6 px-4 uppercase tracking-wide"
+            className="md:text-xl text-lg font-bold text-[#14231B] sm:text-center text-start mb-6 px-4 uppercase tracking-wide"
           >
             Shop by Category
           </h2>

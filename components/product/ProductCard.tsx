@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart } from "lucide-react";
 import { getProductImageUrl } from "@/lib/cloudinary/transforms";
 import { formatPrice } from "@/utils/price";
+import { toggleWishlist, isWishlisted as checkWishlisted } from "@/components/storefront/WishlistDrawer";
 
 interface ProductCardProps {
   product: {
@@ -45,6 +46,15 @@ export default function ProductCard({
   isWholesaleUser = false,
 }: ProductCardProps) {
   const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    setIsWishlisted(checkWishlisted(product.id));
+    const onWishlistChange = () => {
+      setIsWishlisted(checkWishlisted(product.id));
+    };
+    window.addEventListener("wishlist-change", onWishlistChange);
+    return () => window.removeEventListener("wishlist-change", onWishlistChange);
+  }, [product.id]);
 
   const images = product.product_images ?? [];
   const primaryImage =
@@ -88,7 +98,7 @@ export default function ProductCard({
               alt={imageAlt}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 25vw"
-              className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div
@@ -117,7 +127,8 @@ export default function ProductCard({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setIsWishlisted((prev) => !prev);
+            const next = toggleWishlist(product.id);
+            setIsWishlisted(next);
           }}
           className="absolute top-2.5 right-2.5 p-1 text-[#1D211F] hover:text-[#183D2B] transition-colors z-10 cursor-pointer"
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}

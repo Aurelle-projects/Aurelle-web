@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense } from "react";
+import React, { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/product/ProductCard";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 import { createClient } from "@/lib/supabase/client";
-import { Search, SlidersHorizontal, Package2 } from "lucide-react";
+import { SlidersHorizontal, Package2, Filter, ChevronDown, X } from "lucide-react";
 
 // Shape of a product row from Supabase
 interface SupabaseProduct {
@@ -18,8 +17,10 @@ interface SupabaseProduct {
   is_new_arrival?: boolean;
   is_best_seller?: boolean;
   is_featured?: boolean;
-  brand?: { name: string } | null;
-  category?: { name: string; slug: string } | null;
+  // Supabase foreign-key joins may return an object OR a single-element array
+  brand?: { name: string; slug: string } | Array<{ name: string; slug: string }> | null;
+  category?: { name: string; slug: string } | Array<{ name: string; slug: string }> | null;
+  subcategory?: { name: string; slug: string } | Array<{ name: string; slug: string }> | null;
   product_images?: Array<{
     cloudinary_public_id: string;
     secure_url: string;
@@ -27,21 +28,148 @@ interface SupabaseProduct {
     is_primary?: boolean;
     sort_order?: number;
   }>;
-  inventory?: { stock_status: string } | null;
+  inventory?: { stock_status: string } | Array<{ stock_status: string }> | null;
+}
+
+// Normalise Supabase join results — they can be an object or a 1-element array
+function norm<T>(val: T | T[] | null | undefined): T | null {
+  if (!val) return null;
+  return Array.isArray(val) ? (val[0] ?? null) : val;
+}
+
+// ── Custom inline-expanding dropdown ────────────────────────────────────────
+interface DropdownOption { label: string; value: string }
+interface InlineDropdownProps {
+  label: string;
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}
+
+function InlineDropdown({ label, value, options, onChange, disabled = false }: InlineDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selectedLabel = options.find(o => o.value === value)?.label ?? label;
+  const isDefault = value === "all" || value === "";
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(prev => !prev)}
+        className={[
+          "h-10 w-full flex items-center justify-between rounded-sm bg-[#F7F5EF] px-3",
+          "text-xs font-semibold text-[#1D211F] outline-none transition-all duration-200",
+          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-[#EDE9DF]",
+          open ? "rounded-b-none bg-[#EDE9DF]" : "",
+        ].join(" ")}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={isDefault ? "text-[#8C938F] font-medium" : "text-[#1D211F]"}>
+          {selectedLabel}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 mr-0.5 text-[#5C6460] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="w-full rounded-b-sm bg-white border border-[#EDE9DF] border-t-0 shadow-md max-h-44 overflow-y-auto z-10"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+        >
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              role="option"
+              aria-selected={opt.value === value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={[
+                "w-full text-left px-3 py-2 text-xs transition-colors duration-150",
+                opt.value === value
+                  ? "bg-[#183D2B]/10 text-[#183D2B] font-semibold"
+                  : "text-[#1D211F] hover:bg-[#F7F5EF]",
+              ].join(" ")}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Product-type filter checkboxes ───────────────────────────────────────────
+interface ProductTypeFilters {
+  featured: boolean;
+  newArrivals: boolean;
+  bestSellers: boolean;
+  topRated: boolean;
 }
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "all";
-  const initialSort = searchParams.get("sort") || "featured";
-  const initialSearch = searchParams.get("search") || "";
+  const initialBrand = searchParams.get("brand") || "all";
+  const initialSubcategory = searchParams.get("subcategory") || searchParams.get("sub") || "all";
+  const initialSort = searchParams.get("sort") || "price-low";
+  const initialFilter = searchParams.get("filter") || "";
 
   const [allProducts, setAllProducts] = useState<SupabaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory);
   const [sortBy, setSortBy] = useState(initialSort);
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [productTypeFilters, setProductTypeFilters] = useState<ProductTypeFilters>({
+    featured: false,
+    newArrivals: initialFilter === "new-arrivals",
+    bestSellers: false,
+    topRated: false,
+  });
+
+  // ── Direct-fetched filter data (independent of products) ─────────────────
+  const [allBrands, setAllBrands] = useState<{ name: string; slug: string }[]>([]);
+  const [allCategories, setAllCategories] = useState<{ name: string; slug: string }[]>([]);
+  const [allSubcategories, setAllSubcategories] = useState<{ name: string; slug: string; category_slug: string }[]>([]);
+
+  useEffect(() => {
+    const filter = searchParams.get("filter") || "";
+    setSelectedCategory(searchParams.get("category") || "all");
+    setSelectedBrand(searchParams.get("brand") || "all");
+    setSelectedSubcategory(searchParams.get("subcategory") || searchParams.get("sub") || "all");
+    setSortBy(searchParams.get("sort") || "price-low");
+    // Sync special filter flags from URL
+    setProductTypeFilters(prev => ({
+      ...prev,
+      newArrivals: filter === "new-arrivals",
+    }));
+    // Always show top view of shop page when category/search params change
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [searchParams]);
+
+  // Ensure scroll to top on initial page mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, []);
 
   // Load real products from Supabase
   useEffect(() => {
@@ -54,8 +182,9 @@ function ShopContent() {
           .select(`
             id, name, slug, sku, retail_price, compare_at_price,
             is_new_arrival, is_featured, is_best_seller,
-            brand:brands(name),
+            brand:brands(name, slug),
             category:categories(name, slug),
+            subcategory:subcategories(name, slug),
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
             inventory(stock_status)
           `)
@@ -63,11 +192,10 @@ function ShopContent() {
           .eq("status", "published")
           .order("created_at", { ascending: false });
 
-        if (!error && data) {
-          setAllProducts(data as SupabaseProduct[]);
-        }
-      } catch {
-        // DB not configured yet — stay with empty state
+        if (error) console.warn("[ShopPage] products:", error.message);
+        if (data) setAllProducts(data as SupabaseProduct[]);
+      } catch (err) {
+        console.error("[ShopPage] Fetch exception:", err);
       } finally {
         setLoading(false);
       }
@@ -75,133 +203,291 @@ function ShopContent() {
     fetchProducts();
   }, []);
 
+  // Load brands, categories, subcategories directly from their own tables
+  useEffect(() => {
+    async function fetchFilterData() {
+      try {
+        const supabase = createClient();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sb = supabase as any;
+
+        const [{ data: brandsData }, { data: catsData }, { data: subsData }] = await Promise.all([
+          sb.from("brands").select("name, slug").eq("is_active", true).order("name"),
+          sb.from("categories").select("name, slug").eq("is_active", true).order("name"),
+          sb.from("subcategories")
+            .select("name, slug, category:categories(slug)")
+            .eq("is_active", true)
+            .order("name"),
+        ]);
+
+        if (brandsData) setAllBrands(brandsData);
+        if (catsData) setAllCategories(catsData);
+        if (subsData) {
+          // Supabase returns category as { slug } object for the join
+          setAllSubcategories(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            subsData.map((s: any) => ({
+              name: s.name,
+              slug: s.slug,
+              category_slug: norm(s.category)?.slug ?? "",
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("[ShopPage] Filter data fetch exception:", err);
+      }
+    }
+    fetchFilterData();
+  }, []);
+
   const filteredProducts = useMemo(() => {
     return allProducts
       .filter((product) => {
-        if (
-          selectedCategory !== "all" &&
-          product.category?.slug !== selectedCategory
-        ) return false;
+        const cat = norm(product.category);
+        const brand = norm(product.brand);
+        const sub = norm(product.subcategory);
+        const inv = norm(product.inventory);
 
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchName = product.name.toLowerCase().includes(q);
-          const matchCat = product.category?.name.toLowerCase().includes(q) ?? false;
-          const matchBrand = product.brand?.name.toLowerCase().includes(q) ?? false;
-          if (!matchName && !matchCat && !matchBrand) return false;
+        if (selectedCategory !== "all" && cat?.slug !== selectedCategory) return false;
+        if (selectedBrand !== "all" && brand?.slug !== selectedBrand) return false;
+        if (selectedSubcategory !== "all" && sub?.slug !== selectedSubcategory) return false;
+        if (maxPrice > 0 && product.retail_price > maxPrice) return false;
+        if (inStockOnly && inv?.stock_status === "out_of_stock") return false;
+
+        // Product type filters — product must match at least one active type
+        const anyTypeActive =
+          productTypeFilters.featured ||
+          productTypeFilters.newArrivals ||
+          productTypeFilters.bestSellers ||
+          productTypeFilters.topRated;
+        if (anyTypeActive) {
+          const matchesFeatured = productTypeFilters.featured && product.is_featured;
+          const matchesNew = productTypeFilters.newArrivals && product.is_new_arrival;
+          const matchesBest = productTypeFilters.bestSellers && product.is_best_seller;
+          const matchesTopRated = productTypeFilters.topRated && product.is_featured;
+          if (!matchesFeatured && !matchesNew && !matchesBest && !matchesTopRated) return false;
         }
-
-        if (
-          inStockOnly &&
-          product.inventory?.stock_status === "out_of_stock"
-        ) return false;
 
         return true;
       })
       .sort((a, b) => {
         if (sortBy === "price-low") return a.retail_price - b.retail_price;
         if (sortBy === "price-high") return b.retail_price - a.retail_price;
-        if (sortBy === "newest")
-          return (b.is_new_arrival ? 1 : 0) - (a.is_new_arrival ? 1 : 0);
-        if (sortBy === "bestseller")
-          return (b.is_best_seller ? 1 : 0) - (a.is_best_seller ? 1 : 0);
-        return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0);
-      });
-  }, [allProducts, selectedCategory, sortBy, searchQuery, inStockOnly]);
+        return 0;
+      })
+      // Normalise Supabase join fields from T | T[] | null → T | null
+      // so the shape matches ProductCardProps exactly.
+      .map((product) => ({
+        ...product,
+        brand: norm(product.brand),
+        category: norm(product.category),
+        subcategory: norm(product.subcategory),
+        inventory: norm(product.inventory),
+      }));
+  }, [allProducts, selectedCategory, selectedBrand, selectedSubcategory, sortBy, inStockOnly, maxPrice, productTypeFilters]);
+
+  const priceLimit = useMemo(
+    () => Math.max(0, ...allProducts.map((product) => product.retail_price)),
+    [allProducts],
+  );
+  const activeMaxPrice = maxPrice || priceLimit;
+
+  // Filter options sourced directly from DB tables
+  const brandOptions = [
+    { label: "All Brands", value: "all" },
+    ...allBrands.map(b => ({ label: b.name, value: b.slug })),
+  ];
+  const categoryOptions = [
+    { label: "All Categories", value: "all" },
+    ...allCategories.map(c => ({ label: c.name, value: c.slug })),
+  ];
+  // Filter subcategories client-side by selected category
+  const visibleSubcategories = selectedCategory === "all"
+    ? allSubcategories
+    : allSubcategories.filter(s => s.category_slug === selectedCategory);
+  const subcategoryOptions = [
+    { label: "All Subcategories", value: "all" },
+    ...visibleSubcategories.map(s => ({ label: s.name, value: s.slug })),
+  ];
+
+  const handleClearFilters = () => {
+    setSelectedBrand("all");
+    setSelectedCategory("all");
+    setSelectedSubcategory("all");
+    setInStockOnly(false);
+    setMaxPrice(0);
+    setSortBy("price-low");
+    setProductTypeFilters({ featured: false, newArrivals: false, bestSellers: false, topRated: false });
+  };
+
+  const toggleTypeFilter = (key: keyof ProductTypeFilters) => {
+    setProductTypeFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const anyFilterActive =
+    selectedBrand !== "all" ||
+    selectedCategory !== "all" ||
+    selectedSubcategory !== "all" ||
+    inStockOnly ||
+    maxPrice > 0 ||
+    productTypeFilters.featured ||
+    productTypeFilters.newArrivals ||
+    productTypeFilters.bestSellers ||
+    productTypeFilters.topRated;
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen">
-      {/* Page Header */}
-      <div className="bg-white border-b border-[#DCCFB9]/40 py-8 md:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-[11px] font-extrabold tracking-[0.18em] uppercase text-[#183D2B] mb-2">
-            The Aurelle Catalog
-          </p>
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-[#1D211F] tracking-tight mb-2">
-            Elevated Everyday Essentials
-          </h1>
-          <p className="text-sm text-[#5C6460] max-w-lg mx-auto">
-            Beauty, personal care and lifestyle formulations curated for the UAE.
-          </p>
-        </div>
-      </div>
+  
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Filter Controls */}
-        <div className="bg-white rounded-2xl border border-[#DCCFB9]/50 shadow-xs p-4 sm:p-5 space-y-4">
-          {/* Search + Sort row */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1 max-w-lg">
-              <Search
-                size={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C938F]"
-              />
-              <input
-                type="text"
-                placeholder="Search products, brand, or category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 bg-[#F7F5EF] border border-[#DCCFB9]/80 rounded-xl text-sm text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 transition-all"
-              />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+          <aside className="h-fit bg-white p-5 shadow-xs lg:sticky lg:top-24">
+            {/* Header */}
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[#183D2B]">
+                <Filter size={16} />Filters
+              </div>
+              {anyFilterActive && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#183D2B] hover:text-[#102D20] transition-colors"
+                >
+                  <X size={11} />Clear
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#1D211F] whitespace-nowrap">
+            <div className="space-y-4">
+
+              {/* ── Product Type ─── */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8C938F] mb-1">Product Type</p>
+                <div className="divide-y divide-[#F0EBE3]">
+                  {([
+                    { key: "featured" as const, label: "Featured" },
+                    { key: "newArrivals" as const, label: "New Arrivals" },
+                    { key: "bestSellers" as const, label: "Best Sellers" },
+                    { key: "topRated" as const, label: "Top Rated" },
+                  ]).map(({ key, label }) => {
+                    const active = productTypeFilters[key];
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleTypeFilter(key)}
+                        className="w-full flex items-center justify-between py-2 text-left group"
+                      >
+                        <span className={[
+                          "text-xs font-medium transition-colors",
+                          active ? "text-[#183D2B] font-semibold" : "text-[#1D211F] group-hover:text-[#183D2B]",
+                        ].join(" ")}>
+                          {label}
+                        </span>
+                        <span className={[
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-150",
+                          active
+                            ? "bg-[#183D2B] border-[#183D2B]"
+                            : "border-[#DCCFB9] group-hover:border-[#183D2B]",
+                        ].join(" ")}>
+                          {active && (
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                              <path d="M1.5 4L3.2 5.7L6.5 2.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t border-[#DCCFB9]/40" />
+
+              {/* ── Brand ─── */}
+              <InlineDropdown
+                label="All Brands"
+                value={selectedBrand}
+                options={brandOptions}
+                onChange={setSelectedBrand}
+              />
+
+              {/* ── Category ─── */}
+              <InlineDropdown
+                label="All Categories"
+                value={selectedCategory}
+                options={categoryOptions}
+                onChange={(v) => { setSelectedCategory(v); setSelectedSubcategory("all"); }}
+              />
+
+              {/* ── Subcategory ─── */}
+              <InlineDropdown
+                label="All Subcategories"
+                value={selectedSubcategory}
+                options={subcategoryOptions}
+                onChange={setSelectedSubcategory}
+                disabled={visibleSubcategories.length === 0}
+              />
+
+              <div className="border-t border-[#DCCFB9]/40" />
+
+              {/* ── Price ─── */}
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8C938F]">Price</p>
+                  <span className="text-xs font-bold text-[#183D2B]">AED {activeMaxPrice.toLocaleString()}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={priceLimit || 1}
+                  step="1"
+                  value={activeMaxPrice}
+                  onChange={(e) => setMaxPrice(Number(e.target.value))}
+                  className="w-full accent-[#183D2B] h-1"
+                  disabled={!priceLimit}
+                  aria-label="Maximum price"
+                />
+                <div className="mt-1.5 flex justify-between text-[10px] text-[#8C938F]">
+                  <span>AED 0</span>
+                  <span>AED {priceLimit.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-[#DCCFB9]/40" />
+
+              {/* ── Sort ─── */}
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={13} className="shrink-0 text-[#8C938F]" />
+                <InlineDropdown
+                  label="Sort By"
+                  value={sortBy}
+                  options={[
+                    { label: "Price: Low to High", value: "price-low" },
+                    { label: "Price: High to Low", value: "price-high" },
+                  ]}
+                  onChange={setSortBy}
+                />
+              </div>
+
+              <div className="border-t border-[#DCCFB9]/40" />
+
+              {/* ── In Stock ─── */}
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={inStockOnly}
                   onChange={(e) => setInStockOnly(e.target.checked)}
-                  className="w-4 h-4 rounded accent-[#183D2B]"
+                  className="h-3.5 w-3.5 accent-[#183D2B]"
                 />
-                In Stock Only
+                <span className="text-xs font-semibold text-[#1D211F] group-hover:text-[#183D2B] transition-colors">
+                  In Stock Only
+                </span>
               </label>
 
-              <div className="flex items-center gap-1.5">
-                <SlidersHorizontal size={14} className="text-[#5C6460]" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="h-10 px-3 bg-[#F7F5EF] border border-[#DCCFB9]/80 rounded-xl text-xs font-bold text-[#1D211F] outline-none cursor-pointer"
-                >
-                  <option value="featured">Featured</option>
-                  <option value="newest">New Arrivals</option>
-                  <option value="bestseller">Best Sellers</option>
-                  <option value="price-low">Price: Low → High</option>
-                  <option value="price-high">Price: High → Low</option>
-                </select>
-              </div>
             </div>
-          </div>
-
-          {/* Category Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("all")}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
-                selectedCategory === "all"
-                  ? "bg-[#183D2B] text-white shadow-sm"
-                  : "bg-[#F7F5EF] text-[#1D211F] border border-[#DCCFB9]/60 hover:bg-[#DCCFB9]/30"
-              }`}
-            >
-              All
-            </button>
-            {AURELLE_CATEGORIES.map((cat) => (
-              <button
-                key={cat.slug}
-                type="button"
-                onClick={() => setSelectedCategory(cat.slug)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
-                  selectedCategory === cat.slug
-                    ? "bg-[#183D2B] text-white shadow-sm"
-                    : "bg-[#F7F5EF] text-[#1D211F] border border-[#DCCFB9]/60 hover:bg-[#DCCFB9]/30"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
+          </aside>
+          <main className="min-w-0">
 
         {/* Loading skeleton */}
         {loading && (
@@ -253,6 +539,8 @@ function ShopContent() {
               type="button"
               onClick={() => {
                 setSelectedCategory("all");
+                setSelectedBrand("all");
+                setSelectedSubcategory("all");
                 setSearchQuery("");
                 setInStockOnly(false);
               }}
@@ -266,12 +554,12 @@ function ShopContent() {
         {/* Product Grid */}
         {!loading && filteredProducts.length > 0 && (
           <>
-            <p className="text-xs text-[#5C6460] px-1">
+            <p className="text-xs text-[#5C6460] pb-4">
               Showing <strong className="text-[#1D211F]">{filteredProducts.length}</strong> products
               {selectedCategory !== "all" && (
                 <>
                   {" "}in <strong className="text-[#183D2B]">
-                    {AURELLE_CATEGORIES.find((c) => c.slug === selectedCategory)?.name}
+                    {allCategories.find((c) => c.slug === selectedCategory)?.name || selectedCategory}
                   </strong>
                   <button
                     type="button"
@@ -290,6 +578,8 @@ function ShopContent() {
             </div>
           </>
         )}
+          </main>
+        </div>
       </div>
     </div>
   );

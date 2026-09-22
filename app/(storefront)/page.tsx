@@ -9,7 +9,8 @@ import ProductSection from "@/components/storefront/ProductSection";
 import PromoBanners from "@/components/storefront/PromoBanners";
 import BrandShowcase from "@/components/storefront/BrandShowcase";
 import HomeBanners from "@/components/storefront/HomeBanners";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
+import TopRatedProducts from "@/components/storefront/TopRatedProducts";
+import AllProductsSection from "@/components/storefront/AllProductsSection";
 
 export const metadata: Metadata = {
   title: "Aurelle — Everyday Essentials. Elevated.",
@@ -45,6 +46,8 @@ export default async function HomePage() {
   let categories: CategoryItem[] = [];
   let newArrivalProducts: unknown[] = [];
   let bestSellingProducts: unknown[] = [];
+  let topRatedProducts: unknown[] = [];
+  let allProducts: unknown[] = [];
   let brands: BrandItem[] = [];
   let siteSettings: SiteSettingsRow[] = [];
 
@@ -61,7 +64,9 @@ export default async function HomePage() {
       const [
         categoriesResult,
         newArrivalsResult,
+        topRatedResult,
         bestSellersResult,
+        allProductsResult,
         brandsResult,
         settingsResult,
       ] = await Promise.all([
@@ -70,6 +75,8 @@ export default async function HomePage() {
           .select(
             "id, name, slug, description, image_url, image_public_id, sort_order, is_active",
           )
+          .is("parent_id", null)
+          .eq("is_active", true)
           .order("sort_order", { ascending: true })
           .limit(20),
 
@@ -92,6 +99,17 @@ export default async function HomePage() {
 
         supabase
           .from("products")
+          .select(`
+            id, name, slug, retail_price,
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+            reviews(rating)
+          `)
+          .eq("status", "published")
+          .eq("reviews.is_published", true)
+          .limit(100),
+
+        supabase
+          .from("products")
           .select(
             `
             id, name, slug, sku, retail_price, compare_at_price,
@@ -106,6 +124,21 @@ export default async function HomePage() {
           .eq("is_best_seller", true)
           .order("created_at", { ascending: false })
           .limit(10),
+
+        supabase
+          .from("products")
+          .select(
+            `
+            id, name, slug, sku, retail_price, compare_at_price,
+            is_new_arrival, is_featured, is_best_seller,
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
+            inventory(stock_status)
+          `,
+          )
+          .eq("is_published", true)
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .limit(12),
 
         supabase
           .from("brands")
@@ -131,6 +164,19 @@ export default async function HomePage() {
       categories = (categoriesResult.data as CategoryItem[]) ?? [];
       newArrivalProducts = (newArrivalsResult.data as unknown[]) ?? [];
       bestSellingProducts = (bestSellersResult.data as unknown[]) ?? [];
+      topRatedProducts = ((topRatedResult.data as any[]) ?? [])
+        .map((product) => {
+          const ratings = (product.reviews ?? []).map((review: { rating: number }) => review.rating);
+          const rating = ratings.length > 0
+            ? ratings.reduce((sum: number, value: number) => sum + value, 0) / ratings.length
+            : 0;
+          return { ...product, rating, reviews_count: ratings.length };
+        })
+        .filter((product) => product.rating > 0)
+        .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count)
+        .slice(0, 10);
+
+      allProducts = (allProductsResult.data as unknown[]) ?? [];
       brands = (brandsResult.data as BrandItem[]) ?? [];
       siteSettings = (settingsResult.data as SiteSettingsRow[]) ?? [];
     } catch {
@@ -174,9 +220,8 @@ export default async function HomePage() {
     currency_label: announcementSettings.currency_label || "UAE | AED",
   };
 
-  // Real DB categories only
-  const displayCategories: CategoryItem[] =
-    categories.length > 0 ? categories : (AURELLE_CATEGORIES as CategoryItem[]);
+  // Real DB categories only — no fallback/mock data
+  const displayCategories: CategoryItem[] = categories;
 
   return (
     <div>
@@ -229,6 +274,12 @@ export default async function HomePage() {
         bottomButtonText="All Products"
       />
 
+      <TopRatedProducts products={topRatedProducts as any[]} />
+
+      
+
+        <HomeBanners images={homeBannerSettings.images || []} />
+
       {/* ─── 7. Promotional Dual Banners ──── */}
       <PromoBanners
         leftTagline={promoSettings.left?.tagline}
@@ -245,7 +296,8 @@ export default async function HomePage() {
         rightImageUrl={promoSettings.right?.image_url || null}
       />
 
-      <HomeBanners images={homeBannerSettings.images || []} />
+<AllProductsSection initialProducts={allProducts as any[]} />
+    
     </div>
   );
 }

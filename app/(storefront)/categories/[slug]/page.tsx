@@ -47,7 +47,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
           : matched.image_url || null;
       }
     }
-  } catch {}
+  } catch { }
 
   // Fetch real products from DB for this category — no mock fallback
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,7 +72,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     if (!error && data) {
       products = data;
     }
-  } catch {}
+  } catch { }
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-14">

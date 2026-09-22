@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,6 +17,11 @@ import {
 import type { UserRole } from "@/types/database";
 import { useCart } from "@/context/CartContext";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
+import AccountAuthModal from "@/components/auth/AccountAuthModal";
+import CartDrawer from "@/components/storefront/CartDrawer";
+import WishlistDrawer, { getWishlist } from "@/components/storefront/WishlistDrawer";
+import { createClient } from "@/utils/supabase/client";
+import type { ProductItem } from "@/lib/products/mock-products";
 
 export interface NavDropdownItem {
   href: string;
@@ -45,6 +50,15 @@ interface HeaderProps {
   wishlistCount?: number;
   navBrands?: NavBrand[];
   navCategories?: NavCategory[];
+  topRatedProducts?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    retail_price: number;
+    rating: number;
+    reviews_count: number;
+    product_images?: Array<{ secure_url?: string; alt_text?: string | null; is_primary?: boolean }>;
+  }>;
 }
 
 /** Builds the shared nav link structure from DB data. */
@@ -62,15 +76,15 @@ function buildNavLinks(
 
   const categoryDropdown: NavDropdownItem[] = [
     ...navCategories.map((c) => ({
-      href: `/categories/${c.slug}`,
+      href: `/shop?category=${c.slug}`,
       label: c.name,
     })),
-    { href: "/categories", label: "All Categories" },
+    { href: "/shop", label: "All Categories" },
   ];
 
   return [
     { href: "/", label: "Home" },
-    { href: "/new-arrivals", label: "New Arrivals" },
+    { href: "/shop?filter=new-arrivals", label: "New Arrivals" },
     { href: "/shop", label: "Products" },
     { href: "/shop?filter=brands", label: "Shop by Brand", dropdown: brandDropdown },
     { href: "/categories", label: "Shop by Category", dropdown: categoryDropdown },
@@ -93,6 +107,7 @@ export default function Header({
   wishlistCount = 0,
   navBrands = [],
   navCategories = [],
+  topRatedProducts = [],
 }: HeaderProps) {
   const navLinks = buildNavLinks(navBrands, navCategories);
   const pathname = usePathname();
@@ -102,8 +117,15 @@ export default function Header({
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [wishlistDrawerOpen, setWishlistDrawerOpen] = useState(false);
+  const [wishlistedItems, setWishlistedItems] = useState<ProductItem[]>([]);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"login" | "signup">("login");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accountCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +138,15 @@ export default function Header({
 
   function closeDropdown() {
     hoverTimer.current = setTimeout(() => setActiveDropdown(null), 120);
+  }
+
+  function openAccount() {
+    if (accountCloseTimer.current) clearTimeout(accountCloseTimer.current);
+    setAccountOpen(true);
+  }
+
+  function closeAccount() {
+    accountCloseTimer.current = setTimeout(() => setAccountOpen(false), 150);
   }
 
   // Scroll listener with hysteresis deadband and requestAnimationFrame to eliminate any jitter/shaking
@@ -176,8 +207,72 @@ export default function Header({
     }
   }, [mobileSearchOpen]);
 
-  const isAuthenticated = !!userRole;
-  const isAdmin = userRole === "admin" || userRole === "super_admin";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentProfile, setCurrentProfile] = useState<{ full_name?: string | null; email?: string | null } | null>(null);
+
+  // Sync wishlist from localStorage on open/close events
+  const [wishlistCount2, setWishlistCount2] = useState(0);
+  const syncWishlist = useCallback(() => {
+    const ids = getWishlist();
+    setWishlistCount2(ids.length);
+    // We only have ids — show count in header badge (full items managed inside drawer)
+    setWishlistedItems((prev) => {
+      if (ids.length === 0) return [];
+      return prev.filter((p) => ids.includes(p.id));
+    });
+  }, []);
+
+  useEffect(() => {
+    syncWishlist();
+    window.addEventListener("wishlist-change", syncWishlist);
+    return () => window.removeEventListener("wishlist-change", syncWishlist);
+  }, [syncWishlist]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .single()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data }: any) => {
+            if (data) setCurrentProfile(data);
+          });
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", session.user.id)
+          .single()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data }: any) => {
+            if (data) setCurrentProfile(data);
+          });
+      } else {
+        setCurrentProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const isAuthenticated = Boolean(currentUser || userRole);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -224,11 +319,10 @@ export default function Header({
                   <>
                     <button
                       type="button"
-                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-0.5 uppercase transition-colors ${
-                        isActive || isOpen
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-0.5 uppercase transition-colors ${isActive || isOpen
                           ? "text-[#183D2B] font-semibold"
                           : "text-[#1D211F] hover:text-[#183D2B]"
-                      }`}
+                        }`}
                       aria-expanded={isOpen}
                       aria-haspopup="true"
                     >
@@ -262,7 +356,11 @@ export default function Header({
                                     <li key={item.href}>
                                       <Link
                                         href={item.href}
-                                        onClick={() => setActiveDropdown(null)}
+                                        scroll={true}
+                                        onClick={() => {
+                                          setActiveDropdown(null);
+                                          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+                                        }}
                                         className="block px-3 py-1.5 text-[12px] text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors whitespace-nowrap"
                                       >
                                         {item.label}
@@ -280,11 +378,10 @@ export default function Header({
                 ) : (
                   <Link
                     href={link.href}
-                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-0.5 relative transition-colors ${
-                      isActive
+                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-0.5 relative transition-colors ${isActive
                         ? "text-[#183D2B] font-semibold"
                         : "text-[#1D211F] hover:text-[#183D2B]"
-                    }`}
+                      }`}
                   >
                     {link.label}
                   </Link>
@@ -321,11 +418,10 @@ export default function Header({
                   <>
                     <button
                       type="button"
-                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-1 px-1 uppercase transition-colors ${
-                        isActive || isOpen
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-1 px-1 uppercase transition-colors ${isActive || isOpen
                           ? "text-[#183D2B] font-semibold"
                           : "text-[#1D211F] hover:text-[#183D2B]"
-                      }`}
+                        }`}
                       aria-expanded={isOpen}
                       aria-haspopup="true"
                     >
@@ -359,7 +455,11 @@ export default function Header({
                                     <li key={item.href}>
                                       <Link
                                         href={item.href}
-                                        onClick={() => setActiveDropdown(null)}
+                                        scroll={true}
+                                        onClick={() => {
+                                          setActiveDropdown(null);
+                                          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+                                        }}
                                         className="block px-3 py-1.5 text-[12px] text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors whitespace-nowrap"
                                       >
                                         {item.label}
@@ -377,11 +477,10 @@ export default function Header({
                 ) : (
                   <Link
                     href={link.href}
-                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-1 px-1 relative transition-colors ${
-                      isActive
+                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-1 px-1 relative transition-colors ${isActive
                         ? "text-[#183D2B] font-semibold"
                         : "text-[#1D211F] hover:text-[#183D2B]"
-                    }`}
+                      }`}
                   >
                     {link.label}
                   </Link>
@@ -419,8 +518,8 @@ export default function Header({
                   height={110}
                   priority
                   className={`w-auto object-contain block ${isScrolled
-                      ? "h-11 md:h-[46px]"
-                      : "h-12 sm:h-14 md:h-[80px]"
+                    ? "h-11 md:h-[46px]"
+                    : "h-12 sm:h-14 md:h-[80px]"
                     }`}
                 />
               </Link>
@@ -477,33 +576,96 @@ export default function Header({
                       </button>
                     )}
 
-                    <Link
-                      href={isAuthenticated ? "/account" : "/login"}
-                      className="flex flex-col items-center gap-0.5 text-[#1D211F] hover:text-[#183D2B] transition-colors p-1"
+                    <div
+                      onMouseEnter={openAccount}
+                      onMouseLeave={closeAccount}
+                      className="relative flex flex-col items-center gap-0.5 text-[#1D211F] hover:text-[#183D2B] transition-colors p-1"
                       aria-label={isAuthenticated ? "My account" : "Sign in"}
                     >
                       <User size={19} strokeWidth={1.6} />
                       <span className="text-[11px] font-semibold tracking-tight">Account</span>
-                    </Link>
+                      {accountOpen && (
+                        <span
+                          onMouseEnter={openAccount}
+                          onMouseLeave={closeAccount}
+                          className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl bg-white p-2 text-left shadow-2xl border border-[#EDE9DF]/80"
+                        >
+                          {isAuthenticated ? (
+                            <>
+                              <div className="px-3 py-2 border-b border-[#EDE9DF]/60 mb-1">
+                                <p className="text-[10px] uppercase font-bold text-[#8C938F] tracking-wider">Signed In As</p>
+                                <p className="text-xs font-semibold text-[#183D2B] truncate">
+                                  {currentProfile?.full_name || currentUser?.email?.split("@")[0] || "My Account"}
+                                </p>
+                              </div>
+                              <Link href="/account" onClick={() => setAccountOpen(false)} className="block px-3 py-2 text-xs font-medium text-[#1D211F] hover:bg-[#F7F5EF] rounded-md transition-colors">My Profile</Link>
+                              <Link href="/account?tab=orders" onClick={() => setAccountOpen(false)} className="block px-3 py-2 text-xs font-medium text-[#1D211F] hover:bg-[#F7F5EF] rounded-md transition-colors">Recent Orders</Link>
+                              <Link href="/account?tab=addresses" onClick={() => setAccountOpen(false)} className="block px-3 py-2 text-xs font-medium text-[#1D211F] hover:bg-[#F7F5EF] rounded-md transition-colors">Saved Addresses</Link>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setAccountOpen(false);
+                                  const supabase = createClient();
+                                  await supabase.auth.signOut();
+                                  window.location.assign("/");
+                                }}
+                                className="block w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors border-t border-[#EDE9DF]/40 mt-1 cursor-pointer"
+                              >
+                                Sign Out
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAuthModalMode("login");
+                                  setAuthModalOpen(true);
+                                  setAccountOpen(false);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-xs font-semibold text-[#183D2B] hover:bg-[#F7F5EF] rounded-md transition-colors cursor-pointer"
+                              >
+                                Log In
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAuthModalMode("signup");
+                                  setAuthModalOpen(true);
+                                  setAccountOpen(false);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-xs font-medium text-[#5C6460] hover:bg-[#F7F5EF] hover:text-[#183D2B] rounded-md transition-colors cursor-pointer"
+                              >
+                                Sign Up
+                              </button>
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </div>
 
-                    <Link
-                      href="/account/wishlist"
+                    {/* Wishlist button → drawer */}
+                    <button
+                      type="button"
+                      onClick={() => setWishlistDrawerOpen(true)}
                       className="flex flex-col items-center gap-0.5 text-[#1D211F] hover:text-[#183D2B] transition-colors p-1"
-                      aria-label={`Wishlist${wishlistCount > 0 ? `, ${wishlistCount} items` : ""}`}
+                      aria-label={`Wishlist${wishlistCount2 > 0 ? `, ${wishlistCount2} items` : ""}`}
                     >
                       <div className="relative flex items-center justify-center">
                         <Heart size={19} strokeWidth={1.6} />
-                        {wishlistCount > 0 && (
+                        {wishlistCount2 > 0 && (
                           <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 bg-[#183D2B] text-white text-[9.5px] font-bold rounded-full flex items-center justify-center border-[1.5px] border-white leading-none">
-                            {wishlistCount > 99 ? "99+" : wishlistCount}
+                            {wishlistCount2 > 99 ? "99+" : wishlistCount2}
                           </span>
                         )}
                       </div>
                       <span className="text-[11px] font-semibold tracking-tight">Wishlist</span>
-                    </Link>
+                    </button>
 
-                    <Link
-                      href="/cart"
+                    {/* Cart button → drawer */}
+                    <button
+                      type="button"
+                      onClick={() => setCartDrawerOpen(true)}
                       className="flex flex-col items-center gap-0.5 text-[#1D211F] hover:text-[#183D2B] transition-colors p-1"
                       aria-label={`Shopping cart${liveCartCount > 0 ? `, ${liveCartCount} items` : ""}`}
                     >
@@ -514,7 +676,7 @@ export default function Header({
                         </span>
                       </div>
                       <span className="text-[11px] font-semibold tracking-tight">Cart</span>
-                    </Link>
+                    </button>
                   </div>
                 </div>
 
@@ -555,9 +717,11 @@ export default function Header({
                 >
                   {mobileSearchOpen ? <X size={20} strokeWidth={1.75} /> : <Search size={20} strokeWidth={1.75} />}
                 </button>
-                <Link
-                  href="/cart"
+                {/* Mobile Cart → drawer */}
+                <button
+                  type="button"
                   className="flex items-center p-1 text-[#1D211F] hover:text-[#183D2B]"
+                  onClick={() => setCartDrawerOpen(true)}
                   aria-label="Cart"
                 >
                   <div className="relative">
@@ -566,7 +730,7 @@ export default function Header({
                       {liveCartCount > 99 ? "99+" : liveCartCount}
                     </span>
                   </div>
-                </Link>
+                </button>
                 <button
                   className="p-1.5 text-[#1D211F] hover:text-[#183D2B]"
                   onClick={() => setMobileMenuOpen(true)}
@@ -731,31 +895,59 @@ export default function Header({
                     Contact Us
                   </Link>
                 </li>
-                {isAdmin && (
-                  <li>
-                    <Link
-                      href="/admin"
-                      className="block px-3 py-2 text-sm font-bold text-[#183D2B] rounded-lg hover:bg-[#F7F5EF] transition-colors"
-                    >
-                      Admin Console
-                    </Link>
-                  </li>
-                )}
               </ul>
             </nav>
 
-            <div className="p-4 border-t border-[#DCCFB9]/40">
-              <Link
-                href={isAuthenticated ? "/account" : "/login"}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors"
-              >
-                <User size={18} strokeWidth={1.75} aria-hidden="true" />
-                {isAuthenticated ? "My Account" : "Sign In"}
-              </Link>
+            <div className="p-4 border-t border-[#DCCFB9]/40 space-y-2">
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href="/account"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors"
+                  >
+                    <User size={18} strokeWidth={1.75} aria-hidden="true" />
+                    My Account
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      const supabase = createClient();
+                      await supabase.auth.signOut();
+                      window.location.assign("/");
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md border border-[#EDE9DF] text-xs font-medium text-[#5C6460] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalMode("login");
+                    setAuthModalOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors cursor-pointer"
+                >
+                  <User size={18} strokeWidth={1.75} aria-hidden="true" />
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
         </>
       )}
+      <AccountAuthModal open={authModalOpen} initialMode={authModalMode} onClose={() => setAuthModalOpen(false)} />
+      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
+      <WishlistDrawer
+        open={wishlistDrawerOpen}
+        onClose={() => setWishlistDrawerOpen(false)}
+        wishlistedProducts={wishlistedItems}
+        topRatedProducts={topRatedProducts}
+      />
     </>
   );
 }

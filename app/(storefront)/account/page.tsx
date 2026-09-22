@@ -21,6 +21,8 @@ import {
   Mail,
   Home,
   Briefcase,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import AccountAuthModal from "@/components/auth/AccountAuthModal";
@@ -43,6 +45,7 @@ export interface Address {
 
 export interface OrderItem {
   id: string;
+  product_id?: string | null;
   product_snapshot?: {
     name?: string;
     image?: string;
@@ -83,8 +86,10 @@ function AccountContent() {
   const router = useRouter();
   const initialTab = searchParams.get("tab") || "profile";
 
-  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "addresses">(
-    initialTab === "orders" || initialTab === "addresses" ? initialTab : "profile"
+  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "addresses" | "reviews">(
+    initialTab === "orders" || initialTab === "addresses" || initialTab === "reviews"
+      ? initialTab
+      : "profile"
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,10 +127,36 @@ function AccountContent() {
   const [addressSaving, setAddressSaving] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
 
+  // Reviews state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [loadingUserReviews, setLoadingUserReviews] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<{
+    productId: string;
+    productName: string;
+    productImage?: string | null;
+    orderId: string;
+    orderNumber: string;
+    existingRating?: number;
+    existingBody?: string;
+  } | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState<number>(0);
+  const [reviewBody, setReviewBody] = useState<string>("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
+
   // Keep tab synced with query param
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam === "orders" || tabParam === "addresses" || tabParam === "profile") {
+    if (
+      tabParam === "orders" ||
+      tabParam === "addresses" ||
+      tabParam === "profile" ||
+      tabParam === "reviews"
+    ) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -204,13 +235,143 @@ function AccountContent() {
     }
   };
 
+  // Fetch User's Reviews
+  const fetchUserReviews = async () => {
+    if (!user) return;
+    setLoadingUserReviews(true);
+    try {
+      const res = await fetch("/api/reviews?userOnly=true");
+      const data = await res.json();
+      if (res.ok && data.reviews) {
+        setUserReviews(data.reviews);
+      }
+    } catch (err) {
+      console.error("Failed to load reviews:", err);
+    } finally {
+      setLoadingUserReviews(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      if (activeTab === "orders") fetchOrders();
+      if (activeTab === "orders" || activeTab === "reviews") fetchOrders();
+      if (activeTab === "reviews") fetchUserReviews();
       if (activeTab === "addresses") fetchAddresses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, activeTab]);
+
+  function openReviewModal(
+    productId: string,
+    productName: string,
+    productImage: string | null | undefined,
+    orderId: string,
+    orderNumber: string
+  ) {
+    const existing = userReviews.find(
+      (r) => r.product_id === productId && r.order_id === orderId
+    );
+    if (existing) {
+      return; // Already reviewed for this purchase
+    }
+    setReviewTarget({
+      productId,
+      productName,
+      productImage,
+      orderId,
+      orderNumber,
+      existingRating: undefined,
+      existingBody: undefined,
+    });
+    setReviewRating(5);
+    setReviewHoverRating(0);
+    setReviewBody("");
+    setReviewError(null);
+    setReviewSuccess(null);
+    setReviewModalOpen(true);
+  }
+
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reviewTarget) return;
+    if (!user) {
+      setReviewError("Please sign in with your registered account to submit a review.");
+      return;
+    }
+    if (!reviewBody.trim()) {
+      setReviewError("Please enter your review message.");
+      return;
+    }
+
+    setReviewSubmitting(true);
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: reviewTarget.productId,
+          order_id: reviewTarget.orderId,
+          rating: reviewRating,
+          body: reviewBody.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data.error || "Failed to submit review.");
+      } else {
+        setReviewSuccess("Thank you! Your review has been submitted and published.");
+        fetchUserReviews();
+        setTimeout(() => {
+          setReviewModalOpen(false);
+          setReviewSuccess(null);
+        }, 1200);
+      }
+    } catch {
+      setReviewError("Network error. Please try again.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
+  // Auto-open review modal if coming from email review link with orderId
+  useEffect(() => {
+    const orderIdParam = searchParams.get("orderId");
+    if (orderIdParam && orders.length > 0 && activeTab === "reviews") {
+      const targetOrder = orders.find((o) => o.id === orderIdParam);
+      if (
+        targetOrder &&
+        (targetOrder.status || "").toLowerCase() === "delivered" &&
+        targetOrder.order_items &&
+        targetOrder.order_items.length > 0
+      ) {
+        // Find the first unreviewed item in this order
+        const unreviewedItem =
+          targetOrder.order_items.find(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (it: any) =>
+              it.product_id &&
+              !userReviews.some(
+                (r) =>
+                  r.product_id === it.product_id &&
+                  r.order_id === targetOrder.id
+              )
+          ) || targetOrder.order_items[0];
+
+        if (unreviewedItem && unreviewedItem.product_id) {
+          const snap = unreviewedItem.product_snapshot || {};
+          openReviewModal(
+            unreviewedItem.product_id,
+            snap.name || "Aurelle Product",
+            snap.image,
+            targetOrder.id,
+            targetOrder.order_number
+          );
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, searchParams, activeTab]);
 
   // Handle Profile Update
   async function handleProfileSubmit(e: React.FormEvent) {
@@ -397,7 +558,7 @@ function AccountContent() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* ── Top Header Banner ─────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 sm:p-8 shadow-xs mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -482,6 +643,27 @@ function AccountContent() {
             {addresses.length > 0 && (
               <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#183D2B]/10 text-[#183D2B]">
                 {addresses.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("reviews");
+              router.replace("/account?tab=reviews");
+            }}
+            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "reviews"
+                ? "border-[#183D2B] text-[#183D2B]"
+                : "border-transparent text-[#5C6460] hover:text-[#183D2B]"
+            }`}
+          >
+            <Star size={16} />
+            Reviews & Ratings
+            {userReviews.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#183D2B]/10 text-[#183D2B]">
+                {userReviews.length}
               </span>
             )}
           </button>
@@ -801,6 +983,212 @@ function AccountContent() {
             )}
           </div>
         )}
+
+        {/* ── TAB 4: PRODUCT REVIEWS ───────────────────────── */}
+        {activeTab === "reviews" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 sm:p-8 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EDE9DF] pb-6">
+                <div>
+                  <h2 className="font-serif text-xl font-bold text-[#1D211F]">
+                    Product Reviews & Ratings
+                  </h2>
+                  <p className="mt-1 text-xs text-[#5C6460]">
+                    Review products from your delivered orders to share your experience with the community.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#183D2B]/10 text-[#183D2B] self-start sm:self-auto">
+                  <ShieldCheck size={15} />
+                  <span>Verified Customer Reviews</span>
+                </div>
+              </div>
+
+              {/* Orders List */}
+              {loadingOrders || loadingUserReviews ? (
+                <div className="py-16 text-center">
+                  <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-xs text-[#5C6460]">Loading your orders and reviews…</p>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="py-16 text-center max-w-sm mx-auto space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-[#183D2B]/5 text-[#183D2B] flex items-center justify-center mx-auto">
+                    <ShoppingBag size={24} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-[#1D211F]">No Orders Found</h3>
+                    <p className="mt-1 text-xs text-[#5C6460] leading-relaxed">
+                      You haven&apos;t placed any orders yet. Once your order is delivered, you can review your items here.
+                    </p>
+                  </div>
+                  <Link
+                    href="/shop"
+                    className="inline-flex items-center gap-2 py-2.5 px-5 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors"
+                  >
+                    Explore Products
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-6">
+                  {orders.map((order) => {
+                    const isDelivered = (order.status || "").toLowerCase() === "delivered";
+                    const orderItems = order.order_items || [];
+
+                    return (
+                      <div
+                        key={order.id}
+                        className={`rounded-xl border transition-all ${
+                          isDelivered
+                            ? "border-[#EDE9DF] bg-white shadow-xs"
+                            : "border-[#EDE9DF]/60 bg-[#FAF8F5]/50"
+                        } p-5 sm:p-6`}
+                      >
+                        {/* Order Top Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EDE9DF] pb-4 mb-4">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs font-bold text-[#1D211F]">
+                              Order #{order.order_number}
+                            </span>
+                            <span className="text-xs text-[#8C938F]">•</span>
+                            <span className="text-xs text-[#5C6460]">
+                              {new Date(order.created_at).toLocaleDateString("en-AE", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                                isDelivered
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {isDelivered && <Check size={12} />}
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Items inside this order */}
+                        <div className="space-y-3">
+                          {orderItems.length === 0 ? (
+                            <p className="text-xs text-[#8C938F] italic py-2">
+                              No item details recorded for this order.
+                            </p>
+                          ) : (
+                            orderItems.map((item) => {
+                              const snap = item.product_snapshot || {};
+                              const productId = item.product_id;
+                              const existingReview = productId
+                                ? userReviews.find(
+                                    (r) =>
+                                      r.product_id === productId &&
+                                      r.order_id === order.id
+                                  )
+                                : null;
+
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 rounded-lg bg-[#FAF8F5] border border-[#EDE9DF]/70"
+                                >
+                                  <div className="flex items-center gap-3.5 min-w-0">
+                                    <div className="w-14 h-14 rounded-md overflow-hidden bg-white border border-[#EDE9DF] shrink-0 flex items-center justify-center">
+                                      {snap.image ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={snap.image}
+                                          alt={snap.name || "Product"}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <Package size={22} className="text-[#8C938F]" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-[#1D211F] truncate">
+                                        {snap.name || "Aurelle Product"}
+                                      </p>
+                                      <p className="text-[11px] text-[#5C6460] mt-0.5">
+                                        AED {Number(item.price_snapshot || 0).toFixed(2)} × {item.quantity}
+                                      </p>
+                                      {existingReview && (
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                          <div className="flex items-center text-amber-500">
+                                            {[...Array(5)].map((_, i) => (
+                                              <Star
+                                                key={i}
+                                                size={12}
+                                                className={
+                                                  i < existingReview.rating
+                                                    ? "fill-amber-400 text-amber-400"
+                                                    : "text-gray-300"
+                                                }
+                                              />
+                                            ))}
+                                          </div>
+                                          <span className="text-[10px] font-bold text-[#183D2B]">
+                                            Rated {existingReview.rating}/5
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Review Option: Strictly only when order status is Delivered */}
+                                  <div className="flex items-center self-end sm:self-auto shrink-0">
+                                    {isDelivered ? (
+                                      productId ? (
+                                        existingReview ? (
+                                          <span className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                            <Check size={13} className="text-emerald-600" />
+                                            Reviewed
+                                          </span>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openReviewModal(
+                                                productId,
+                                                snap.name || "Aurelle Product",
+                                                snap.image,
+                                                order.id,
+                                                order.order_number
+                                              )
+                                            }
+                                            className="inline-flex items-center gap-1.5 py-2 px-4 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-[#183D2B] text-white hover:bg-[#102D20] shadow-xs"
+                                          >
+                                            <Star size={13} className="text-white" />
+                                            Rate & Review
+                                          </button>
+                                        )
+                                      ) : (
+                                        <span className="text-[11px] text-[#8C938F]">
+                                          Product unavailable
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="text-[11px] text-[#8C938F] italic bg-[#EDE9DF]/40 px-2.5 py-1 rounded">
+                                        Review available once delivered
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── ADD / EDIT ADDRESS MODAL ───────────────────────── */}
@@ -972,6 +1360,152 @@ function AccountContent() {
                   className="py-2.5 px-6 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 cursor-pointer"
                 >
                   {addressSaving ? "Saving..." : editingAddressId ? "Update Address" : "Save Address"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── RATE & REVIEW MODAL ───────────────────────── */}
+      {reviewModalOpen && reviewTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1D211F]/50 backdrop-blur-xs p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-[#EDE9DF] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-[#EDE9DF]">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-[#1D211F]">
+                  {reviewTarget.existingRating ? "Update Product Review" : "Write a Product Review"}
+                </h3>
+                <p className="text-[11px] text-[#5C6460] mt-0.5">
+                  Order #{reviewTarget.orderNumber}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewModalOpen(false)}
+                className="p-1 rounded-md text-[#8C938F] hover:text-[#1D211F] hover:bg-[#F7F5EF] transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Product header */}
+            <div className="flex items-center gap-3.5 my-5 p-3 rounded-xl bg-[#FAF8F5] border border-[#EDE9DF]">
+              <div className="w-12 h-12 rounded-lg bg-white border border-[#EDE9DF] overflow-hidden shrink-0 flex items-center justify-center">
+                {reviewTarget.productImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={reviewTarget.productImage}
+                    alt={reviewTarget.productName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Package size={20} className="text-[#8C938F]" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#1D211F] truncate">
+                  {reviewTarget.productName}
+                </p>
+                <p className="text-[11px] text-[#183D2B] font-semibold mt-0.5">
+                  Verified Delivered Purchase
+                </p>
+              </div>
+            </div>
+
+            {reviewError && (
+              <div className="mb-4 flex items-center gap-2 rounded-md bg-red-50 border border-red-200 p-3 text-xs text-red-700">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{reviewError}</span>
+              </div>
+            )}
+
+            {reviewSuccess && (
+              <div className="mb-4 flex items-center gap-2 rounded-md bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+                <Check size={16} className="shrink-0" />
+                <span>{reviewSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitReview} className="space-y-5">
+              {/* Star Rating Selector */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-2">
+                  Overall Rating *
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const isFilled =
+                        reviewHoverRating > 0
+                          ? star <= reviewHoverRating
+                          : star <= reviewRating;
+
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setReviewHoverRating(star)}
+                          onMouseLeave={() => setReviewHoverRating(0)}
+                          onClick={() => setReviewRating(star)}
+                          className="p-1 transition-transform hover:scale-110 cursor-pointer focus:outline-none"
+                        >
+                          <Star
+                            size={28}
+                            className={
+                              isFilled
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-gray-300 hover:text-amber-200"
+                            }
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-bold text-[#183D2B] ml-2">
+                    {reviewRating === 5 && "5 - Exceptional"}
+                    {reviewRating === 4 && "4 - Very Good"}
+                    {reviewRating === 3 && "3 - Average"}
+                    {reviewRating === 2 && "2 - Below Expectation"}
+                    {reviewRating === 1 && "1 - Poor"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Review Message */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1.5">
+                  Review Message *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={reviewBody}
+                  onChange={(e) => setReviewBody(e.target.value)}
+                  placeholder="Share your experience regarding texture, fragrance, effectiveness, and results..."
+                  className="w-full rounded-md border border-[#EDE9DF] bg-[#F7F5EF] p-3 text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white resize-none"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EDE9DF]">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalOpen(false)}
+                  className="py-2.5 px-4 rounded-md border border-[#EDE9DF] text-xs font-semibold text-[#5C6460] hover:bg-[#F7F5EF] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting}
+                  className="py-2.5 px-6 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 cursor-pointer"
+                >
+                  {reviewSubmitting ? "Submitting..." : "Submit Review"}
                 </button>
               </div>
             </form>

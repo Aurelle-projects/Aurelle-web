@@ -29,6 +29,7 @@ interface SupabaseProduct {
     sort_order?: number;
   }>;
   inventory?: { stock_status: string } | Array<{ stock_status: string }> | null;
+  reviews?: Array<{ rating: number; is_published?: boolean }>;
 }
 
 // Normalise Supabase join results — they can be an object or a 1-element array
@@ -186,7 +187,8 @@ function ShopContent() {
             category:categories(name, slug),
             subcategory:subcategories(name, slug),
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            inventory(stock_status),
+            reviews(rating, is_published)
           `)
           .eq("is_published", true)
           .eq("status", "published")
@@ -261,10 +263,20 @@ function ShopContent() {
           productTypeFilters.bestSellers ||
           productTypeFilters.topRated;
         if (anyTypeActive) {
-          const matchesFeatured = productTypeFilters.featured && product.is_featured;
-          const matchesNew = productTypeFilters.newArrivals && product.is_new_arrival;
-          const matchesBest = productTypeFilters.bestSellers && product.is_best_seller;
-          const matchesTopRated = productTypeFilters.topRated && product.is_featured;
+          const matchesFeatured = productTypeFilters.featured && Boolean(product.is_featured);
+          const matchesNew = productTypeFilters.newArrivals && Boolean(product.is_new_arrival);
+          const matchesBest = productTypeFilters.bestSellers && Boolean(product.is_best_seller);
+
+          const publishedReviews = (product.reviews ?? []).filter(
+            (r: { rating: number; is_published?: boolean }) => r.is_published !== false
+          );
+          const reviewCount = publishedReviews.length;
+          const avgRating =
+            reviewCount > 0
+              ? publishedReviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviewCount
+              : 0;
+          const matchesTopRated = productTypeFilters.topRated && avgRating >= 4.0;
+
           if (!matchesFeatured && !matchesNew && !matchesBest && !matchesTopRated) return false;
         }
 

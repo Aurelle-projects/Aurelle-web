@@ -50,15 +50,6 @@ interface HeaderProps {
   wishlistCount?: number;
   navBrands?: NavBrand[];
   navCategories?: NavCategory[];
-  topRatedProducts?: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    retail_price: number;
-    rating: number;
-    reviews_count: number;
-    product_images?: Array<{ secure_url?: string; alt_text?: string | null; is_primary?: boolean }>;
-  }>;
 }
 
 /** Builds the shared nav link structure from DB data. */
@@ -107,7 +98,6 @@ export default function Header({
   wishlistCount = 0,
   navBrands = [],
   navCategories = [],
-  topRatedProducts = [],
 }: HeaderProps) {
   const navLinks = buildNavLinks(navBrands, navCategories);
   const pathname = usePathname();
@@ -945,8 +935,6 @@ export default function Header({
       <WishlistDrawer
         open={wishlistDrawerOpen}
         onClose={() => setWishlistDrawerOpen(false)}
-        wishlistedProducts={wishlistedItems}
-        topRatedProducts={topRatedProducts}
       />
     </>
   );

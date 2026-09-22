@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Tag,
   FolderTree,
+  MessageSquare,
 } from "lucide-react";
 
 interface NavItem {
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/hero", label: "Home Management", icon: Sliders },
   { href: "/admin/products", label: "Products Catalog", icon: Package },
   { href: "/admin/orders", label: "Customer Orders", icon: ShoppingBag },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/admin/wholesale", label: "B2B Wholesale", icon: Briefcase },
   { href: "/admin/settings", label: "Store Settings", icon: Settings },
 ];

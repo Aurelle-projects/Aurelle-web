@@ -35,17 +35,47 @@ export default function AdminOrdersPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from("orders")
-        .select(
-          "id, order_number, customer_name, customer_email, items_count, total_amount, payment_status, order_status, created_at, city"
-        )
+        .select(`
+          id,
+          order_number,
+          customer_email,
+          total,
+          status,
+          payment_status,
+          created_at,
+          shipping_address,
+          order_items ( id )
+        `)
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        setOrders(data as OrderItem[]);
+      if (!error && Array.isArray(data)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped: OrderItem[] = data.map((o: any) => {
+          const addr = (o.shipping_address as Record<string, unknown>) || {};
+          const customer_name =
+            (addr.fullName as string) ||
+            (addr.full_name as string) ||
+            (o.customer_email ? o.customer_email.split("@")[0] : "Customer");
+          const city = (addr.city as string) || (addr.emirate as string) || "UAE";
+          return {
+            id: o.id,
+            order_number: o.order_number || "",
+            customer_name,
+            customer_email: o.customer_email || "",
+            items_count: Array.isArray(o.order_items) ? o.order_items.length : 1,
+            total_amount: Number(o.total) || 0,
+            payment_status: o.payment_status || "pending",
+            order_status: (o.status || "pending") as OrderItem["order_status"],
+            created_at: o.created_at || new Date().toISOString(),
+            city,
+          };
+        });
+        setOrders(mapped);
       } else {
-        setOrders([]); // Empty — no sample data shown
+        setOrders([]);
       }
-    } catch {
+    } catch (err) {
+      console.error("[AdminOrdersPage] load error:", err);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -58,14 +88,16 @@ export default function AdminOrdersPage() {
       prev.map((o) => (o.id === id ? { ...o, order_status: newStatus } : o))
     );
     try {
-      const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("orders")
-        .update({ order_status: newStatus })
-        .eq("id", id);
-    } catch {
-      // Silently fail — optimistic already applied
+      const res = await fetch(`/api/admin/orders/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        console.error("[AdminOrdersPage] Failed to update status on server");
+      }
+    } catch (err) {
+      console.error("[AdminOrdersPage] Status change network error:", err);
     }
   }
 

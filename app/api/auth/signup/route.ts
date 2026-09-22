@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWelcomeEmail } from "@/lib/email/brevo";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,11 @@ export async function POST(request: NextRequest) {
         role: "customer",
         updated_at: new Date().toISOString(),
       });
+
+    // Send welcome email (fire-and-forget — don't let email failure break signup)
+    sendWelcomeEmail(normalizedEmail, cleanFullName || undefined).catch((err) =>
+      console.error("[Signup] Welcome email error:", err)
+    );
 
     return NextResponse.json({
       success: true,

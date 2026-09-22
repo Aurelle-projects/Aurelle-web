@@ -255,11 +255,7 @@ export default async function HomePage() {
       />
 
       {/* ─── 8. Brand Showcase (6-Image Collage + Text) ──── */}
-      <BrandShowcase
-        heading={showcaseSettings.heading}
-        description={showcaseSettings.description}
-        images={showcaseSettings.images || []}
-      />
+        <HomeBanners images={homeBannerSettings.images || []} />
 
       {/* ─── 6. Best Selling Section — database products only ── */}
       <ProductSection
@@ -274,11 +270,17 @@ export default async function HomePage() {
         bottomButtonText="All Products"
       />
 
+      <BrandShowcase
+        heading={showcaseSettings.heading}
+        description={showcaseSettings.description}
+        images={showcaseSettings.images || []}
+      />
+
       <TopRatedProducts products={topRatedProducts as any[]} />
 
-      
+ 
 
-        <HomeBanners images={homeBannerSettings.images || []} />
+   
 
       {/* ─── 7. Promotional Dual Banners ──── */}
       <PromoBanners
@@ -296,8 +298,8 @@ export default async function HomePage() {
         rightImageUrl={promoSettings.right?.image_url || null}
       />
 
-<AllProductsSection initialProducts={allProducts as any[]} />
-    
+      <AllProductsSection initialProducts={allProducts as any[]} />
+
     </div>
   );
 }

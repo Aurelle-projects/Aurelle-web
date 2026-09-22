@@ -46,7 +46,7 @@ export default function ProductSection({
             </p>
           )}
           <h2
-            className="text-2xl sm:text-3xl  text-[#1D211F] tracking-tight uppercase font-bold"
+            className="text-xl font-bold text-[#14231B] mb-6 uppercase tracking-wide"
            
           >
             {title}
@@ -60,7 +60,7 @@ export default function ProductSection({
           </div>
         ) : (
           <div
-            className={`grid grid-cols-2 ${desktopColumns === 5 ? "md:grid-cols-5" : "md:grid-cols-6"} gap-4 sm:gap-6 lg:gap-8`}
+            className={`grid grid-cols-2 ${desktopColumns === 5 ? "md:grid-cols-5" : "md:grid-cols-5"} gap-4 sm:gap-6 lg:gap-8`}
             role="list"
             aria-label={`${title} products`}
           >

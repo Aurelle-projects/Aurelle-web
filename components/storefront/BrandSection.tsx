@@ -75,7 +75,7 @@ export default function BrandSection({ brands }: BrandSectionProps) {
       aria-label="Shop by Brand"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <h2 className="text-2xl sm:text-3xl text-[#1D211F] tracking-tight text-center uppercase font-bold">
+        <h2 className="text-xl font-bold text-[#14231B] mb-6 sm:text-center uppercase tracking-wide">
           Shop by Brand
         </h2>
       </div>

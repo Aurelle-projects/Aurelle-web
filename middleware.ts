@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 
 // Routes that require authentication
-const PROTECTED_ROUTES = ["/account", "/checkout"];
+const PROTECTED_ROUTES = ["/account"];
 
 // Routes that require admin role
 const ADMIN_ROUTES = ["/admin"];

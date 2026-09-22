@@ -52,6 +52,25 @@ export default function CategoriesPageClient({ initialCategories }: Props) {
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
 
+  if (!categories || categories.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16" aria-label="Loading categories">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-3xl border border-[#DCCFB9]/60 shadow-xs overflow-hidden animate-pulse flex flex-col justify-between">
+              <div className="h-48 sm:h-52 md:h-56 bg-[#F0EBE1]" />
+              <div className="p-6 space-y-3">
+                <div className="h-5 bg-[#F0EBE1] rounded-full w-2/3" />
+                <div className="h-3 bg-[#F0EBE1] rounded-full w-full" />
+                <div className="h-3 bg-[#F0EBE1] rounded-full w-4/5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -64,6 +83,10 @@ export default function CategoriesPageClient({ initialCategories }: Props) {
             <Link
               key={category.slug}
               href={`/shop?category=${category.slug}`}
+              scroll={true}
+              onClick={() => {
+                window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              }}
               className="group bg-white rounded-3xl border border-[#DCCFB9]/60 shadow-xs overflow-hidden hover:shadow-xl hover:border-[#183D2B]/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
             >
               <div>

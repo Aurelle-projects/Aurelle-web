@@ -19,21 +19,6 @@ interface CategoryGridProps {
   categories: CategoryItem[];
 }
 
-// Short display names for the circular icons (matches reference)
-const SHORT_NAMES: Record<string, string> = {
-  "cosmetics-makeup": "Makeup",
-  "skincare-body-care": "Skincare",
-  "hair-care": "Hair Care",
-  "personal-care-hygiene": "Personal Care",
-  "baby-care": "Baby Care",
-  "health-wellness": "Wellness",
-  "grooming-accessories": "Grooming",
-  "household-lifestyle": "Household",
-  "perfumes-fragrances": "Fragrances",
-  "general-consumer-goods": "General",
-};
-
-
 export default function CategoryGrid({ categories: initialCategories }: CategoryGridProps) {
   const [categories, setCategories] = useState<CategoryItem[]>(initialCategories || []);
   const [isPaused, setIsPaused] = useState(false);
@@ -134,7 +119,23 @@ export default function CategoryGrid({ categories: initialCategories }: Category
     }
   };
 
-  if (!categories || categories.length === 0) return null;
+  if (!categories || categories.length === 0) {
+    return (
+      <div className="w-full overflow-hidden py-3 px-2 sm:px-4" aria-label="Loading categories">
+        <div className="flex items-start gap-6 sm:gap-8 lg:gap-10 w-max">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center gap-3 shrink-0 w-32 sm:w-40 md:w-44 lg:w-48 animate-pulse"
+            >
+              <div className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full bg-[#F0EBE1] border border-[#E5DFD5]" />
+              <div className="h-4 w-20 bg-[#F0EBE1] rounded-full mt-1" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // Duplicate items 2x for seamless, infinite looping
   const displayItems = categories.concat(categories);
@@ -174,12 +175,16 @@ export default function CategoryGrid({ categories: initialCategories }: Category
               category.image_url ||
               (category.image_public_id ? getCategoryImageUrl(category.image_public_id) : null);
 
-            const displayName = SHORT_NAMES[category.slug] ?? category.name;
+            const displayName = category.name;
 
             return (
               <Link
                 key={`${category.slug}-${idx}`}
                 href={`/shop?category=${category.slug}`}
+                scroll={true}
+                onClick={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+                }}
                 className="flex flex-col items-center gap-3 group shrink-0 w-32 sm:w-40 md:w-44 lg:w-48 transition-transform duration-300 hover:-translate-y-1"
                 role="listitem"
                 aria-label={`Shop ${displayName}`}

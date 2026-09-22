@@ -1,7 +1,6 @@
 import React from "react";
 import fs from "fs";
 import path from "path";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 import { createClient } from "@/lib/supabase/server";
 import CategoriesPageClient from "@/components/storefront/CategoriesPageClient";
 
@@ -48,20 +47,18 @@ export default async function CategoriesPage() {
     // Fallback to savedCategories
   }
 
-  // ─── 3. Merge definitions: savedCategories > dbCategories > static ───────
-  const categories = AURELLE_CATEGORIES.map((staticCat) => {
-    const savedCat = savedCategories.find((s) => s.slug === staticCat.slug);
-    const dbCat = dbCategories.find((d: { slug: string }) => d.slug === staticCat.slug);
-
+  // ─── 3. Real Database Categories Only — No Fallback Data ───────────────
+  const categories = dbCategories.map((dbCat: any) => {
+    const savedCat = savedCategories.find((s) => s.slug === dbCat.slug);
     return {
-      id: dbCat?.id ?? savedCat?.id ?? staticCat.slug,
-      name: savedCat?.name || staticCat.name,
-      slug: staticCat.slug,
-      description: savedCat?.description || dbCat?.description || staticCat.description,
-      sort_order: staticCat.sort_order,
-      image_url: savedCat?.image_url ?? dbCat?.image_url ?? null,
-      image_public_id: savedCat?.image_public_id ?? dbCat?.image_public_id ?? null,
-      subcategories: staticCat.subcategories,
+      id: dbCat.id,
+      name: dbCat.name,
+      slug: dbCat.slug,
+      description: dbCat.description || "",
+      sort_order: dbCat.sort_order || 1,
+      image_url: savedCat?.image_url ?? dbCat.image_url ?? null,
+      image_public_id: savedCat?.image_public_id ?? dbCat.image_public_id ?? null,
+      subcategories: [],
     };
   });
 

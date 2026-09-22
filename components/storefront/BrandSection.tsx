@@ -142,9 +142,9 @@ export default function BrandSection({ brands }: BrandSectionProps) {
               </div>
 
               {/* Brand name — outside the card */}
-              <span className="text-xs font-semibold text-[#1D211F] text-center leading-tight w-36 truncate">
+              {/* <span className="text-xs font-semibold text-[#1D211F] text-center leading-tight w-36 truncate">
                 {brand.name}
-              </span>
+              </span> */}
             </Link>
           ))}
         </div>

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  sendOrderConfirmationEmail,
+  sendAdminOrderNotificationEmail,
+} from "@/lib/email/brevo";
 
 export const dynamic = "force-dynamic";
 
@@ -207,6 +211,30 @@ export async function POST(request: NextRequest) {
         console.warn("[Save address during checkout warning]:", saveAddrErr);
       }
     }
+
+    // 4. Send transactional emails (fire-and-forget — never block the order response)
+    const emailData = {
+      orderNumber: order.order_number,
+      customerName: customerName || "",
+      customerEmail: customerEmail.trim().toLowerCase(),
+      items: (items ?? []).map((item: { name?: string; price?: number; quantity?: number; sku?: string; image?: string }) => ({
+        name: item.name || "Product",
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        sku: item.sku,
+        image: item.image,
+      })),
+      subtotal: subtotal || 0,
+      shippingAmount: shippingAmount || 0,
+      total: total || 0,
+      shippingAddress: shippingAddress || {},
+      paymentMethod,
+    };
+
+    Promise.all([
+      sendOrderConfirmationEmail(emailData),
+      sendAdminOrderNotificationEmail(emailData),
+    ]).catch((err) => console.error("[Orders] Email send error:", err));
 
     return NextResponse.json({
       success: true,

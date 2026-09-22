@@ -72,8 +72,8 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
     <section className="bg-white py-12 md:py-16" aria-labelledby="top-rated-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-7">
-          <h2 id="top-rated-heading" className="text-2xl sm:text-3xl text-[#1D211F] uppercase font-bold">
-            Top Rated
+          <h2 id="top-rated-heading" className="text-lg sm:text-xl text-[#1D211F] uppercase font-bold">
+            Top Rated Products
           </h2>
         </div>
 
@@ -95,7 +95,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                           alt={image.alt_text || product.name}
                           fill
                           sizes="220px"
-                          className="object-contain p-3"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-3xl font-bold text-[#183D2B]/20">

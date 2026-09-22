@@ -61,20 +61,17 @@ export interface TopRatedProduct {
 interface WishlistDrawerProps {
   open: boolean;
   onClose: () => void;
-  wishlistedProducts?: ProductItem[];
-  topRatedProducts?: TopRatedProduct[];
 }
 
 // ─── Main Drawer ──────────────────────────────────────────────────
 export default function WishlistDrawer({
   open,
   onClose,
-  wishlistedProducts = [],
-  topRatedProducts = [],
 }: WishlistDrawerProps) {
   const { addItem } = useCart();
-  const [items, setItems] = useState<ProductItem[]>(wishlistedProducts);
+  const [items, setItems] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
 
   // Lock body scroll when open
@@ -89,20 +86,25 @@ export default function WishlistDrawer({
     const ids = getWishlist();
     if (ids.length === 0) {
       setItems([]);
+      setFetchError(null);
     } else {
       setLoading(true);
+      setFetchError(null);
       try {
         const supabase = createClient();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("products")
           .select(`
-            id, name, slug, sku, retail_price, description, short_description,
+            id, name, slug, sku, retail_price, description,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .in("id", ids);
 
-        if (Array.isArray(data)) {
+        if (error) {
+          console.error("[WishlistDrawer] Supabase error:", error);
+          setFetchError(error.message);
+        } else if (Array.isArray(data)) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const mapped: ProductItem[] = data.map((p: any) => ({
             id: p.id,
@@ -110,7 +112,7 @@ export default function WishlistDrawer({
             slug: p.slug,
             sku: p.sku || p.id,
             description: p.description || "",
-            short_description: p.short_description || "",
+            short_description: "",
             retail_price: Number(p.retail_price) || 0,
             category_id: "",
             category_slug: "",
@@ -136,8 +138,9 @@ export default function WishlistDrawer({
           }));
           setItems(mapped);
         }
-      } catch {
-        // Silently fail if offline or db issue
+      } catch (err) {
+        console.error("[WishlistDrawer] Unexpected error:", err);
+        setFetchError("Failed to load wishlist. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -230,6 +233,18 @@ export default function WishlistDrawer({
               <div className="px-5 py-4 space-y-4">
                 {loading && items.length === 0 ? (
                   <div className="py-12 text-center text-xs text-[#8C938F]">Loading wishlist...</div>
+                ) : fetchError ? (
+                  <div className="flex flex-col items-center justify-center gap-3 text-center py-12">
+                    <p className="text-[13px] font-semibold text-red-500">Could not load wishlist</p>
+                    <p className="text-[12px] text-[#8C938F]">{fetchError}</p>
+                    <button
+                      type="button"
+                      onClick={loadData}
+                      className="mt-1 px-4 py-2 bg-[#183D2B] text-white text-[12px] font-semibold rounded-sm hover:bg-[#102D20] transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 ) : items.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-4 text-center py-12">
                     <div className="w-20 h-20 rounded-full bg-[#F7F5EF] flex items-center justify-center">

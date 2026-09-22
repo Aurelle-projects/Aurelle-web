@@ -324,7 +324,7 @@ function CheckoutContent() {
             <h1 className="text-2xl font-serif font-bold text-[#1D211F]">UAE Secure Checkout</h1>
           </div>
           <Link
-            href="/cart"
+            href="/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] transition-colors"
           >
             <ArrowLeft size={14} />

@@ -25,11 +25,14 @@ export async function GET() {
         customer_type,
         total,
         subtotal,
+        discount_amount,
+        shipping_amount,
         status,
         payment_status,
         created_at,
         shipping_address,
-        order_items ( id, product_snapshot, quantity, line_total )
+        notes,
+        order_items ( id, product_id, product_snapshot, sku_snapshot, price_snapshot, quantity, line_total )
       `)
       .order("created_at", { ascending: false });
 

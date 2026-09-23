@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { Search, Package, RefreshCw, Building2, ShoppingBag } from "lucide-react";
+import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
+import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye } from "lucide-react";
 import { useAdminData, AdminOrderItem } from "@/context/AdminDataContext";
 
 type OrderItem = AdminOrderItem;
@@ -13,6 +14,8 @@ export default function AdminOrdersPage() {
     ordersLoading,
     loadOrders,
     setOrders,
+    products,
+    loadProducts,
   } = useAdminData();
 
   const orders = useMemo(() => contextOrders ?? [], [contextOrders]);
@@ -20,15 +23,31 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "retail" | "wholesale">("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]);
+    loadProducts();
+  }, [loadOrders, loadProducts]);
+
+  function getOrderThumbnail(ord: OrderItem): string | null {
+    const firstItem = ord.items?.[0];
+    if (!firstItem) return null;
+    if (firstItem.image) return firstItem.image;
+    if (firstItem.product_id && products) {
+      const match = products.find((p) => p.id === firstItem.product_id);
+      if (match?.image_url) return match.image_url;
+    }
+    return null;
+  }
 
   async function handleStatusChange(id: string, newStatus: OrderItem["order_status"]) {
     // Optimistic update
     setOrders((prev) =>
       prev ? prev.map((o) => (o.id === id ? { ...o, order_status: newStatus } : o)) : null
+    );
+    setSelectedOrder((prev) =>
+      prev && prev.id === id ? { ...prev, order_status: newStatus } : prev
     );
     try {
       const res = await fetch(`/api/admin/orders/${id}/status`, {
@@ -225,8 +244,8 @@ export default function AdminOrdersPage() {
                     <th className="py-2.5 px-3.5">Order #</th>
                     <th className="py-2.5 px-3.5">Channel</th>
                     <th className="py-2.5 px-3.5">Customer</th>
-                    <th className="py-2.5 px-3.5">Location</th>
-                    <th className="py-2.5 px-3.5">Items</th>
+                    <th className="py-2.5 px-3.5">Product</th>
+                    <th className="py-2.5 px-3.5 text-center">View</th>
                     <th className="py-2.5 px-3.5">Total (AED)</th>
                     <th className="py-2.5 px-3.5">Payment</th>
                     <th className="py-2.5 px-3.5">Fulfillment</th>
@@ -256,11 +275,54 @@ export default function AdminOrdersPage() {
                         <p className="font-semibold text-xs text-[#1D211F]">{ord.customer_name}</p>
                         <span className="text-[10px] text-[#5C6460]">{ord.customer_email}</span>
                       </td>
-                      <td className="py-2.5 px-3.5 text-[11px] font-medium text-[#1D211F]">
-                        {ord.city}, UAE
+                      <td className="py-2.5 px-3.5">
+                        {(() => {
+                          const thumb = getOrderThumbnail(ord);
+                          const firstItemName = ord.items?.[0]?.name || "Order item";
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrder(ord)}
+                                title={`View details for ${firstItemName}`}
+                                className="group relative cursor-pointer block"
+                              >
+                                {thumb ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={thumb}
+                                    alt={firstItemName}
+                                    className="w-9 h-9 rounded object-cover border border-[#DCCFB9]/60 shrink-0 group-hover:border-[#183D2B] transition-colors"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded bg-[#F7F5EF] border border-[#DCCFB9]/60 flex items-center justify-center text-[#8E9590] shrink-0 group-hover:border-[#183D2B] group-hover:text-[#183D2B] transition-colors">
+                                    <Package size={15} />
+                                  </div>
+                                )}
+                              </button>
+                              {ord.items && ord.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOrder(ord)}
+                                  title={`${ord.items.length} items total — Click to view`}
+                                  className="text-[9.5px] font-bold text-[#5C6460] bg-[#F7F5EF] border border-[#DCCFB9]/60 px-1 py-0.5 rounded cursor-pointer hover:bg-white hover:text-[#183D2B] transition-colors"
+                                >
+                                  +{ord.items.length - 1}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
-                      <td className="py-2.5 px-3.5 text-[11px] text-[#5C6460]">
-                        {ord.items_count ?? "—"} items
+                      <td className="py-2.5 px-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrder(ord)}
+                          title="View Order Details"
+                          className="p-1.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-[#183D2B]/10 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center"
+                        >
+                          <Eye size={15} />
+                        </button>
                       </td>
                       <td className="py-2.5 px-3.5 font-bold text-[#1D211F]">
                         AED {(ord.total_amount ?? 0).toFixed(2)}
@@ -310,6 +372,15 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Order Details Popup Box */}
+      <OrderDetailsModal
+        isOpen={!!selectedOrder}
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onStatusChange={handleStatusChange}
+        products={products}
+      />
     </div>
   );
 }

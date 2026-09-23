@@ -50,6 +50,37 @@ export interface AdminBrand {
   created_at?: string;
 }
 
+export interface AdminOrderItemDetail {
+  id: string;
+  product_id?: string | null;
+  name: string;
+  image?: string | null;
+  quantity: number;
+  line_total: number;
+  price?: number;
+  sku?: string;
+  slug?: string;
+}
+
+export interface AdminOrderShippingAddress {
+  fullName?: string;
+  full_name?: string;
+  phone?: string;
+  streetAddress?: string;
+  addressLine1?: string;
+  address_line1?: string;
+  addressLine2?: string;
+  address_line2?: string;
+  area?: string;
+  city?: string;
+  emirate?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  postal_code?: string;
+  email?: string;
+}
+
 export interface AdminOrderItem {
   id: string;
   order_number: string;
@@ -58,10 +89,16 @@ export interface AdminOrderItem {
   customer_type: "retail" | "wholesale";
   items_count: number;
   total_amount: number;
+  subtotal?: number;
+  discount_amount?: number;
+  shipping_amount?: number;
   payment_status: "paid" | "pending" | "failed" | string;
   order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
   created_at: string;
   city: string;
+  shipping_address?: AdminOrderShippingAddress | null;
+  notes?: string | null;
+  items?: AdminOrderItemDetail[];
 }
 
 export interface AdminReviewItem {
@@ -314,24 +351,51 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
       if (json.success && Array.isArray(json.orders)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped: AdminOrderItem[] = json.orders.map((o: any) => {
-          const addr = (o.shipping_address as Record<string, unknown>) || {};
+          const addr = (o.shipping_address as AdminOrderShippingAddress) || {};
           const customer_name =
-            (addr.fullName as string) ||
-            (addr.full_name as string) ||
+            addr.fullName ||
+            addr.full_name ||
             (o.customer_email ? o.customer_email.split("@")[0] : "Customer");
-          const city = (addr.city as string) || (addr.emirate as string) || "UAE";
+          const city = addr.city || addr.emirate || addr.area || "UAE";
+
+          const rawItems = Array.isArray(o.order_items) ? o.order_items : [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const items: AdminOrderItemDetail[] = rawItems.map((it: any) => {
+            const snap = it.product_snapshot || {};
+            return {
+              id: it.id,
+              product_id: it.product_id || null,
+              name: snap.name || "Product",
+              image: snap.image || snap.image_url || snap.imageUrl || null,
+              quantity: it.quantity || 1,
+              line_total: Number(it.line_total) || 0,
+              price:
+                Number(it.price_snapshot) ||
+                (Number(it.line_total) / (it.quantity || 1)) ||
+                0,
+              sku: it.sku_snapshot || snap.sku || "",
+              slug: snap.slug || "",
+            };
+          });
+
           return {
             id: o.id,
             order_number: o.order_number || "",
             customer_name,
             customer_email: o.customer_email || "",
             customer_type: (o.customer_type === "wholesale" ? "wholesale" : "retail") as "retail" | "wholesale",
-            items_count: Array.isArray(o.order_items) ? o.order_items.length : 1,
+            items_count: items.reduce((sum, item) => sum + item.quantity, 0) || rawItems.length || 1,
             total_amount: Number(o.total) || 0,
+            subtotal: Number(o.subtotal) || Number(o.total) || 0,
+            discount_amount: Number(o.discount_amount) || 0,
+            shipping_amount: Number(o.shipping_amount) || 0,
             payment_status: o.payment_status || "pending",
             order_status: (o.status || "pending") as AdminOrderItem["order_status"],
             created_at: o.created_at || new Date().toISOString(),
             city,
+            shipping_address: addr,
+            notes: o.notes || null,
+            items,
           };
         });
 

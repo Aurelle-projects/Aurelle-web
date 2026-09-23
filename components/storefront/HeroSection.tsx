@@ -87,7 +87,7 @@ export default function HeroSection({
 
   return (
     <section
-      className="relative overflow-hidden bg-[#122419] text-white flex flex-col justify-end sm:justify-center h-[420px] sm:h-auto"
+      className="relative overflow-hidden bg-[#122419] text-white flex flex-col justify-end sm:justify-center h-[480px] sm:h-auto"
       aria-label="Aurelle Hero"
       style={
         isDesktop

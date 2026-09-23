@@ -9,7 +9,8 @@ export interface DeleteConfirmModalProps {
   onConfirm: () => void | Promise<void>;
   title?: string;
   itemName?: string;
-  itemType?: string; // e.g., "product", "category", "subcategory", "brand"
+  itemType?: string; // e.g., "product", "category", "subcategory", "brand", "review", "image"
+  imagePreview?: string;
   description?: string;
   warningNote?: string;
   isLoading?: boolean;
@@ -24,6 +25,7 @@ export default function DeleteConfirmModal({
   title,
   itemName,
   itemType = "item",
+  imagePreview,
   description,
   warningNote,
   isLoading = false,
@@ -86,6 +88,18 @@ export default function DeleteConfirmModal({
               </p>
             </div>
           </div>
+
+          {/* Image Thumbnail Preview (if provided) */}
+          {imagePreview && (
+            <div className="flex items-center justify-center p-3 rounded-xl bg-[#FAF8F5] border border-[#183D2B]/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagePreview}
+                alt={itemName || "Item to delete"}
+                className="w-24 h-24 object-cover rounded-lg border border-[#DCCFB9]/50 shadow-xs"
+              />
+            </div>
+          )}
 
           {/* Item Name Highlight Badge (if provided) */}
           {itemName && (

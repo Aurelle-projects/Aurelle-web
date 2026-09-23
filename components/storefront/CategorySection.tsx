@@ -7,7 +7,7 @@ interface CategorySectionProps {
 
 export default function CategorySection({ categories }: CategorySectionProps) {
   return (
-    <section className="bg-white py-12 md:py-16 relative overflow-hidden" aria-labelledby="categories-heading">
+    <section className="bg-white pt-6 md:pt-16 relative overflow-hidden" aria-labelledby="categories-heading">
       <div className="max-w-[1440px] mx-auto">
         <div className="text-start mb-8 sm:mb-10">
           <h2

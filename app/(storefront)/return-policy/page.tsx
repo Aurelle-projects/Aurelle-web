@@ -8,8 +8,8 @@ export const metadata = {
 
 export default function ReturnPolicyPage() {
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
+    <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
         <div className="text-center space-y-2">
           <span className="inline-block px-3 py-1 bg-[#183D2B]/10 text-[#183D2B] text-xs font-bold uppercase tracking-widest rounded-full">
             Customer Assurance
@@ -20,7 +20,7 @@ export default function ReturnPolicyPage() {
           <p className="text-xs text-[#5C6460]">Last updated: September 2026</p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[#DCCFB9]/60 shadow-xs p-8 sm:p-12 space-y-6 text-sm text-[#5C6460] leading-relaxed">
+        <div className="bg-white rounded-sm border border-[#DCCFB9]/60 shadow-xs p-8 sm:p-12 space-y-6 text-sm text-[#5C6460] leading-relaxed">
           <section className="space-y-3">
             <h2 className="text-base font-bold text-[#1D211F]">1. 14-Day Hassle-Free Returns</h2>
             <p>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,23 @@ export async function PATCH(req: NextRequest) {
     if (is_active !== undefined) payload.is_active = !!is_active;
     if (sort_order !== undefined) payload.sort_order = typeof sort_order === "number" ? sort_order : 0;
 
+    // Check if brand existing logo is being replaced
+    if (logo_public_id !== undefined) {
+      const { data: oldBrand } = await supabase
+        .from("brands")
+        .select("logo_public_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (oldBrand?.logo_public_id && oldBrand.logo_public_id !== logo_public_id) {
+        try {
+          await deleteFromCloudinary(oldBrand.logo_public_id);
+        } catch (cldErr) {
+          console.error("[API brands] Cloudinary old logo cleanup error:", cldErr);
+        }
+      }
+    }
+
     let result = await supabase.from("brands").update(payload).eq("id", id).select().single();
 
     // If sort_order column missing, retry without it
@@ -150,6 +168,13 @@ export async function DELETE(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
+    // Fetch brand logo_public_id before deleting
+    const { data: oldBrand } = await supabase
+      .from("brands")
+      .select("logo_public_id")
+      .eq("id", id)
+      .maybeSingle();
+
     // Unlink any products pointing to this brand
     const { error: prodErr } = await supabase
       .from("products")
@@ -162,6 +187,15 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       console.error("[API brands DELETE error]:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Clean up Cloudinary logo
+    if (oldBrand?.logo_public_id) {
+      try {
+        await deleteFromCloudinary(oldBrand.logo_public_id);
+      } catch (cldErr) {
+        console.error("[API brands] Cloudinary logo deletion error:", cldErr);
+      }
     }
 
     return NextResponse.json({ success: true });

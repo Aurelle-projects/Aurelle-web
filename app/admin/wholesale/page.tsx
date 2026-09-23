@@ -16,39 +16,6 @@ interface WholesaleApp {
   created_at: string;
 }
 
-const SAMPLE_APPLICATIONS: WholesaleApp[] = [
-  {
-    id: "app-1",
-    company_name: "Al Manara Pharmacy LLC",
-    trade_license_number: "CN-1029384",
-    contact_person: "Tariq Mansoor",
-    email: "procurement@almanara.ae",
-    phone: "+971 50 123 4567",
-    status: "pending",
-    created_at: "2026-09-15T10:00:00Z",
-  },
-  {
-    id: "app-2",
-    company_name: "Glow & Co Beauty Salons",
-    trade_license_number: "DXB-8839201",
-    contact_person: "Noura Al-Sayed",
-    email: "supply@glowandco.ae",
-    phone: "+971 52 987 6543",
-    status: "under_review",
-    created_at: "2026-09-14T14:30:00Z",
-  },
-  {
-    id: "app-3",
-    company_name: "Emirates Luxury Retail FZE",
-    trade_license_number: "SHJ-5561029",
-    contact_person: "Rashid Khalifa",
-    email: "rashid@elr.ae",
-    phone: "+971 55 334 2211",
-    status: "approved",
-    created_at: "2026-09-10T09:15:00Z",
-  },
-];
-
 export default function AdminWholesalePage() {
   const [applications, setApplications] = useState<WholesaleApp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,13 +27,13 @@ export default function AdminWholesalePage() {
   async function loadApplications() {
     setLoading(true);
     try {
-      const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
-        .from("wholesale_applications")
-        .select("id, company_name, trade_license_number, contact_person, email, phone, status, created_at")
-        .order("created_at", { ascending: false });
-      if (!error && data) setApplications(data as WholesaleApp[]);
+      const res = await fetch("/api/admin/wholesale", { cache: "no-store" });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.applications)) {
+        setApplications(json.applications as WholesaleApp[]);
+      } else {
+        setApplications([]);
+      }
     } catch {
       setApplications([]);
     } finally {
@@ -80,12 +47,11 @@ export default function AdminWholesalePage() {
     );
 
     try {
-      const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("wholesale_applications")
-        .update({ status: newStatus })
-        .eq("id", id);
+      await fetch("/api/admin/wholesale", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
     } catch {
       // Local state fallback
     }

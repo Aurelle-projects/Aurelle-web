@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 import type { UserRole } from "@/types/database";
 import { useCart } from "@/context/CartContext";
@@ -78,7 +79,7 @@ function buildNavLinks(
     { href: "/shop?filter=new-arrivals", label: "New Arrivals" },
     { href: "/shop", label: "Products" },
     { href: "/shop?filter=brands", label: "Shop by Brand", dropdown: brandDropdown },
-    { href: "/categories", label: "Shop by Category", dropdown: categoryDropdown },
+    { href: "/shop?filter=categories", label: "Shop by Category", dropdown: categoryDropdown },
     { href: "/about", label: "About Us" },
   ];
 }
@@ -103,6 +104,7 @@ export default function Header({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -166,6 +168,18 @@ export default function Header({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   // Read live count from CartContext
   let liveCartCount = cartCount;
   try {
@@ -182,6 +196,7 @@ export default function Header({
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     setMobileMenuOpen(false);
+    setMobileDropdownOpen(null);
     setSearchOpen(false);
   }
 
@@ -300,7 +315,7 @@ export default function Header({
                   : pathname.startsWith(link.href) && link.href !== "/shop";
             return (
               <li
-                key={link.href}
+                key={`${link.href}-${link.label}`}
                 className="relative"
                 onMouseEnter={() => hasDropdown && openDropdown(catKey)}
                 onMouseLeave={() => hasDropdown && closeDropdown()}
@@ -331,7 +346,7 @@ export default function Header({
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -6, scale: 0.97 }}
                           transition={{ duration: 0.18, ease: "easeOut" }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden"
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden rounded-sm"
                           onMouseEnter={() => openDropdown(catKey)}
                           onMouseLeave={() => closeDropdown()}
                         >
@@ -341,7 +356,7 @@ export default function Header({
                                 {colIdx > 0 && (
                                   <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
                                 )}
-                                <ul className="list-none m-0 p-1">
+                                <ul className="list-none m-0 p-1 w-[240px]">
                                   {chunk.map((item) => (
                                     <li key={item.href}>
                                       <Link
@@ -430,7 +445,7 @@ export default function Header({
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -6, scale: 0.97 }}
                           transition={{ duration: 0.18, ease: "easeOut" }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden"
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max bg-white border border-[#DCCFB9]/60 shadow-xl z-50 overflow-hidden rounded-sm"
                           onMouseEnter={() => openDropdown(link.label)}
                           onMouseLeave={() => closeDropdown()}
                         >
@@ -440,7 +455,7 @@ export default function Header({
                                 {colIdx > 0 && (
                                   <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
                                 )}
-                                <ul className="list-none m-0 p-1">
+                                <ul className="list-none m-0 p-1 w-[240px]">
                                   {chunk.map((item) => (
                                     <li key={item.href}>
                                       <Link
@@ -578,7 +593,7 @@ export default function Header({
                         <span
                           onMouseEnter={openAccount}
                           onMouseLeave={closeAccount}
-                          className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl bg-white p-2 text-left shadow-2xl border border-[#EDE9DF]/80"
+                          className="absolute right-0 top-full z-50 mt-2 w-48 rounded-sm bg-white p-2 text-left shadow-2xl border border-[#EDE9DF]/80"
                         >
                           {isAuthenticated ? (
                             <>
@@ -743,7 +758,7 @@ export default function Header({
                   <input
                     ref={mobileSearchInputRef}
                     type="text"
-                    className="w-full h-10 pl-3.5 pr-10 bg-transparent border border-[#D8CDBB] rounded-md text-sm text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] transition-colors"
+                    className="w-full h-10 pl-3.5 pr-10 bg-transparent border border-[#D8CDBB] rounded-sm text-sm text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] transition-colors"
                     placeholder="Search products, brands..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -772,7 +787,7 @@ export default function Header({
                     <input
                       ref={scrolledSearchInputRef}
                       type="text"
-                      className="w-full h-10 pl-4 pr-11 bg-transparent border border-[#D8CDBB] rounded-md text-[13.5px] text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 transition-colors"
+                      className="w-full h-10 pl-4 pr-11 bg-transparent border border-[#D8CDBB] rounded-sm text-[13.5px] text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 transition-colors"
                       placeholder="Search for products, brands or categories..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -802,134 +817,244 @@ export default function Header({
       </div>
 
       {/* ─── Mobile Menu Drawer ────────────────────────────────────── */}
-      {mobileMenuOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/40 z-50 transition-opacity"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            className="fixed top-0 right-0 bottom-0 w-[min(320px,85vw)] bg-white z-50 flex flex-col shadow-2xl overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Mobile navigation"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-[#DCCFB9]/40">
-              <Link
-                href="/"
-                onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="flex items-center"
-                aria-label="Aurelle Home"
-              >
-                <Image
-                  src="/logo.png"
-                  alt="Aurelle Cosmetics Trading FZ-LLC"
-                  width={160}
-                  height={75}
-                  className="h-11 w-auto object-contain"
-                />
-              </Link>
-              <button
-                className="p-1 text-[#1D211F] hover:text-[#183D2B]"
-                onClick={() => setMobileMenuOpen(false)}
-                aria-label="Close menu"
-              >
-                <X size={22} strokeWidth={1.75} />
-              </button>
-            </div>
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="mobile-drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 bg-black/45 z-50 backdrop-blur-[2px]"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              aria-hidden="true"
+            />
 
-            <nav className="flex-1 p-4" aria-label="Mobile navigation">
-              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-[#8C938F] mb-1.5">
-                Categories
-              </p>
-              <ul className="flex flex-col gap-0.5 list-none p-0 m-0 mb-4">
-                {navLinks.map((link) => (
-                  <li key={link.href}>
+            {/* Slide-in Drawer from Right Side */}
+            <motion.div
+              key="mobile-drawer-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed top-0 right-0 bottom-0 w-[min(340px,88vw)] bg-white z-50 flex flex-col shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Mobile navigation"
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#EDE9DF] shrink-0">
+                <Link
+                  href="/"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileDropdownOpen(null);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="flex items-center"
+                  aria-label="Aurelle Home"
+                >
+                  <Image
+                    src="/logo.png"
+                    alt="Aurelle Cosmetics Trading FZ-LLC"
+                    width={150}
+                    height={70}
+                    className="h-10 w-auto object-contain"
+                  />
+                </Link>
+                <button
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors cursor-pointer"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileDropdownOpen(null);
+                  }}
+                  aria-label="Close menu"
+                >
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+
+              {/* Navigation Menu */}
+              <nav className="flex-1 overflow-y-auto px-4 py-3 divide-y divide-[#EDE9DF]/50" aria-label="Mobile navigation">
+                {/* Main Navigation Links */}
+                <div className="pb-3">
+                  <ul className="flex flex-col gap-1 list-none p-0 m-0">
+                    {navLinks.map((link) => {
+                      const hasDropdown = Boolean(link.dropdown && link.dropdown.length > 0);
+                      const isDropdownOpen = mobileDropdownOpen === link.label;
+
+                      if (hasDropdown) {
+                        return (
+                          <li key={`${link.href}-${link.label}`} className="flex flex-col">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMobileDropdownOpen((prev) =>
+                                  prev === link.label ? null : link.label
+                                )
+                              }
+                              className={`w-full flex items-center justify-between px-3.5 py-2.5 text-[15px] font-medium rounded-lg transition-colors cursor-pointer ${
+                                isDropdownOpen
+                                  ? "bg-[#FAF8F5] text-[#183D2B] font-semibold"
+                                  : "text-[#1D211F] hover:bg-[#F7F5EF] hover:text-[#183D2B]"
+                              }`}
+                            >
+                              <span>{link.label}</span>
+                              <ChevronDown
+                                size={18}
+                                className={`transition-transform duration-200 ${
+                                  isDropdownOpen
+                                    ? "rotate-180 text-[#183D2B]"
+                                    : "text-[#8C938F]"
+                                }`}
+                              />
+                            </button>
+
+                            {/* Dropdown Menu with motion */}
+                            <AnimatePresence initial={false}>
+                              {isDropdownOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.22, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <ul className="pl-3 pr-1 py-1.5 space-y-0.5 border-l-2 border-[#183D2B]/20 ml-4 my-1 list-none">
+                                    {link.dropdown!.map((sub) => (
+                                      <li key={sub.href}>
+                                        <Link
+                                          href={sub.href}
+                                          onClick={() => {
+                                            setMobileMenuOpen(false);
+                                            setMobileDropdownOpen(null);
+                                          }}
+                                          className="block px-3 py-2 text-[13px] font-medium text-[#5C6460] hover:text-[#183D2B] hover:bg-[#FAF8F5] rounded-md transition-colors"
+                                        >
+                                          {sub.label}
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </li>
+                        );
+                      }
+
+                      return (
+                        <li key={`${link.href}-${link.label}`}>
+                          <Link
+                            href={link.href}
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setMobileDropdownOpen(null);
+                            }}
+                            className="block px-3.5 py-2.5 text-[15px] font-medium text-[#1D211F] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
+                          >
+                            {link.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+
+                {/* Explore Links */}
+                <div className="pt-3">
+                  <p className="px-3.5 text-[11px] font-bold uppercase tracking-wider text-[#8C938F] mb-1.5">
+                    Explore
+                  </p>
+                  <ul className="flex flex-col gap-0.5 list-none p-0 m-0">
+                    <li>
+                      <Link
+                        href="/about"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setMobileDropdownOpen(null);
+                        }}
+                        className="block px-3.5 py-2 text-[13px] font-medium text-[#5C6460] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
+                      >
+                        About Aurelle
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/contact"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setMobileDropdownOpen(null);
+                        }}
+                        className="block px-3.5 py-2 text-[13px] font-medium text-[#5C6460] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
+                      >
+                        Contact Us
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </nav>
+
+              {/* Account & Sign Out footer (ALWAYS PINNED AND VISIBLE) */}
+              <div className="p-4 border-t border-[#EDE9DF] bg-[#FAF8F5]/80 space-y-2 shrink-0">
+                {isAuthenticated ? (
+                  <>
+                    {currentProfile?.full_name && (
+                      <p className="text-xs text-[#8C938F] px-1 truncate">
+                        Signed in as <strong className="text-[#14231B]">{currentProfile.full_name}</strong>
+                      </p>
+                    )}
                     <Link
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-sm font-medium text-[#1D211F] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
+                      href="/account"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setMobileDropdownOpen(null);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#183D2B] text-white font-semibold text-xs hover:bg-[#102D20] transition-colors shadow-2xs"
                     >
-                      {link.label}
+                      <User size={16} strokeWidth={1.8} aria-hidden="true" />
+                      My Account
                     </Link>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-[#8C938F] mb-1.5">
-                Explore
-              </p>
-              <ul className="flex flex-col gap-0.5 list-none p-0 m-0">
-                <li>
-                  <Link
-                    href="/categories"
-                    className="block px-3 py-2 text-sm font-medium text-[#5C6460] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
-                  >
-                    All Categories
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/about"
-                    className="block px-3 py-2 text-sm font-medium text-[#5C6460] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
-                  >
-                    About Aurelle
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/contact"
-                    className="block px-3 py-2 text-sm font-medium text-[#5C6460] rounded-lg hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
-                  >
-                    Contact Us
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-
-            <div className="p-4 border-t border-[#DCCFB9]/40 space-y-2">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/account"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors"
-                  >
-                    <User size={18} strokeWidth={1.75} aria-hidden="true" />
-                    My Account
-                  </Link>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setMobileMenuOpen(false);
+                        setMobileDropdownOpen(null);
+                        const supabase = createClient();
+                        await supabase.auth.signOut();
+                        window.location.assign("/");
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-red-200 text-red-600 bg-red-50/60 hover:bg-red-100/70 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      <LogOut size={15} strokeWidth={1.8} />
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
+                      setAuthModalMode("login");
+                      setAuthModalOpen(true);
                       setMobileMenuOpen(false);
-                      const supabase = createClient();
-                      await supabase.auth.signOut();
-                      window.location.assign("/");
+                      setMobileDropdownOpen(null);
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md border border-[#EDE9DF] text-xs font-medium text-[#5C6460] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors shadow-2xs cursor-pointer"
                   >
-                    Sign Out
+                    <User size={18} strokeWidth={1.75} aria-hidden="true" />
+                    Sign In / Register
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthModalMode("login");
-                    setAuthModalOpen(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-[#183D2B] text-white font-semibold text-sm hover:bg-[#102D20] transition-colors cursor-pointer"
-                >
-                  <User size={18} strokeWidth={1.75} aria-hidden="true" />
-                  Sign In
-                </button>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <AccountAuthModal open={authModalOpen} initialMode={authModalMode} onClose={() => setAuthModalOpen(false)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
       <WishlistDrawer

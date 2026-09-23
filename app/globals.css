@@ -149,7 +149,7 @@
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 @layer utilities {
   .animate-top-rated {
-    animation: top-rated-slide 28s linear infinite;
+    animation: top-rated-slide 16s linear infinite;
   }
 
   @keyframes top-rated-slide {
@@ -183,6 +183,15 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+  }
+}
+
+/* ─── Prevent iPhone / iOS Safari Zoom on Input Focus ───────────────────── */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }
 

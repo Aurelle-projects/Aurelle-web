@@ -244,6 +244,7 @@ export default async function HomePage() {
       {/* ─── 5. New Arrivals Section — database products only ── */}
       <ProductSection
         title="New Arrivals"
+        badge="New Arrival"
         viewAllHref="/shop"
         products={newArrivalProducts}
         maxProducts={10}

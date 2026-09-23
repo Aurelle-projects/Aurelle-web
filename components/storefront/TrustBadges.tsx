@@ -183,26 +183,24 @@ export default function TrustBadges({ badges }: TrustBadgesProps) {
       aria-label="Customer Guarantees"
     >
       <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
-        {/* Mobile: 2×2 centered stacked cells with dividers */}
-        <div className="grid grid-cols-2 sm:hidden">
+        {/* Mobile: 2×2 Modern Boxed Cards */}
+        <div className="grid grid-cols-2 gap-2.5 px-4 sm:hidden">
           {BADGES.map((badge) => {
             const Icon = badge.icon;
             return (
               <div
                 key={badge.title}
-                className="flex min-h-[94px] flex-col items-center justify-center gap-1.5 py-3 px-2 text-center"
+                className="flex flex-col items-center justify-center text-center p-3.5 rounded-2xl bg-[#FAF9F6] border border-[#EBE6DC] shadow-xs"
               >
-                <div className="w-10 h-10 rounded-full border-[1.5px] border-[#1D211F] bg-transparent text-[#1D211F] flex items-center justify-center shrink-0">
-                  <Icon className="w-[18px] h-[18px]" />
+                <div className="w-10 h-10 rounded-full bg-white border border-[#E2DDD3] text-[#183D2B] flex items-center justify-center shrink-0 mb-2 shadow-2xs">
+                  <Icon className="w-[19px] h-[19px]" />
                 </div>
-                <div>
-                  <p className="text-[12px] font-bold text-[#1D211F] leading-tight tracking-tight">
-                    {badge.title}
-                  </p>
-                  <p className="text-[10.5px] text-[#5C6460] leading-tight mt-0.5">
-                    {badge.subtitle}
-                  </p>
-                </div>
+                <p className="text-[12px] font-bold text-[#14231B] leading-tight tracking-tight">
+                  {badge.title}
+                </p>
+                <p className="text-[10.5px] text-[#5C6460] leading-tight mt-0.5">
+                  {badge.subtitle}
+                </p>
               </div>
             );
           })}

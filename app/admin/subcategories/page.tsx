@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
-import { createClient } from "@/lib/supabase/client";
+import { useAdminData, AdminCategory, AdminSubcategory } from "@/context/AdminDataContext";
 import {
   Plus,
   Edit2,
@@ -52,9 +52,17 @@ function SubcategoriesContent() {
   const searchParams = useSearchParams();
   const initialCategoryFilter = searchParams.get("category") || "all";
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    categories: contextCategories,
+    subcategories: contextSubcategories,
+    categoriesLoading,
+    loadCategories,
+    setSubcategories,
+  } = useAdminData();
+
+  const categories = useMemo(() => contextCategories ?? [], [contextCategories]);
+  const subcategories = useMemo(() => contextSubcategories ?? [], [contextSubcategories]);
+  const loading = (contextCategories === null || contextSubcategories === null) && categoriesLoading;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Subcategory | null>(null);
@@ -67,39 +75,11 @@ function SubcategoriesContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY_SUB_FORM });
 
-
-
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/categories");
-      const result = await res.json();
-      if (!res.ok || result.error) throw new Error(result.error || "Failed to load subcategories.");
-
-      const cats: Category[] = result.categories ?? [];
-      const subs: Subcategory[] = result.subcategories ?? [];
-
-      setCategories(cats);
-
-      const catMap = new Map(cats.map((c) => [c.id, c.name]));
-      const mapped: Subcategory[] = subs.map((s) => ({
-        ...s,
-        parent_name: catMap.get(s.parent_id) || "Unknown Category",
-      }));
-
-      setSubcategories(mapped);
-    } catch (err: any) {
-      showMsg(err?.message || "Failed to load subcategories from database.", "error");
-    } finally {
-      setLoading(false);
-    }
-  }
+    loadCategories();
+  }, [loadCategories]);
 
   function showMsg(text: string, type: "success" | "error" | "info") {
     setMessage({ text, type });
@@ -171,7 +151,7 @@ function SubcategoriesContent() {
 
       showMsg(editingId ? "Subcategory updated successfully." : "Subcategory created successfully.", "success");
       setShowModal(false);
-      await loadData();
+      await loadCategories(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       showMsg(err?.message || "Failed to save subcategory.", "error");
@@ -192,10 +172,10 @@ function SubcategoriesContent() {
       const result = await res.json();
       if (!res.ok || result.error) throw new Error(result.error || "Failed to delete subcategory.");
 
-      setSubcategories((prev) => prev.filter((s) => s.id !== id));
+      setSubcategories((prev) => (prev ? prev.filter((s) => s.id !== id) : null));
       showMsg(`Subcategory "${name}" deleted successfully.`, "success");
       setDeleteTarget(null);
-      await loadData();
+      await loadCategories(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       showMsg(err?.message || "Failed to delete subcategory.", "error");
@@ -204,14 +184,18 @@ function SubcategoriesContent() {
     }
   }
 
-  const filteredSubcategories = subcategories.filter((s) => {
-    const matchesCategory = selectedCategory === "all" || s.parent_id === selectedCategory;
-    const matchesSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.slug.toLowerCase().includes(search.toLowerCase()) ||
-      (s.parent_name && s.parent_name.toLowerCase().includes(search.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  const filteredSubcategories = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    return subcategories.filter((s) => {
+      const matchesCategory = selectedCategory === "all" || s.parent_id === selectedCategory;
+      const matchesSearch =
+        !term ||
+        s.name.toLowerCase().includes(term) ||
+        s.slug.toLowerCase().includes(term) ||
+        (s.parent_name && s.parent_name.toLowerCase().includes(term));
+      return matchesCategory && matchesSearch;
+    });
+  }, [subcategories, selectedCategory, search]);
 
   return (
     <div className="flex flex-col pb-16">
@@ -220,32 +204,31 @@ function SubcategoriesContent() {
         subtitle="Create, edit, and organize subcategories under their parent categories. All data is fetched from database."
       />
 
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4">
         {/* Navigation Tabs */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#183D2B]/10 pb-4">
-          <div className="flex items-center gap-2 p-1 bg-[#F0EBE1] rounded-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#183D2B]/10 pb-3">
+          <div className="flex items-center gap-1.5 p-1 bg-[#F0EBE1] rounded-lg">
             <Link
               href="/admin/categories"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#5C6460] hover:text-[#183D2B] hover:bg-white/60 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] hover:bg-white/60 transition-all"
             >
-              <Layers size={16} />
+              <Layers size={14} />
               <span>Categories ({categories.length})</span>
             </Link>
             <button
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#183D2B] text-white shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[#183D2B] text-white shadow-2xs transition-all"
             >
-              <FolderTree size={16} />
+              <FolderTree size={14} />
               <span>Subcategories ({subcategories.length})</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
-
             <button
               onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#183D2B] hover:bg-[#122e20] text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] hover:bg-[#122e20] text-white text-xs font-semibold rounded-md shadow-2xs transition-all cursor-pointer"
             >
-              <Plus size={16} />
+              <Plus size={14} />
               <span>Add Subcategory</span>
             </button>
           </div>
@@ -254,7 +237,7 @@ function SubcategoriesContent() {
         {/* Message Banner */}
         {message && (
           <div
-            className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${
+            className={`p-3 rounded-lg border flex items-center gap-2.5 text-xs font-medium ${
               message.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                 : message.type === "error"
@@ -263,36 +246,36 @@ function SubcategoriesContent() {
             }`}
           >
             {message.type === "success" ? (
-              <Check size={18} className="shrink-0 text-emerald-600" />
+              <Check size={15} className="shrink-0 text-emerald-600" />
             ) : (
-              <AlertCircle size={18} className="shrink-0 text-red-600" />
+              <AlertCircle size={15} className="shrink-0 text-red-600" />
             )}
             <span className="flex-1">{message.text}</span>
-            <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600">
-              <X size={16} />
+            <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+              <X size={14} />
             </button>
           </div>
         )}
 
         {/* Filters: Search & Category Dropdown */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5C6460]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C6460]" />
             <input
               type="text"
               placeholder="Search subcategories..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B]"
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-[#183D2B]/20 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-[#183D2B]"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <Filter size={16} className="text-[#5C6460] shrink-0" />
+            <Filter size={14} className="text-[#5C6460] shrink-0" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-[#183D2B]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#183D2B] font-medium text-[#1A1A1A]"
+              className="px-3 py-1.5 rounded-lg border border-[#183D2B]/20 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-[#183D2B] font-medium text-[#1A1A1A] cursor-pointer"
             >
               <option value="all">All Categories ({subcategories.length})</option>
               {categories.map((cat) => {
@@ -309,18 +292,18 @@ function SubcategoriesContent() {
 
         {/* Content Table */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#5C6460] space-y-3">
-            <Loader2 size={32} className="animate-spin text-[#183D2B]" />
-            <p className="text-sm font-medium">Loading subcategories from database...</p>
+          <div className="flex flex-col items-center justify-center py-16 text-[#5C6460] space-y-2">
+            <Loader2 size={24} className="animate-spin text-[#183D2B]" />
+            <p className="text-xs font-medium">Loading subcategories from database...</p>
           </div>
         ) : filteredSubcategories.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-[#183D2B]/10 p-12 text-center max-w-md mx-auto space-y-4 shadow-sm">
-            <div className="w-14 h-14 bg-[#183D2B]/5 rounded-2xl flex items-center justify-center mx-auto text-[#183D2B]">
-              <FolderTree size={28} />
+          <div className="bg-white rounded-xl border border-[#183D2B]/10 p-8 text-center max-w-md mx-auto space-y-3 shadow-2xs">
+            <div className="w-10 h-10 bg-[#183D2B]/5 rounded-xl flex items-center justify-center mx-auto text-[#183D2B]">
+              <FolderTree size={22} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#1A1A1A]">No subcategories found</h3>
-              <p className="text-xs text-[#5C6460] mt-1">
+              <h3 className="text-sm font-bold text-[#1A1A1A]">No subcategories found</h3>
+              <p className="text-[11px] text-[#5C6460] mt-0.5">
                 {search || selectedCategory !== "all"
                   ? "No subcategories matched your filter criteria."
                   : "Get started by adding your first subcategory."}
@@ -328,30 +311,30 @@ function SubcategoriesContent() {
             </div>
             <button
               onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#183D2B] text-white text-sm font-semibold rounded-xl"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] text-white text-xs font-semibold rounded-md cursor-pointer"
             >
-              <Plus size={16} />
+              <Plus size={14} />
               <span>Add Subcategory</span>
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-[#183D2B]/10 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-lg border border-[#183D2B]/10 overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#FAF8F5] border-b border-[#183D2B]/10 text-[11px] font-bold uppercase tracking-wider text-[#5C6460]">
-                    <th className="py-3.5 px-4">Subcategory Name</th>
-                    <th className="py-3.5 px-4">Parent Category</th>
-                    <th className="py-3.5 px-4">Sort Order</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  <tr className="bg-[#FAF8F5] border-b border-[#183D2B]/10 text-[10px] font-bold uppercase tracking-wider text-[#5C6460]">
+                    <th className="py-2.5 px-3.5">Subcategory Name</th>
+                    <th className="py-2.5 px-3.5">Parent Category</th>
+                    <th className="py-2.5 px-3.5">Sort Order</th>
+                    <th className="py-2.5 px-3.5">Status</th>
+                    <th className="py-2.5 px-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#183D2B]/5 text-sm">
+                <tbody className="divide-y divide-[#183D2B]/5 text-xs">
                   {filteredSubcategories.map((sub) => (
                     <tr key={sub.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
                       {/* Name */}
-                      <td className="py-3.5 px-4 font-semibold text-[#1A1A1A]">
+                      <td className="py-2.5 px-3.5 font-semibold text-xs text-[#1A1A1A]">
                         {sub.name}
                       </td>
 

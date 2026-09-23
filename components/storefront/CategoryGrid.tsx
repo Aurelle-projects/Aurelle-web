@@ -54,7 +54,7 @@ export default function CategoryGrid({ categories: initialCategories }: Category
     }
   }, [initialCategories]);
 
-  // Infinite Auto-Slide
+  // Timed jump animation (auto-slide step by step)
   useEffect(() => {
     if (isPaused || categories.length <= 1) return;
 
@@ -66,10 +66,15 @@ export default function CategoryGrid({ categories: initialCategories }: Category
       if (!track) return;
 
       const firstItem = track.children[0] as HTMLElement;
-      const tenthItem = track.children[categories.length] as HTMLElement;
+      const secondItem = track.children[1] as HTMLElement;
+      const setItem = track.children[categories.length] as HTMLElement;
 
-      const step = firstItem ? firstItem.offsetWidth + 32 : 220;
-      const singleSetWidth = tenthItem && firstItem ? tenthItem.offsetLeft - firstItem.offsetLeft : 0;
+      const step =
+        secondItem && firstItem
+          ? secondItem.offsetLeft - firstItem.offsetLeft
+          : (firstItem?.offsetWidth || 100) + 12;
+      const singleSetWidth =
+        setItem && firstItem ? setItem.offsetLeft - firstItem.offsetLeft : 0;
 
       // Infinite loop: if we've scrolled past the first set, reset silently then scroll
       if (singleSetWidth > 0 && slider.scrollLeft >= singleSetWidth - 10) {
@@ -121,15 +126,15 @@ export default function CategoryGrid({ categories: initialCategories }: Category
 
   if (!categories || categories.length === 0) {
     return (
-      <div className="w-full overflow-hidden py-3 px-2 sm:px-4" aria-label="Loading categories">
-        <div className="flex items-start gap-6 sm:gap-8 lg:gap-10 w-max">
+      <div className="w-full overflow-hidden py-3 pl-4 pr-0 sm:px-4" aria-label="Loading categories">
+        <div className="flex items-start gap-3 sm:gap-8 lg:gap-10 w-max">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="flex flex-col items-center gap-3 shrink-0 w-32 sm:w-40 md:w-44 lg:w-48 animate-pulse"
+              className="flex flex-col items-center gap-2.5 sm:gap-3 shrink-0 w-[calc((100vw-92px)/3)] sm:w-40 md:w-44 lg:w-48 animate-pulse"
             >
-              <div className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full bg-[#F0EBE1] border border-[#E5DFD5]" />
-              <div className="h-4 w-20 bg-[#F0EBE1] rounded-full mt-1" />
+              <div className="w-[76px] h-[76px] sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full bg-[#F0EBE1] border border-[#E5DFD5]" />
+              <div className="h-3.5 w-16 sm:w-20 bg-[#F0EBE1] rounded-full mt-1" />
             </div>
           ))}
         </div>
@@ -137,8 +142,8 @@ export default function CategoryGrid({ categories: initialCategories }: Category
     );
   }
 
-  // Duplicate items 2x for seamless, infinite looping
-  const displayItems = categories.concat(categories);
+  // Duplicate items for seamless infinite looping
+  const displayItems = categories.concat(categories).concat(categories);
 
   return (
     <div
@@ -158,7 +163,7 @@ export default function CategoryGrid({ categories: initialCategories }: Category
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onClickCapture={handleClickCapture}
-        className="w-full overflow-x-auto scroll-smooth py-3 px-2 sm:px-4 cursor-grab active:cursor-grabbing"
+        className="w-full overflow-x-auto scroll-smooth py-3 pl-4 pr-0 sm:px-4 cursor-grab active:cursor-grabbing"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -166,7 +171,7 @@ export default function CategoryGrid({ categories: initialCategories }: Category
         }}
       >
         <div
-          className="flex items-start gap-6 sm:gap-8 lg:gap-10 w-max"
+          className="flex items-start gap-3 sm:gap-8 lg:gap-10 w-max"
           role="list"
           aria-label="Product categories slider"
         >
@@ -185,26 +190,26 @@ export default function CategoryGrid({ categories: initialCategories }: Category
                 onClick={() => {
                   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
                 }}
-                className="flex flex-col items-center gap-3 group shrink-0 w-32 sm:w-40 md:w-44 lg:w-48 transition-transform duration-300 hover:-translate-y-1"
+                className="flex flex-col items-center gap-2.5 sm:gap-3 group shrink-0 w-[calc((100vw-92px)/3)] sm:w-40 md:w-44 lg:w-48 transition-transform duration-300 hover:-translate-y-1"
                 role="listitem"
                 aria-label={`Shop ${displayName}`}
                 draggable={false}
               >
-                {/* ── Large Circular Category Card ─────────────────── */}
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full overflow-hidden bg-white ring-2 ring-white group-hover:border-[#183D2B] group-hover:ring-[#183D2B]/20 transition-all duration-300 shadow-sm group-hover:shadow-xl group-hover:shadow-[#183D2B]/15">
+                {/* ── Circular Category Card ─────────────────── */}
+                <div className="relative w-[76px] h-[76px] sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 rounded-full overflow-hidden bg-white ring-2 ring-white group-hover:border-[#183D2B] group-hover:ring-[#183D2B]/20 transition-all duration-300 shadow-sm group-hover:shadow-xl group-hover:shadow-[#183D2B]/15">
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
                       alt={displayName}
                       fill
-                      sizes="(max-width: 640px) 112px, (max-width: 1024px) 160px, 176px"
+                      sizes="(max-width: 640px) 76px, (max-width: 1024px) 160px, 176px"
                       className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                       draggable={false}
                     />
                   ) : (
                     /* Elegant Letter Placeholder */
                     <div className="w-full h-full bg-gradient-to-br from-[#EDE8DE] to-[#D9CEBF] flex items-center justify-center">
-                      <span className="font-serif text-3xl sm:text-4xl font-bold text-[#183D2B]/75">
+                      <span className="font-serif text-2xl sm:text-4xl font-bold text-[#183D2B]/75">
                         {displayName.charAt(0)}
                       </span>
                     </div>
@@ -214,8 +219,8 @@ export default function CategoryGrid({ categories: initialCategories }: Category
                   <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#183D2B]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
 
-                {/* ── Typography & Label (Clean: Category name only, no extra explore arrows) ─ */}
-                <span className="text-sm  text-[#1D211F] text-center tracking-tight leading-snug group-hover:text-[#183D2B] transition-colors">
+                {/* ── Typography & Label ─ */}
+                <span className="text-xs sm:text-sm text-[#1D211F] text-center tracking-tight leading-tight line-clamp-2 px-1 group-hover:text-[#183D2B] transition-colors">
                   {displayName}
                 </span>
               </Link>

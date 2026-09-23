@@ -235,16 +235,34 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
     }
   }
 
+  function getCartReadyProduct() {
+    if (!product) return null;
+    const primaryImg =
+      (product as any).product_images?.find((img: any) => img.is_primary)?.secure_url ||
+      (product as any).product_images?.[0]?.secure_url;
+    return {
+      ...product,
+      images:
+        (product as any).images?.length > 0
+          ? (product as any).images
+          : primaryImg
+          ? [{ url: primaryImg, alt: product.name, is_primary: true }]
+          : [],
+    };
+  }
+
   function handleAddToCart() {
-    if (!product) return;
-    cart.addItem(product, quantity);
+    const p = getCartReadyProduct();
+    if (!p) return;
+    cart.addItem(p as any, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
 
   function handleBuyNow() {
-    if (!product) return;
-    cart.addItem(product, quantity);
+    const p = getCartReadyProduct();
+    if (!p) return;
+    cart.addItem(p as any, quantity);
     router.push("/checkout");
   }
 
@@ -300,8 +318,8 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
     : 0;
 
   return (
-    <div className="bg-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+    <div className="bg-white min-h-screen pb-20 lg:pb-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
         {/* ── Gallery + Info ─────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20">
           {/* Gallery */}
@@ -373,7 +391,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           <div>
             <p className="text-sm font-medium text-[#183D2B]">{product.brand?.name || "Aurelle"}</p>
 
-            <h1 className="mt-1.5 text-3xl sm:text-4xl font-bold text-[#14231B] leading-tight">
+            <h1 className="mt-1.5 text-lg font-semibold sm:text-3xl  text-[#14231B] leading-tight">
               {product.name}
             </h1>
 
@@ -405,7 +423,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </a>
 
             <div className="mt-4 flex items-baseline gap-3">
-              <span className="text-2xl font-bold text-[#14231B]">
+              <span className="text-lg font-semibold text-[#14231B]">
                 AED {Number(product.retail_price).toFixed(2)}
               </span>
               {isOnSale && product.compare_at_price && (
@@ -417,18 +435,14 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </div>
 
             {(product.benefits || product.description) && (
-              <p className="mt-4 text-[15px] text-[#4B534E] leading-relaxed break-words">
+              <p className="mt-4 sm:text-sm text-xs text-[#4B534E] leading-relaxed break-words">
                 {product.benefits || product.description}
               </p>
             )}
 
-            <p className="mt-4 text-sm font-medium text-emerald-700">
-              In stock — ready for same-day UAE dispatch
-            </p>
-
             {/* Quantity + Actions */}
             <div className="mt-8 flex items-center gap-4">
-              <div className="flex items-center border-b border-[#DCCFB9]">
+              <div className="flex items-center">
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -449,11 +463,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className={`w-full py-3.5 px-6 rounded-sm font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                className={`w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
                   added ? "bg-emerald-600 text-white" : "bg-[#183D2B] hover:bg-[#102D20] text-white"
                 }`}
               >
@@ -473,7 +487,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="w-full py-3.5 px-6 rounded-sm font-bold text-sm bg-[#C9A84C] hover:bg-[#b0923e] text-[#14231B] transition-colors cursor-pointer"
+                className="w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm bg-[#C9A84C] hover:bg-[#b0923e] text-[#14231B] transition-colors cursor-pointer flex items-center justify-center"
               >
                 Buy now
               </button>
@@ -573,7 +587,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
         </div>
 
         {/* ── Overall Reviews Section ──────────────────────────────── */}
-        <div id="reviews" className="mt-20 pt-12 border-t border-[#EFEAE0]">
+        <div id="reviews" className="sm:mt-10 pt-12 ">
           {/* Review Heading & Info Note */}
           <div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#14231B]">
@@ -585,9 +599,9 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </div>
 
           {/* Overall rating first & Rate this Product button on same line (space-between) */}
-          <div className="mt-6 pb-6 border-b border-[#EFEAE0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="mt-6 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Overall Rating Box (shown first on the left) */}
-            <div className="flex items-center gap-5 p-4 rounded-xl bg-[#FAF8F5] border border-[#EDE9DF] self-start sm:self-auto">
+            <div className="flex items-center gap-5 p-4 rounded-xl bg-[#FAF8F5] border border-[#EDE9DF] w-full sm:w-auto">
               <div className="text-center">
                 <span className="text-3xl sm:text-4xl font-serif font-bold text-[#183D2B]">
                   {reviewSummary.totalReviews > 0 ? reviewSummary.averageRating.toFixed(1) : "0.0"}
@@ -619,17 +633,16 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               </div>
             </div>
 
-            {/* Rate this Product Button (on the same line with space-between) */}
+            {/* Rate this Product Button (full width on mobile, auto on desktop) */}
             {!showReviewForm && (
-              <div className="self-start sm:self-auto">
+              <div className="w-full sm:w-auto">
                 <button
                   id="write-review-btn"
                   type="button"
                   disabled={eligibilityChecking}
                   onClick={handleRateClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-lg hover:bg-[#102D20] disabled:opacity-60 transition-colors shadow-sm cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-lg hover:bg-[#102D20] disabled:opacity-60 transition-colors shadow-sm cursor-pointer"
                 >
-               
                   {eligibilityChecking ? "Checking…" : "Rate this Product"}
                 </button>
               </div>
@@ -743,30 +756,63 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
             return (
               <div>
-                <div className="divide-y divide-[#EFEAE0]">
-                  {displayedReviews.map((rev) => (
-                    <div key={rev.id} className="py-6 space-y-2">
-                      <h4 className="text-sm font-bold text-[#14231B]">{rev.author_name}</h4>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            size={14}
-                            className={
-                              s <= rev.rating
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-gray-300"
-                            }
-                          />
-                        ))}
+                <div>
+                  {displayedReviews.map((rev, idx) => {
+                    const initial = (rev.author_name || "U").trim().charAt(0).toUpperCase();
+                    // Hardcoded distinct colors for the initial icon
+                    const AVATAR_PALETTES = [
+                      "bg-[#183D2B] text-white", // Aurelle deep green
+                      "bg-[#9C6D3F] text-white", // Warm amber terracotta
+                      "bg-[#35535C] text-white", // Deep petrol blue
+                      "bg-[#684B6E] text-white", // Rich plum
+                      "bg-[#70603A] text-white", // Golden bronze
+                      "bg-[#41624F] text-white", // Forest sage
+                    ];
+                    const colorClass = AVATAR_PALETTES[(rev.author_name ? rev.author_name.charCodeAt(0) : idx) % AVATAR_PALETTES.length];
+
+                    return (
+                      <div key={rev.id} className="py-5">
+                        <div className="flex items-start gap-3">
+                          {/* Round avatar icon with hard-coded color */}
+                          <div className={`w-8 h-8 rounded-full ${colorClass} font-bold text-xs flex items-center justify-center shrink-0 uppercase shadow-xs mt-0.5`}>
+                            {initial}
+                          </div>
+
+                          {/* Content column: user name & rating on same line, message directly below starting at same line */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-3">
+                              <h4 className="text-sm font-bold text-[#14231B] truncate">
+                                {rev.author_name}
+                              </h4>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    size={14}
+                                    className={
+                                      s <= rev.rating
+                                        ? "fill-amber-400 text-amber-400"
+                                        : "text-gray-300"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Review message: perfectly aligned with the user name */}
+                            <p className="mt-1.5 text-sm text-[#4B534E] leading-relaxed break-words">
+                              {rev.body}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm text-[#4B534E] leading-relaxed break-words pt-1">{rev.body}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {hasMoreReviews && (
-                  <div className="py-8 text-center border-t border-[#EFEAE0]">
+                  <div className="py-8 text-center">
                     <button
                       type="button"
                       id="see-more-reviews-btn"
@@ -791,7 +837,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
         {/* Related Products — only shown when DB has related items */}
         {relatedProducts.length > 0 && (
-          <div className="mt-20 pt-12 border-t border-[#EFEAE0]">
+          <div className="sm:mt-5 pt-5">
             <h2 className="text-xl font-bold text-[#14231B] mb-6">You may also love</h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((p) => (
@@ -800,6 +846,48 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Mobile Sticky Bottom Action Bar — ONLY on mobile view (lg:hidden) */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#DCCFB9]/60 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
+        {/* Left Side: Price */}
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8E9590]">Price</span>
+          <div className="flex items-baseline gap-1.5 truncate">
+            <span className="text-lg font-bold text-[#14231B]">
+              AED {Number(product.retail_price).toFixed(2)}
+            </span>
+            {isOnSale && product.compare_at_price && (
+              <span className="text-xs text-[#8E9590] line-through">
+                AED {Number(product.compare_at_price).toFixed(2)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Add to Bag + Buy Now Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            className={`h-11 px-3.5 rounded-lg border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+              added
+                ? "bg-emerald-600 border-emerald-600 text-white"
+                : "border-[#183D2B] text-[#183D2B] hover:bg-[#F7F5EF] active:scale-95"
+            }`}
+            aria-label="Add to bag"
+          >
+            {added ? <Check size={16} strokeWidth={2.5} /> : <ShoppingBag size={16} strokeWidth={2} />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            className="h-11 px-6 rounded-lg bg-[#C9A84C] hover:bg-[#b0923e] active:scale-95 text-[#14231B] text-xs font-bold uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center justify-center"
+          >
+            Buy now
+          </button>
+        </div>
       </div>
     </div>
   );

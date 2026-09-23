@@ -14,6 +14,7 @@ interface ProductSectionProps {
   bottomButtonText?: string;
   maxProducts?: number;
   desktopColumns?: 5 | 6;
+  badge?: string;
 }
 
 export default function ProductSection({
@@ -27,6 +28,7 @@ export default function ProductSection({
   bottomButtonText = "All Products",
   maxProducts = 4,
   desktopColumns = 6,
+  badge,
 }: ProductSectionProps) {
   if (products.length === 0 && !emptyMessage) return null;
 
@@ -34,7 +36,7 @@ export default function ProductSection({
 
   return (
     <section
-      className={`py-12 md:py-16 ${background === "cream" ? "bg-[#FAF6F0]" : "bg-white"}`}
+      className={`py-6 md:py-16 ${background === "cream" ? "bg-[#FAF6F0]" : "bg-white"}`}
       aria-labelledby={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,7 +69,10 @@ export default function ProductSection({
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {displayProducts.map((product: any) => (
               <div key={product.id} role="listitem">
-                <ProductCard product={product} />
+                <ProductCard
+                  product={product}
+                  badge={badge ?? (title.toLowerCase().includes("new arrival") ? "New Arrival" : undefined)}
+                />
               </div>
             ))}
           </div>

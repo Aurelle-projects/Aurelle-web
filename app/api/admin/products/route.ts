@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 
 // GET /api/admin/products — Lightweight list for dropdowns (id, name, slug)
 export async function GET() {
@@ -237,17 +238,45 @@ export async function PATCH(req: NextRequest) {
 
     // Update images if provided
     if (images !== undefined && Array.isArray(images)) {
+      // Find removed images to delete from Cloudinary
+      const { data: currentImages } = await supabase
+        .from("product_images")
+        .select("cloudinary_public_id")
+        .eq("product_id", id);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newPublicIds = new Set(
+        images.map((img: any) => img.public_id || img.cloudinary_public_id).filter(Boolean)
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const removedImages = (currentImages || []).filter(
+        (img: any) => img.cloudinary_public_id && !newPublicIds.has(img.cloudinary_public_id)
+      );
+
       await supabase.from("product_images").delete().eq("product_id", id);
       if (images.length > 0) {
-        const imageRows = images.map((img: { public_id: string; secure_url: string; is_primary: boolean }, idx: number) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const imageRows = images.map((img: any, idx: number) => ({
           product_id: id,
-          cloudinary_public_id: img.public_id,
+          cloudinary_public_id: img.public_id || img.cloudinary_public_id,
           secure_url: img.secure_url,
-          is_primary: img.is_primary,
+          is_primary: !!img.is_primary,
           sort_order: idx,
         }));
         const { error: imgErr } = await supabase.from("product_images").insert(imageRows);
         if (imgErr) console.error("[API] Image update error:", imgErr);
+      }
+
+      // Cleanup removed images from Cloudinary
+      for (const img of removedImages) {
+        if (img.cloudinary_public_id) {
+          try {
+            await deleteFromCloudinary(img.cloudinary_public_id);
+          } catch (cldErr) {
+            console.error("[API] Cloudinary image cleanup error:", cldErr);
+          }
+        }
       }
     }
 
@@ -275,6 +304,12 @@ export async function DELETE(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
+    // Fetch existing product image public IDs before deleting rows
+    const { data: existingImages } = await supabase
+      .from("product_images")
+      .select("cloudinary_public_id")
+      .eq("product_id", id);
+
     // Delete related rows first (cascade may handle some, but be explicit)
     await supabase.from("product_images").delete().eq("product_id", id);
     await supabase.from("inventory").delete().eq("product_id", id);
@@ -284,6 +319,19 @@ export async function DELETE(req: NextRequest) {
     if (error) {
       console.error("[API] Product delete error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Clean up images from Cloudinary
+    if (existingImages && Array.isArray(existingImages)) {
+      for (const img of existingImages) {
+        if (img.cloudinary_public_id) {
+          try {
+            await deleteFromCloudinary(img.cloudinary_public_id);
+          } catch (cldErr) {
+            console.error("[API] Cloudinary image deletion error:", cldErr);
+          }
+        }
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,11 +14,8 @@ import {
   Trash2,
   Star,
   ShieldCheck,
-  ChevronRight,
   ShoppingBag,
-  Clock,
   Phone,
-  Mail,
   Home,
   Briefcase,
   X,
@@ -71,6 +68,34 @@ export interface Order {
   order_items?: OrderItem[];
 }
 
+export interface Review {
+  id: string;
+  product_id: string;
+  order_id: string;
+  rating: number;
+  body: string;
+  created_at?: string;
+}
+
+interface Profile {
+  id: string;
+  full_name?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  updated_at?: string;
+}
+
+// Minimal shape of the Supabase auth user we actually read from.
+interface AuthUser {
+  id: string;
+  email?: string | null;
+  user_metadata?: {
+    full_name?: string;
+    phone?: string;
+    [key: string]: unknown;
+  };
+}
+
 const UAE_EMIRATES = [
   "Dubai",
   "Abu Dhabi",
@@ -81,21 +106,34 @@ const UAE_EMIRATES = [
   "Umm Al Quwain",
 ];
 
+type TabId = "profile" | "orders" | "addresses" | "reviews";
+
 function AccountContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialTab = searchParams.get("tab") || "profile";
 
-  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "addresses" | "reviews">(
+  const [activeTab, setActiveTab] = useState<TabId>(
     initialTab === "orders" || initialTab === "addresses" || initialTab === "reviews"
       ? initialTab
       : "profile"
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [user, setUser] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [profile, setProfile] = useState<any>(null);
+  const mobileTabContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleTabChange = useCallback(
+    (tabId: TabId) => {
+      setActiveTab(tabId);
+      router.replace(`/account?tab=${tabId}`);
+      if (mobileTabContainerRef.current) {
+        mobileTabContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+      }
+    },
+    [router]
+  );
+
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
@@ -128,8 +166,7 @@ function AccountContent() {
   const [addressError, setAddressError] = useState<string | null>(null);
 
   // Reviews state
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [loadingUserReviews, setLoadingUserReviews] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{
@@ -148,6 +185,18 @@ function AccountContent() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
 
+  const tabsList: { id: TabId; label: string; icon: typeof User; count?: number }[] = [
+    { id: "profile", label: "Profile Details", icon: User },
+    { id: "orders", label: "Recent Orders", icon: Package, count: orders.length },
+    { id: "addresses", label: "Saved Addresses", icon: MapPin, count: addresses.length },
+    { id: "reviews", label: "Reviews & Ratings", icon: Star, count: userReviews.length },
+  ];
+
+  const mobileOrderedTabs = [
+    ...tabsList.filter((t) => t.id === activeTab),
+    ...tabsList.filter((t) => t.id !== activeTab),
+  ];
+
   // Keep tab synced with query param
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -163,12 +212,16 @@ function AccountContent() {
 
   // Load initial User & Profile
   useEffect(() => {
+    let cancelled = false;
+
     async function loadUser() {
       setLoading(true);
       const supabase = createClient();
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser();
+
+      if (cancelled) return;
 
       if (!currentUser) {
         setUser(null);
@@ -178,13 +231,14 @@ function AccountContent() {
 
       setUser(currentUser);
 
-      // Fetch profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profileData } = await (supabase as any)
         .from("profiles")
         .select("*")
         .eq("id", currentUser.id)
         .single();
+
+      if (cancelled) return;
 
       if (profileData) {
         setProfile(profileData);
@@ -199,10 +253,13 @@ function AccountContent() {
     }
 
     loadUser();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch Orders
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!user) return;
     setLoadingOrders(true);
     try {
@@ -216,10 +273,10 @@ function AccountContent() {
     } finally {
       setLoadingOrders(false);
     }
-  };
+  }, [user]);
 
   // Fetch Addresses
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async () => {
     if (!user) return;
     setLoadingAddresses(true);
     try {
@@ -233,10 +290,10 @@ function AccountContent() {
     } finally {
       setLoadingAddresses(false);
     }
-  };
+  }, [user]);
 
   // Fetch User's Reviews
-  const fetchUserReviews = async () => {
+  const fetchUserReviews = useCallback(async () => {
     if (!user) return;
     setLoadingUserReviews(true);
     try {
@@ -250,46 +307,47 @@ function AccountContent() {
     } finally {
       setLoadingUserReviews(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    if (user) {
-      if (activeTab === "orders" || activeTab === "reviews") fetchOrders();
-      if (activeTab === "reviews") fetchUserReviews();
-      if (activeTab === "addresses") fetchAddresses();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, activeTab]);
+    if (!user) return;
+    if (activeTab === "orders" || activeTab === "reviews") fetchOrders();
+    if (activeTab === "reviews") fetchUserReviews();
+    if (activeTab === "addresses") fetchAddresses();
+  }, [user, activeTab, fetchOrders, fetchUserReviews, fetchAddresses]);
 
-  function openReviewModal(
-    productId: string,
-    productName: string,
-    productImage: string | null | undefined,
-    orderId: string,
-    orderNumber: string
-  ) {
-    const existing = userReviews.find(
-      (r) => r.product_id === productId && r.order_id === orderId
-    );
-    if (existing) {
-      return; // Already reviewed for this purchase
-    }
-    setReviewTarget({
-      productId,
-      productName,
-      productImage,
-      orderId,
-      orderNumber,
-      existingRating: undefined,
-      existingBody: undefined,
-    });
-    setReviewRating(5);
-    setReviewHoverRating(0);
-    setReviewBody("");
-    setReviewError(null);
-    setReviewSuccess(null);
-    setReviewModalOpen(true);
-  }
+  const openReviewModal = useCallback(
+    (
+      productId: string,
+      productName: string,
+      productImage: string | null | undefined,
+      orderId: string,
+      orderNumber: string
+    ) => {
+      const existing = userReviews.find(
+        (r) => r.product_id === productId && r.order_id === orderId
+      );
+      if (existing) {
+        return; // Already reviewed for this purchase
+      }
+      setReviewTarget({
+        productId,
+        productName,
+        productImage,
+        orderId,
+        orderNumber,
+        existingRating: undefined,
+        existingBody: undefined,
+      });
+      setReviewRating(5);
+      setReviewHoverRating(0);
+      setReviewBody("");
+      setReviewError(null);
+      setReviewSuccess(null);
+      setReviewModalOpen(true);
+    },
+    [userReviews]
+  );
 
   async function handleSubmitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -345,16 +403,12 @@ function AccountContent() {
         targetOrder.order_items &&
         targetOrder.order_items.length > 0
       ) {
-        // Find the first unreviewed item in this order
         const unreviewedItem =
           targetOrder.order_items.find(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (it: any) =>
+            (it) =>
               it.product_id &&
               !userReviews.some(
-                (r) =>
-                  r.product_id === it.product_id &&
-                  r.order_id === targetOrder.id
+                (r) => r.product_id === it.product_id && r.order_id === targetOrder.id
               )
           ) || targetOrder.order_items[0];
 
@@ -402,6 +456,20 @@ function AccountContent() {
       setProfileSaving(false);
     }
   }
+
+  const resetAddressForm = useCallback(() => {
+    setAddressForm({
+      label: "Home",
+      fullName: profile?.full_name || user?.user_metadata?.full_name || "",
+      phone: profile?.phone || user?.user_metadata?.phone || "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "Dubai",
+      country: "AE",
+      isDefault: addresses.length === 0,
+    });
+    setAddressError(null);
+  }, [profile, user, addresses.length]);
 
   // Handle Address Submit (Create or Update)
   async function handleAddressSubmit(e: React.FormEvent) {
@@ -492,20 +560,6 @@ function AccountContent() {
     setAddressModalOpen(true);
   }
 
-  function resetAddressForm() {
-    setAddressForm({
-      label: "Home",
-      fullName: profile?.full_name || user?.user_metadata?.full_name || "",
-      phone: profile?.phone || user?.user_metadata?.phone || "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "Dubai",
-      country: "AE",
-      isDefault: addresses.length === 0,
-    });
-    setAddressError(null);
-  }
-
   // Handle Logout
   async function handleSignOut() {
     const supabase = createClient();
@@ -557,12 +611,12 @@ function AccountContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-[#FAF8F5] py-5 sm:py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto ">
         {/* ── Top Header Banner ─────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 sm:p-8 shadow-xs mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white rounded-sm border border-[#EDE9DF] p-3 sm:p-8 shadow-xs mb-4 sm:mb-8 flex sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-xl font-serif font-bold shrink-0">
+            <div className="hidden md:flex w-14 h-14 rounded-full bg-[#183D2B] text-white items-center justify-center text-xl font-serif font-bold shrink-0">
               {fullName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "A"}
             </div>
             <div>
@@ -580,25 +634,58 @@ function AccountContent() {
           <button
             type="button"
             onClick={handleSignOut}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-[#EDE9DF] text-xs font-semibold text-[#5C6460] hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors self-start sm:self-auto cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#183D2B] text-white text-xs font-semibold hover:bg-[#102D20] transition-colors self-start sm:self-auto cursor-pointer shadow-xs"
           >
-            <LogOut size={14} />
+     
             Sign Out
           </button>
         </div>
 
-        {/* ── Tab Navigation ───────────────────────────────── */}
-        <div className="flex border-b border-[#EDE9DF] mb-8 gap-2 sm:gap-6 overflow-x-auto pb-1">
+        {/* ── Mobile Tab Navigation (UNCHANGED) ── */}
+        <div
+          ref={mobileTabContainerRef}
+          className="flex sm:hidden gap-2 overflow-x-auto pb-3 mb-2 sm:mb-6 scrollbar-none no-scrollbar -mx-4 px-4 scroll-smooth"
+        >
+          {mobileOrderedTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 py-2 px-3.5 rounded-sm text-xs font-semibold tracking-wide shrink-0 transition-all cursor-pointer shadow-2xs ${
+                  isActive
+                    ? "bg-[#183D2B] text-white ring-1 ring-[#183D2B]"
+                    : "bg-white border border-[#EDE9DF] text-[#5C6460] hover:text-[#183D2B] hover:border-[#183D2B]/30"
+                }`}
+              >
+                <Icon size={14} className={isActive ? "text-white" : "text-[#8C938F]"} />
+                <span>{tab.label}</span>
+                {typeof tab.count === "number" && tab.count > 0 && (
+                  <span
+                    className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#183D2B]/10 text-[#183D2B]"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Desktop Tab Navigation (UNCHANGED markup/behavior) ──── */}
+        <div className="hidden sm:flex sm:mb-4 gap-2 sm:gap-6 overflow-x-auto">
           <button
             type="button"
             onClick={() => {
               setActiveTab("profile");
               router.replace("/account?tab=profile");
             }}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "profile"
-                ? "border-[#183D2B] text-[#183D2B]"
-                : "border-transparent text-[#5C6460] hover:text-[#183D2B]"
+            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "profile" ? " text-[#183D2B]" : " text-[#5C6460] hover:text-[#183D2B]"
             }`}
           >
             <User size={16} />
@@ -611,7 +698,7 @@ function AccountContent() {
               setActiveTab("orders");
               router.replace("/account?tab=orders");
             }}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "orders"
                 ? "border-[#183D2B] text-[#183D2B]"
                 : "border-transparent text-[#5C6460] hover:text-[#183D2B]"
@@ -632,7 +719,7 @@ function AccountContent() {
               setActiveTab("addresses");
               router.replace("/account?tab=addresses");
             }}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "addresses"
                 ? "border-[#183D2B] text-[#183D2B]"
                 : "border-transparent text-[#5C6460] hover:text-[#183D2B]"
@@ -653,7 +740,7 @@ function AccountContent() {
               setActiveTab("reviews");
               router.replace("/account?tab=reviews");
             }}
-            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "reviews"
                 ? "border-[#183D2B] text-[#183D2B]"
                 : "border-transparent text-[#5C6460] hover:text-[#183D2B]"
@@ -671,7 +758,7 @@ function AccountContent() {
 
         {/* ── TAB 1: PROFILE DETAILS ───────────────────────── */}
         {activeTab === "profile" && (
-          <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 sm:p-8 shadow-xs">
+          <div className="bg-white rounded-sm border border-[#EDE9DF] p-2 sm:p-8 shadow-xs">
             <div className="max-w-xl">
               <h2 className="font-serif text-xl font-bold text-[#1D211F]">Personal Information</h2>
               <p className="mt-1 text-xs text-[#5C6460]">
@@ -752,12 +839,12 @@ function AccountContent() {
         {activeTab === "orders" && (
           <div className="space-y-4">
             {loadingOrders ? (
-              <div className="bg-white rounded-2xl border border-[#EDE9DF] p-12 text-center">
+              <div className="bg-white rounded-sm border border-[#EDE9DF] p-12 text-center">
                 <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 <p className="text-xs text-[#5C6460]">Loading your order history...</p>
               </div>
             ) : orders.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-[#EDE9DF] p-12 text-center space-y-4">
+              <div className="bg-white rounded-sm border border-[#EDE9DF] p-12 text-center space-y-4">
                 <div className="w-14 h-14 rounded-full bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center mx-auto">
                   <ShoppingBag size={26} strokeWidth={1.5} />
                 </div>
@@ -778,57 +865,76 @@ function AccountContent() {
               orders.map((ord) => (
                 <div
                   key={ord.id}
-                  className="bg-white rounded-2xl border border-[#EDE9DF] p-6 shadow-xs space-y-4 hover:border-[#183D2B]/30 transition-all"
+                  className="bg-white rounded-sm p-6 shadow-xs space-y-4 hover:border-[#183D2B]/30 transition-all"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#EDE9DF]/70 gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#183D2B] font-mono tracking-wider">
+                  <div className="pb-3 border-b border-[#EDE9DF]/70">
+                    {/* Row 1: order number + status badge + total — all on one line */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-bold text-[#183D2B] font-mono tracking-wider truncate">
                           {ord.order_number}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 shrink-0">
                           {ord.status}
                         </span>
                       </div>
+                      <span className="text-sm font-bold text-[#1D211F] shrink-0">
+                        AED {Number(ord.total).toFixed(2)}
+                      </span>
+                    </div>
+                    {/* Row 2: date + payment method */}
+                    <div className="flex items-center justify-between mt-1">
                       <p className="text-[11px] text-[#8C938F]">
-                        Placed on {new Date(ord.created_at).toLocaleDateString("en-AE", {
+                        {new Date(ord.created_at).toLocaleDateString("en-AE", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         })}
                       </p>
-                    </div>
-
-                    <div className="text-right sm:text-right">
-                      <span className="text-sm font-bold text-[#1D211F]">
-                        AED {Number(ord.total).toFixed(2)}
-                      </span>
                       <p className="text-[10px] text-[#5C6460] uppercase">
                         {ord.payment_status === "paid" ? "Paid Online" : "Cash on Delivery"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Order Items */}
                   {ord.order_items && ord.order_items.length > 0 && (
-                    <div className="space-y-2 pt-1">
-                      {ord.order_items.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between text-xs py-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[#1D211F] font-medium">
-                              {item.product_snapshot?.name || "Product"}
+                    <div className="space-y-3 pt-2">
+                      {ord.order_items.map((item) => {
+                        const snap = item.product_snapshot || {};
+                        const image = snap.image;
+                        return (
+                          <div key={item.id} className="flex items-center justify-between text-xs py-1.5 gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-12 h-12 rounded-md overflow-hidden bg-[#FAF8F5] border border-[#EDE9DF] shrink-0 flex items-center justify-center">
+                                {image ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={image}
+                                    alt={snap.name || "Product"}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package size={20} className="text-[#8C938F]" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[#1D211F] font-medium truncate">
+                                  {snap.name || "Product"}
+                                </p>
+                                <p className="text-[#8C938F] text-[11px] mt-0.5">
+                                  Qty: {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[#1D211F] font-semibold shrink-0">
+                              AED {Number(item.line_total).toFixed(2)}
                             </span>
-                            <span className="text-[#8C938F]">× {item.quantity}</span>
                           </div>
-                          <span className="text-[#1D211F] font-semibold">
-                            AED {Number(item.line_total).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
-                  {/* Delivery summary */}
                   {ord.shipping_address && (
                     <div className="pt-2 text-[11px] text-[#5C6460] flex items-center gap-1.5 border-t border-[#EDE9DF]/40">
                       <MapPin size={12} className="text-[#183D2B] shrink-0" />
@@ -847,7 +953,7 @@ function AccountContent() {
         {/* ── TAB 3: SAVED ADDRESSES ───────────────────────── */}
         {activeTab === "addresses" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="font-serif text-xl font-bold text-[#1D211F]">Your Delivery Addresses</h2>
                 <p className="mt-0.5 text-xs text-[#5C6460]">
@@ -861,7 +967,7 @@ function AccountContent() {
                   resetAddressForm();
                   setAddressModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 py-2 px-4 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors cursor-pointer whitespace-nowrap shrink-0 w-full sm:w-auto"
               >
                 <Plus size={14} />
                 Add Address
@@ -874,7 +980,7 @@ function AccountContent() {
                 <p className="text-xs text-[#5C6460]">Loading addresses...</p>
               </div>
             ) : addresses.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-[#EDE9DF] p-12 text-center space-y-4">
+              <div className="bg-white rounded-sm border border-[#EDE9DF] p-12 text-center space-y-4">
                 <div className="w-14 h-14 rounded-full bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center mx-auto">
                   <MapPin size={26} strokeWidth={1.5} />
                 </div>
@@ -909,7 +1015,6 @@ function AccountContent() {
                     }`}
                   >
                     <div>
-                      {/* Address Header */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#F7F5EF] text-[#183D2B]">
@@ -949,7 +1054,6 @@ function AccountContent() {
                         </div>
                       </div>
 
-                      {/* Address Details */}
                       <h4 className="text-sm font-bold text-[#1D211F]">{addr.full_name}</h4>
                       <p className="text-xs text-[#5C6460] mt-1 leading-relaxed">
                         {addr.address_line1}
@@ -965,7 +1069,6 @@ function AccountContent() {
                       )}
                     </div>
 
-                    {/* Set default footer */}
                     {!addr.is_default && (
                       <div className="pt-4 mt-3 border-t border-[#EDE9DF]/60">
                         <button
@@ -987,8 +1090,8 @@ function AccountContent() {
         {/* ── TAB 4: PRODUCT REVIEWS ───────────────────────── */}
         {activeTab === "reviews" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-[#EDE9DF] p-6 sm:p-8 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EDE9DF] pb-6">
+            <div className="bg-white rounded-sm border border-[#EDE9DF] p-3 sm:p-8 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
                 <div>
                   <h2 className="font-serif text-xl font-bold text-[#1D211F]">
                     Product Reviews & Ratings
@@ -997,13 +1100,12 @@ function AccountContent() {
                     Review products from your delivered orders to share your experience with the community.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#183D2B]/10 text-[#183D2B] self-start sm:self-auto">
+                <div className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-[#183D2B]/10 text-[#183D2B] self-start sm:self-auto">
                   <ShieldCheck size={15} />
                   <span>Verified Customer Reviews</span>
                 </div>
               </div>
 
-              {/* Orders List */}
               {loadingOrders || loadingUserReviews ? (
                 <div className="py-16 text-center">
                   <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -1042,25 +1144,14 @@ function AccountContent() {
                             : "border-[#EDE9DF]/60 bg-[#FAF8F5]/50"
                         } p-5 sm:p-6`}
                       >
-                        {/* Order Top Bar */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EDE9DF] pb-4 mb-4">
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-xs font-bold text-[#1D211F]">
+                        <div className="pb-4 mb-4 border-b border-[#EDE9DF]/60">
+                          {/* Row 1: order number (left) + status badge (right) */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-bold text-[#1D211F] truncate">
                               Order #{order.order_number}
                             </span>
-                            <span className="text-xs text-[#8C938F]">•</span>
-                            <span className="text-xs text-[#5C6460]">
-                              {new Date(order.created_at).toLocaleDateString("en-AE", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shrink-0 ${
                                 isDelivered
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-amber-100 text-amber-800"
@@ -1070,9 +1161,16 @@ function AccountContent() {
                               {order.status}
                             </span>
                           </div>
+                          {/* Row 2: date */}
+                          <p className="text-xs text-[#5C6460] mt-1">
+                            {new Date(order.created_at).toLocaleDateString("en-AE", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
                         </div>
 
-                        {/* Items inside this order */}
                         <div className="space-y-3">
                           {orderItems.length === 0 ? (
                             <p className="text-xs text-[#8C938F] italic py-2">
@@ -1084,16 +1182,14 @@ function AccountContent() {
                               const productId = item.product_id;
                               const existingReview = productId
                                 ? userReviews.find(
-                                    (r) =>
-                                      r.product_id === productId &&
-                                      r.order_id === order.id
+                                    (r) => r.product_id === productId && r.order_id === order.id
                                   )
                                 : null;
 
                               return (
                                 <div
                                   key={item.id}
-                                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 rounded-lg bg-[#FAF8F5] border border-[#EDE9DF]/70"
+                                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2"
                                 >
                                   <div className="flex items-center gap-3.5 min-w-0">
                                     <div className="w-14 h-14 rounded-md overflow-hidden bg-white border border-[#EDE9DF] shrink-0 flex items-center justify-center">
@@ -1138,7 +1234,6 @@ function AccountContent() {
                                     </div>
                                   </div>
 
-                                  {/* Review Option: Strictly only when order status is Delivered */}
                                   <div className="flex items-center self-end sm:self-auto shrink-0">
                                     {isDelivered ? (
                                       productId ? (
@@ -1219,7 +1314,6 @@ function AccountContent() {
             )}
 
             <form onSubmit={handleAddressSubmit} className="mt-4 space-y-3.5">
-              {/* Address Label Selector */}
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1">
                   Address Label
@@ -1242,7 +1336,6 @@ function AccountContent() {
                 </div>
               </div>
 
-              {/* Name & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1">
@@ -1272,7 +1365,6 @@ function AccountContent() {
                 </div>
               </div>
 
-              {/* Street Address */}
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1">
                   Street Address & Building / Villa Number *
@@ -1287,7 +1379,6 @@ function AccountContent() {
                 />
               </div>
 
-              {/* Area / Landmark */}
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1">
                   Area / Neighborhood / Landmark (Optional)
@@ -1301,7 +1392,6 @@ function AccountContent() {
                 />
               </div>
 
-              {/* City & Country */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1">
@@ -1332,7 +1422,6 @@ function AccountContent() {
                 </div>
               </div>
 
-              {/* Default checkbox */}
               <div className="pt-1">
                 <label className="flex items-center gap-2 text-xs text-[#1D211F] cursor-pointer">
                   <input
@@ -1345,7 +1434,6 @@ function AccountContent() {
                 </label>
               </div>
 
-              {/* Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EDE9DF]">
                 <button
                   type="button"
@@ -1393,7 +1481,6 @@ function AccountContent() {
               </button>
             </div>
 
-            {/* Product header */}
             <div className="flex items-center gap-3.5 my-5 p-3 rounded-xl bg-[#FAF8F5] border border-[#EDE9DF]">
               <div className="w-12 h-12 rounded-lg bg-white border border-[#EDE9DF] overflow-hidden shrink-0 flex items-center justify-center">
                 {reviewTarget.productImage ? (
@@ -1432,7 +1519,6 @@ function AccountContent() {
             )}
 
             <form onSubmit={handleSubmitReview} className="space-y-5">
-              {/* Star Rating Selector */}
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-2">
                   Overall Rating *
@@ -1441,9 +1527,7 @@ function AccountContent() {
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((star) => {
                       const isFilled =
-                        reviewHoverRating > 0
-                          ? star <= reviewHoverRating
-                          : star <= reviewRating;
+                        reviewHoverRating > 0 ? star <= reviewHoverRating : star <= reviewRating;
 
                       return (
                         <button
@@ -1476,7 +1560,6 @@ function AccountContent() {
                 </div>
               </div>
 
-              {/* Review Message */}
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1.5">
                   Review Message *
@@ -1491,7 +1574,6 @@ function AccountContent() {
                 />
               </div>
 
-              {/* Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EDE9DF]">
                 <button
                   type="button"

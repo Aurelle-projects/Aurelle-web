@@ -422,27 +422,26 @@ export default function AdminHeroPage() {
         subtitle="Customize announcement bar, hero banners, trust badges, and the family collection banner."
       />
 
-      <div className="p-6 md:p-8 max-w-5xl mx-auto w-full space-y-6">
+      <div className="p-4 md:p-6 max-w-5xl mx-auto w-full space-y-4">
         {/* Top Quick Bar */}
-        <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-[#DCCFB9]/60 shadow-xs">
+        <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#DCCFB9]/60 shadow-xs">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#183D2B]">
-       
             <span>Storefront Visual Customizer</span>
           </div>
           <button
             type="button"
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-all"
           >
-            <Save size={14} />
+            <Save size={13} />
             <span>{isSaving ? "Saving..." : "Save All Changes"}</span>
           </button>
         </div>
 
         {message && (
           <div
-            className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${
+            className={`p-3 rounded-lg border flex items-center gap-2.5 text-xs font-medium ${
               message.type === "success"
                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                 : message.type === "error"
@@ -451,42 +450,42 @@ export default function AdminHeroPage() {
             }`}
           >
             {message.type === "success" ? (
-              <Check size={18} className="text-emerald-600 shrink-0" />
+              <Check size={16} className="text-emerald-600 shrink-0" />
             ) : (
-              <AlertCircle size={18} className="text-red-600 shrink-0" />
+              <AlertCircle size={16} className="text-red-600 shrink-0" />
             )}
             <span>{message.text}</span>
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-4">
           {/* 1. Top Announcement */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-            <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
               1. Top Announcement Bar
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Announcement Message
                 </label>
                 <input
                   type="text"
                   value={formData.top_announcement}
                   onChange={(e) => handleChange("top_announcement", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="Enter announcement message"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Currency / Region Pill
                 </label>
                 <input
                   type="text"
                   value={formData.currency_label}
                   onChange={(e) => handleChange("currency_label", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="e.g. UAE | AED"
                 />
               </div>
@@ -494,80 +493,80 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 2. Main Hero Section */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-6">
-            <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
+            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
               2. Main Hero Section
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Top Tagline / Overline (Small text above headline)
                 </label>
                 <input
                   type="text"
                   value={formData.hero_tagline}
                   onChange={(e) => handleChange("hero_tagline", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="e.g. NATURAL CARE FOR A BRIGHTER YOU"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Hero Headline
                 </label>
                 <input
                   type="text"
                   value={formData.hero_title}
                   onChange={(e) => handleChange("hero_title", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="Enter hero headline"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Hero Subtitle
                 </label>
                 <textarea
                   rows={2}
                   value={formData.hero_subtitle}
                   onChange={(e) => handleChange("hero_subtitle", e.target.value)}
-                  className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
+                  className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
                   placeholder="Enter hero subtitle"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Call-to-Action Text
                 </label>
                 <input
                   type="text"
                   value={formData.cta_primary_text}
                   onChange={(e) => handleChange("cta_primary_text", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="Enter button text (e.g. SHOP COLLECTION)"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Call-to-Action Link
                 </label>
                 <input
                   type="text"
                   value={formData.cta_primary_href}
                   onChange={(e) => handleChange("cta_primary_href", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="Enter button link (e.g. /shop)"
                 />
               </div>
 
               {/* Hero Banner Images — 2-column: Desktop | Mobile */}
-              <div className="md:col-span-2 pt-2">
-                <p className="text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-3">Hero Banner Images</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="md:col-span-2 pt-1">
+                <p className="text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-2">Hero Banner Images</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Desktop Banner */}
                   <div>
                     <CloudinaryUploader
@@ -633,95 +632,95 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 3. Five Trust Badges */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-            <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
               3. The 5 Storefront Trust Badges
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Badge 1 */}
-              <div className="p-3.5 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-2">
-                <div className="flex items-center gap-2 text-[#183D2B] font-bold text-xs">
-                  <Truck size={16} />
+              <div className="p-3 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#183D2B] font-bold text-[11px]">
+                  <Truck size={14} />
                   <span>Delivery Badge</span>
                 </div>
                 <input
                   type="text"
                   value={formData.badge_1_title}
                   onChange={(e) => handleChange("badge_1_title", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
                   placeholder="Title"
                 />
                 <input
                   type="text"
                   value={formData.badge_1_sub}
                   onChange={(e) => handleChange("badge_1_sub", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
                   placeholder="Subtitle"
                 />
               </div>
 
               {/* Badge 2 */}
-              <div className="p-3.5 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-2">
-                <div className="flex items-center gap-2 text-[#183D2B] font-bold text-xs">
-                  <ShieldCheck size={16} />
+              <div className="p-3 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#183D2B] font-bold text-[11px]">
+                  <ShieldCheck size={14} />
                   <span>Authenticity Badge</span>
                 </div>
                 <input
                   type="text"
                   value={formData.badge_2_title}
                   onChange={(e) => handleChange("badge_2_title", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
                   placeholder="Title"
                 />
                 <input
                   type="text"
                   value={formData.badge_2_sub}
                   onChange={(e) => handleChange("badge_2_sub", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
                   placeholder="Subtitle"
                 />
               </div>
 
               {/* Badge 3 */}
-              <div className="p-3.5 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-2">
-                <div className="flex items-center gap-2 text-[#183D2B] font-bold text-xs">
-                  <CreditCard size={16} />
+              <div className="p-3 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#183D2B] font-bold text-[11px]">
+                  <CreditCard size={14} />
                   <span>Payment Badge</span>
                 </div>
                 <input
                   type="text"
                   value={formData.badge_3_title}
                   onChange={(e) => handleChange("badge_3_title", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
                   placeholder="Title"
                 />
                 <input
                   type="text"
                   value={formData.badge_3_sub}
                   onChange={(e) => handleChange("badge_3_sub", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
                   placeholder="Subtitle"
                 />
               </div>
 
               {/* Badge 5 */}
-              <div className="p-3.5 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-2">
-                <div className="flex items-center gap-2 text-[#183D2B] font-bold text-xs">
-                  <RotateCcw size={16} />
+              <div className="p-3 bg-[#F7F5EF]/60 rounded-lg border border-[#DCCFB9]/40 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#183D2B] font-bold text-[11px]">
+                  <RotateCcw size={14} />
                   <span>Returns Badge</span>
                 </div>
                 <input
                   type="text"
                   value={formData.badge_5_title}
                   onChange={(e) => handleChange("badge_5_title", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none"
                   placeholder="Title"
                 />
                 <input
                   type="text"
                   value={formData.badge_5_sub}
                   onChange={(e) => handleChange("badge_5_sub", e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
+                  className="w-full h-7 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#5C6460] outline-none"
                   placeholder="Subtitle"
                 />
               </div>
@@ -729,36 +728,36 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 4. Family Banner Section */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-            <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
               4. Family Collection Banner
             </h2>
-            <p className="text-xs text-[#5C6460] leading-relaxed">
+            <p className="text-[11px] text-[#5C6460] leading-relaxed">
               This section appears on the homepage below categories. Upload a family lifestyle image and customize the text.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Banner Headline
                 </label>
                 <input
                   type="text"
                   value={formData.family_title}
                   onChange={(e) => handleChange("family_title", e.target.value)}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
                   placeholder="Enter banner headline"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Banner Subtitle
                 </label>
                 <textarea
                   rows={2}
                   value={formData.family_subtitle}
                   onChange={(e) => handleChange("family_subtitle", e.target.value)}
-                  className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
+                  className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
                   placeholder="Enter banner subtitle"
                 />
               </div>
@@ -766,7 +765,7 @@ export default function AdminHeroPage() {
               <div className="md:col-span-2">
                 <CloudinaryUploader
                   label="Family Collection Image"
-                  description="Upload a lifestyle photo showing family/household products. Appears on the right side of the Family Banner on the homepage. Recommended: 900Ã—700px or 4:3 ratio."
+                  description="Upload a lifestyle photo showing family/household products. Appears on the right side of the Family Banner on the homepage. Recommended: 900×700px or 4:3 ratio."
                   folder="aurelle/hero"
                   aspectRatio="hero"
                   value={formData.family_image_url}
@@ -797,26 +796,26 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 5. Promotional Dual Banners (Storefront) */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-6">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
-              <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+              <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
                 5. Promotional Dual Banners (Storefront)
               </h2>
-              <p className="text-xs text-[#5C6460] leading-relaxed mt-1">
+              <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Configure the two side-by-side promotional campaign banners displayed on the homepage. Upload campaign model / product imagery and adjust text &amp; links.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Left Banner: Primary Campaign */}
-              <div className="p-5 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-2">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#183D2B]">
+              <div className="p-4 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-3">
+                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-1.5">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#183D2B]">
                     Primary Banner
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                       Top Subtitle / Tagline
@@ -825,7 +824,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_left_tagline ?? ""}
                       onChange={(e) => handleChange("promo_left_tagline", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter subtitle"
                     />
                   </div>
@@ -837,13 +836,13 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_left_title ?? ""}
                       onChange={(e) => handleChange("promo_left_title", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter title"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                       Discount / Offer
@@ -852,7 +851,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_left_discount ?? ""}
                       onChange={(e) => handleChange("promo_left_discount", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter discount"
                     />
                   </div>
@@ -864,7 +863,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_left_btn_text ?? ""}
                       onChange={(e) => handleChange("promo_left_btn_text", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter button label"
                     />
                   </div>
@@ -880,7 +879,7 @@ export default function AdminHeroPage() {
                   />
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-1">
                   <CloudinaryUploader
                     label="Upload Image"
                     description="Upload campaign visual for the primary banner. Transparent PNG / clean background recommended."
@@ -913,14 +912,14 @@ export default function AdminHeroPage() {
               </div>
 
               {/* Right Banner: Secondary Campaign */}
-              <div className="p-5 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-4">
-                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-2">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#183D2B]">
+              <div className="p-4 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-3">
+                <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-1.5">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#183D2B]">
                     Secondary Banner 
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                       Top Subtitle / Tagline
@@ -929,7 +928,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_right_tagline ?? ""}
                       onChange={(e) => handleChange("promo_right_tagline", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter subtitle"
                     />
                   </div>
@@ -941,13 +940,13 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_right_title ?? ""}
                       onChange={(e) => handleChange("promo_right_title", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter title"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                       Discount / Offer
@@ -956,7 +955,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_right_discount ?? ""}
                       onChange={(e) => handleChange("promo_right_discount", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter discount"
                     />
                   </div>
@@ -968,7 +967,7 @@ export default function AdminHeroPage() {
                       type="text"
                       value={formData.promo_right_btn_text ?? ""}
                       onChange={(e) => handleChange("promo_right_btn_text", e.target.value)}
-                      className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
+                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B] placeholder:text-[#8C938F]"
                       placeholder="Enter button label"
                     />
                   </div>
@@ -989,21 +988,21 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 6. Homepage Two-Banner Section */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-6">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
-              <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
+              <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
                 6. Homepage Banners (2 Images)
               </h2>
-              <p className="text-xs text-[#5C6460] leading-relaxed mt-1">
+              <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Upload up to two images for the homepage two-column banner section.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {[1, 2].map((num) => {
                 const urlKey = `home_banner_${num}_url` as keyof HeroData;
                 const pidKey = `home_banner_${num}_public_id` as keyof HeroData;
-                  const linkKey = `home_banner_${num}_link` as keyof HeroData;
+                const linkKey = `home_banner_${num}_link` as keyof HeroData;
 
                 return (
                   <div key={num} className="p-3 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50">
@@ -1040,49 +1039,49 @@ export default function AdminHeroPage() {
           </div>
 
           {/* 7. Brand Showcase / Gallery Section (6 Images + Text) */}
-          <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-6">
+          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
-              <h2 className="text-base font-bold text-[#1D211F] border-b border-[#DCCFB9]/30 pb-2">
-                6. Brand Showcase / Timeless Glow (6 Images + Text)
+              <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
+                7. Brand Showcase / Timeless Glow (6 Images + Text)
               </h2>
-              <p className="text-xs text-[#5C6460] leading-relaxed mt-1">
+              <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Configure the homepage showcase section featuring a 6-image photo collage alongside your campaign heading and description.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Heading Title
                 </label>
                 <input
                   type="text"
                   value={formData.showcase_heading}
                   onChange={(e) => handleChange("showcase_heading", e.target.value)}
-                  className="w-full h-10 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none placeholder:text-[#8C938F]"
+                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none placeholder:text-[#8C938F]"
                   placeholder="e.g. Timeless Glow"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
                   Small Description
                 </label>
                 <textarea
                   rows={2}
                   value={formData.showcase_description}
                   onChange={(e) => handleChange("showcase_description", e.target.value)}
-                  className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none resize-none placeholder:text-[#8C938F]"
+                  className="w-full p-2 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none resize-none placeholder:text-[#8C938F]"
                   placeholder="Enter Decription"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-3">
+              <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-2">
                 Showcase Photo Grid (6 Images — 3 Top, 3 Bottom)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {[1, 2, 3, 4, 5, 6].map((num) => {
                   const urlKey = `showcase_image_${num}_url` as keyof HeroData;
                   const pidKey = `showcase_image_${num}_public_id` as keyof HeroData;
@@ -1096,7 +1095,7 @@ export default function AdminHeroPage() {
                   ];
 
                   return (
-                    <div key={num} className="p-3 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50">
+                    <div key={num} className="p-2.5 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50">
                       <CloudinaryUploader
                         label={labels[num - 1]}
                         description="Photo of product application / lifestyle"
@@ -1126,13 +1125,13 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#183D2B] hover:bg-[#102D20] text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
             >
-              <Save size={16} />
+              <Save size={14} />
               <span>{isSaving ? "Saving..." : "Save All Changes"}</span>
             </button>
           </div>

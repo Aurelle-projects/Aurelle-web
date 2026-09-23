@@ -61,7 +61,14 @@ export async function GET() {
           sku_snapshot,
           price_snapshot,
           quantity,
-          line_total
+          line_total,
+          products (
+            id,
+            product_images (
+              secure_url,
+              is_primary
+            )
+          )
         )
       `)
       .or(`user_id.eq.${user.id},customer_email.eq.${user.email}`)
@@ -72,7 +79,28 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ orders: orders || [] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formattedOrders = (orders || []).map((ord: any) => ({
+      ...ord,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      order_items: (ord.order_items || []).map((item: any) => {
+        const snap = item.product_snapshot || {};
+        const fallbackImg =
+          item.products?.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+          item.products?.product_images?.[0]?.secure_url ||
+          null;
+
+        return {
+          ...item,
+          product_snapshot: {
+            ...snap,
+            image: snap.image || fallbackImg,
+          },
+        };
+      }),
+    }));
+
+    return NextResponse.json({ orders: formattedOrders });
   } catch (err) {
     console.error("[Orders GET exception]:", err);
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });

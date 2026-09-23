@@ -75,7 +75,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   } catch { }
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-14">
+    <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#5C6460]">
@@ -83,8 +83,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
             Home
           </Link>
           <ChevronRight size={13} />
-          <Link href="/categories" className="hover:text-[#183D2B] transition-colors">
-            Categories
+          <Link href="/shop" className="hover:text-[#183D2B] transition-colors">
+            Shop
           </Link>
           <ChevronRight size={13} />
           <span className="font-semibold text-[#1D211F]">{category.name}</span>
@@ -100,11 +100,11 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
                     Aurelle Category #{category.sort_order}
                   </span>
                   <Link
-                    href="/categories"
+                    href="/shop"
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5C6460] hover:text-[#183D2B] px-3.5 py-1.5 rounded-full border border-[#DCCFB9] hover:border-[#183D2B] transition-colors shrink-0"
                   >
                     <ArrowLeft size={13} />
-                    <span>All 10 Categories</span>
+                    <span>Back to Shop</span>
                   </Link>
                 </div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#1D211F] mt-2 tracking-tight">

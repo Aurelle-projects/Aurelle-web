@@ -1,6 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
+
+// ─── Viewport: Prevent iPhone Auto-Zoom on Input Focus ────────────────────────
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 // ─── Fonts: Haute Parfumerie & Luxury Cosmetics Typography ────────────────────
 const plusJakarta = Plus_Jakarta_Sans({

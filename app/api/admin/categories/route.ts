@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 
 export const dynamic = "force-dynamic";
 
@@ -186,6 +187,23 @@ export async function PATCH(req: NextRequest) {
     if (sort_order !== undefined) payload.sort_order = Number(sort_order);
     if (is_active !== undefined) payload.is_active = !!is_active;
 
+    // Check if category existing image is being replaced
+    if (image_public_id !== undefined) {
+      const { data: oldCat } = await supabase
+        .from("categories")
+        .select("image_public_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (oldCat?.image_public_id && oldCat.image_public_id !== image_public_id) {
+        try {
+          await deleteFromCloudinary(oldCat.image_public_id);
+        } catch (cldErr) {
+          console.error("[API categories] Cloudinary old image cleanup error:", cldErr);
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from("categories")
       .update(payload)
@@ -241,18 +259,34 @@ export async function DELETE(req: NextRequest) {
     }
 
     // ── Delete category ────────────────────────────────────────────────────
-    // 1. Unlink products pointing to this category
+    // 1. Fetch category image_public_id before deleting
+    const { data: oldCat } = await supabase
+      .from("categories")
+      .select("image_public_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    // 2. Unlink products pointing to this category
     await supabase.from("products").update({ category_id: null }).eq("category_id", id);
 
-    // 2. Delete all subcategories belonging to this category
+    // 3. Delete all subcategories belonging to this category
     await supabase.from("subcategories").delete().eq("category_id", id);
 
-    // 3. Delete the category itself
+    // 4. Delete the category itself
     const { error } = await supabase.from("categories").delete().eq("id", id);
 
     if (error) {
       console.error("[API categories DELETE error]:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // 5. Clean up Cloudinary image
+    if (oldCat?.image_public_id) {
+      try {
+        await deleteFromCloudinary(oldCat.image_public_id);
+      } catch (cldErr) {
+        console.error("[API categories] Cloudinary image deletion error:", cldErr);
+      }
     }
 
     return NextResponse.json({ success: true });

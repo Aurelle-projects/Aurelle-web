@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 
 interface UploadedImage {
   public_id: string;
@@ -46,6 +47,8 @@ export default function NewProductPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [imageToDelete, setImageToDelete] = useState<{ index: number; url: string; public_id?: string } | null>(null);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   // DB option lists
   const [dbBrands, setDbBrands] = useState<DbBrand[]>([]);
@@ -150,6 +153,28 @@ export default function NewProductPage() {
       }
       return filtered;
     });
+  }
+
+  async function handleConfirmDeleteImage() {
+    if (!imageToDelete) return;
+    setIsDeletingImage(true);
+    try {
+      if (imageToDelete.public_id) {
+        await fetch("/api/admin/upload/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ public_id: imageToDelete.public_id }),
+        });
+      }
+      removeImage(imageToDelete.index);
+      setImageToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      removeImage(imageToDelete.index);
+      setImageToDelete(null);
+    } finally {
+      setIsDeletingImage(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -331,7 +356,7 @@ export default function NewProductPage() {
                               <Star size={10} /><span>Set Primary</span>
                             </button>
                           )}
-                          <button type="button" onClick={() => removeImage(idx)}
+                          <button type="button" onClick={() => setImageToDelete({ index: idx, url: img.secure_url, public_id: img.public_id })}
                             className="text-red-600 hover:text-red-800 ml-auto p-0.5" title="Remove image">
                             <Trash2 size={13} />
                           </button>
@@ -418,6 +443,18 @@ export default function NewProductPage() {
           </div>
         </form>
       </div>
+
+      {/* Delete Image Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(imageToDelete)}
+        onClose={() => setImageToDelete(null)}
+        onConfirm={handleConfirmDeleteImage}
+        itemType="image"
+        itemName="Product Gallery Image"
+        imagePreview={imageToDelete?.url}
+        description="Are you sure you want to remove this image? It will be permanently removed from Cloudinary storage."
+        isLoading={isDeletingImage}
+      />
     </div>
   );
 }

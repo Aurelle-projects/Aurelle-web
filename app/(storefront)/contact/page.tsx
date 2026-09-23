@@ -30,8 +30,8 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
+    <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <span className="inline-block px-3 py-1 bg-[#183D2B]/10 text-[#183D2B] text-xs font-bold uppercase tracking-widest rounded-full">
@@ -48,7 +48,7 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* ── Left Column: Contact Cards ─────────────────────────────── */}
           <div className="space-y-4">
-            <div className="bg-white p-6 rounded-2xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <MapPin size={20} />
               </div>
@@ -62,7 +62,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <Clock size={20} />
               </div>
@@ -74,7 +74,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <Mail size={20} />
               </div>
@@ -88,7 +88,7 @@ export default function ContactPage() {
           </div>
 
           {/* ── Right 2 Cols: Form ─────────────────────────────────────── */}
-          <div className="lg:col-span-2 bg-white rounded-3xl border border-[#DCCFB9]/60 shadow-xs p-6 md:p-10">
+          <div className="lg:col-span-2 bg-white rounded-sm border border-[#DCCFB9]/60 shadow-xs p-6 md:p-10">
             {submitted ? (
               <div className="text-center py-12 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
@@ -185,7 +185,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3.5 px-6 rounded-full bg-[#183D2B] hover:bg-[#102D20] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                  className="w-full py-3.5 px-6 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 >
                   <Send size={15} />
                   <span>{isSubmitting ? "Sending..." : "Submit Message"}</span>

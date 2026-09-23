@@ -210,7 +210,12 @@ function CheckoutContent() {
           sku: item.product?.sku || "AUR-ITEM",
           price: item.product?.retail_price || 0,
           quantity: item.quantity,
-          image: item.product?.images?.[0]?.url || null,
+          image:
+            item.product?.images?.[0]?.url ||
+            (item.product as any)?.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+            (item.product as any)?.product_images?.[0]?.secure_url ||
+            (item.product as any)?.primary_image_url ||
+            null,
           slug: item.product?.slug || "",
         })),
         subtotal,
@@ -243,82 +248,91 @@ function CheckoutContent() {
     }
   }
 
-  // ── ORDER SUCCESS SCREEN ─────────────────────────────────
+  // ── ORDER SUCCESS MODAL ──────────────────────────────────
   if (orderComplete) {
     return (
-      <div className="bg-[#FAF8F5] min-h-screen py-16 px-4">
-        <div className="max-w-md mx-auto bg-white rounded-2xl border border-[#EDE9DF] p-8 text-center space-y-5 shadow-xs">
-          <div className="w-16 h-16 rounded-full bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center mx-auto">
-            <CheckCircle2 size={36} />
-          </div>
+      <>
+        {/* Backdrop */}
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
 
-          <span className="inline-block px-3 py-1 bg-[#183D2B]/10 text-[#183D2B] text-xs font-bold uppercase tracking-widest rounded-full">
-            Order Confirmed
-          </span>
-
-          <h1 className="text-2xl font-serif font-bold text-[#1D211F]">
-            Thank You, {formData.fullName.split(" ")[0]}!
-          </h1>
-
-          <p className="text-xs text-[#5C6460] leading-relaxed">
-            Your elevated essentials order has been placed successfully. A confirmation message and
-            order summary have been dispatched to <strong>{formData.email}</strong>.
-          </p>
-
-          <div className="p-4 bg-[#F7F5EF] rounded-xl border border-[#EDE9DF] text-left text-xs space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[#5C6460]">Order Reference:</span>
-              <span className="font-mono font-bold text-[#183D2B]">{orderComplete}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#5C6460]">Delivery Address:</span>
-              <span className="font-semibold text-[#1D211F]">
-                {formData.streetAddress}, {formData.emirate}
+        {/* Modal */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="w-full max-w-sm bg-white rounded-md border border-[#EDE9DF] p-5 text-center space-y-3.5 shadow-xl">
+            {/* Icon + Badge row */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
+                <CheckCircle2 size={28} />
+              </div>
+              <span className="inline-block px-2.5 py-0.5 bg-[#183D2B]/10 text-[#183D2B] text-[10px] font-bold uppercase tracking-widest rounded-md">
+                Order Confirmed
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-[#5C6460]">Payment Method:</span>
-              <span className="font-semibold text-[#1D211F] uppercase">
-                {formData.paymentMethod === "cod" ? "Cash on Delivery" : formData.paymentMethod}
-              </span>
-            </div>
-            <div className="flex justify-between pt-1 border-t border-[#EDE9DF]">
-              <span className="text-[#5C6460] font-medium">Total Amount:</span>
-              <span className="font-bold text-[#183D2B]">AED {finalTotal.toFixed(2)}</span>
-            </div>
-          </div>
 
-          <div className="pt-2 flex flex-col gap-2.5">
-            {currentUser && (
+            <div className="space-y-1">
+              <h1 className="text-lg font-serif font-bold text-[#1D211F]">
+                Thank You, {formData.fullName.split(" ")[0]}!
+              </h1>
+              <p className="text-[11px] text-[#5C6460] leading-relaxed">
+                Order placed successfully. Confirmation dispatched to{" "}
+                <strong>{formData.email}</strong>.
+              </p>
+            </div>
+
+            <div className="p-3 bg-[#F7F5EF] rounded-md border border-[#EDE9DF] text-left text-[11px] space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-[#5C6460]">Order Reference:</span>
+                <span className="font-mono font-bold text-[#183D2B]">{orderComplete}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5C6460]">Delivery:</span>
+                <span className="font-semibold text-[#1D211F] text-right max-w-[55%] truncate">
+                  {formData.area ? `${formData.area}, ` : ""}{formData.emirate}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5C6460]">Payment:</span>
+                <span className="font-semibold text-[#1D211F] uppercase">
+                  {formData.paymentMethod === "cod" ? "Cash on Delivery" : formData.paymentMethod}
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-[#EDE9DF]">
+                <span className="text-[#5C6460] font-medium">Total:</span>
+                <span className="font-bold text-[#183D2B]">AED {finalTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {currentUser && (
+                <Link
+                  href="/account?tab=orders"
+                  className="w-full py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-md hover:bg-[#102D20] transition-colors block text-center"
+                >
+                  View Order in Account
+                </Link>
+              )}
               <Link
-                href="/account?tab=orders"
-                className="w-full py-3 bg-[#183D2B] text-white text-xs font-bold rounded-md hover:bg-[#102D20] transition-colors block text-center"
+                href="/shop"
+                className={`w-full py-2.5 rounded-md text-xs font-bold transition-colors block text-center ${
+                  currentUser
+                    ? "border border-[#EDE9DF] text-[#1D211F] hover:bg-[#F7F5EF]"
+                    : "bg-[#183D2B] text-white hover:bg-[#102D20]"
+                }`}
               >
-                View Order in Account
+                Continue Browsing
               </Link>
-            )}
-            <Link
-              href="/"
-              className={`w-full py-3 rounded-md text-xs font-bold transition-colors block text-center ${
-                currentUser
-                  ? "border border-[#EDE9DF] text-[#1D211F] hover:bg-[#F7F5EF]"
-                  : "bg-[#183D2B] text-white hover:bg-[#102D20]"
-              }`}
-            >
-              Continue Browsing
-            </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // ── MAIN CHECKOUT PAGE ───────────────────────────────────
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-14">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
+    <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12 pb-28 md:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-[#EDE9DF] pb-4">
+        {/* <div className="flex items-center justify-between border-b border-[#EDE9DF] pb-4">
           <div className="flex items-center gap-2">
             <Lock size={18} className="text-[#183D2B]" />
             <h1 className="text-2xl font-serif font-bold text-[#1D211F]">UAE Secure Checkout</h1>
@@ -330,7 +344,7 @@ function CheckoutContent() {
             <ArrowLeft size={14} />
             <span>Return to Bag</span>
           </Link>
-        </div>
+        </div> */}
 
         {/* Guest sign in reminder */}
         {!currentUser && !loadingAuth && (
@@ -345,7 +359,7 @@ function CheckoutContent() {
             <button
               type="button"
               onClick={() => setAuthModalOpen(true)}
-              className="px-4 py-1.5 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors shrink-0 cursor-pointer"
+              className="px-4 py-2 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors shrink-0 cursor-pointer"
             >
               Sign In
             </button>
@@ -467,7 +481,7 @@ function CheckoutContent() {
 
                     <div>
                       <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                        Phone Number (UAE Mobile) *
+                        Phone Number *
                       </label>
                       <input
                         type="tel"
@@ -557,7 +571,7 @@ function CheckoutContent() {
                         <span>Save this address to my account for future orders</span>
                       </label>
                       {formData.saveToAccount && (
-                        <label className="flex items-center gap-2 text-xs text-[#5C6460] pl-6 cursor-pointer">
+                        <label className="flex items-center gap-2 text-xs text-[#5C6460] cursor-pointer">
                           <input
                             type="checkbox"
                             name="setAsDefault"
@@ -696,7 +710,7 @@ function CheckoutContent() {
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-xs">Pay</span>
+                    <span className="font-bold text-xs">Pay</span>
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -723,7 +737,11 @@ function CheckoutContent() {
               {/* Items breakdown list */}
               <div className="max-h-60 overflow-y-auto space-y-3 pr-1">
                 {items.map((item) => {
-                  const productImg = item.product?.images?.[0]?.url;
+                  const productImg =
+                    item.product?.images?.[0]?.url ||
+                    (item.product as any)?.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+                    (item.product as any)?.product_images?.[0]?.secure_url ||
+                    (item.product as any)?.primary_image_url;
                   const itemPrice = item.product?.retail_price || 0;
                   return (
                     <div key={item.id} className="flex items-center justify-between text-xs py-1">
@@ -800,6 +818,29 @@ function CheckoutContent() {
             </div>
           </div>
         </form>
+
+        {/* ── Sticky Bottom Checkout Bar (mobile) ───────────────── */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-[#EDE9DF] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center justify-between gap-4">
+          {/* Left: Total price */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#8C938F] leading-none">Total Amount</span>
+            <span className="text-base font-bold text-[#183D2B] leading-tight">AED {finalTotal.toFixed(2)}</span>
+          </div>
+
+          {/* Right: Single Place Order button */}
+          <button
+            type="button"
+            disabled={isSubmitting || items.length === 0}
+            onClick={() => {
+              const form = document.querySelector<HTMLFormElement>("form");
+              if (form) form.requestSubmit();
+            }}
+            className="py-3 px-6 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Lock size={12} />
+            {isSubmitting ? "Placing..." : "Place Order"}
+          </button>
+        </div>
 
         <AccountAuthModal
           open={authModalOpen}

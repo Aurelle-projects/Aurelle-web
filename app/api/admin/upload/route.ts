@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToCloudinary } from "@/lib/cloudinary/server";
+import { compressImageForUpload } from "@/lib/images/compress";
 
 export const dynamic = "force-dynamic";
 
@@ -24,18 +25,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Max file size: 10MB
-    if (file.size > 10 * 1024 * 1024) {
+    // Max file size: 2MB
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File size exceeds 10MB limit" },
+        { error: "File size exceeds maximum upload limit of 2MB" },
         { status: 400 }
       );
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const rawBuffer = Buffer.from(bytes);
 
-    const asset = await uploadToCloudinary(buffer, folder);
+    // Compress and resize image before uploading to storage:
+    // - Maximum dimensions: 1600 × 1600 px
+    // - Format: WebP
+    // - Quality: 80–85%
+    // - Target compressed size: 300 KB – 800 KB
+    const compressed = await compressImageForUpload(rawBuffer, {
+      maxWidth: 1600,
+      maxHeight: 1600,
+      initialQuality: 82,
+      maxSizeBytes: 800 * 1024,
+    });
+
+    const asset = await uploadToCloudinary(compressed.buffer, folder, {
+      format: "webp",
+    });
 
     return NextResponse.json({
       success: true,

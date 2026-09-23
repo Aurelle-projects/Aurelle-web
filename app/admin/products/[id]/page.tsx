@@ -7,6 +7,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import { createClient } from "@/lib/supabase/client";
 import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2 } from "lucide-react";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 
 interface UploadedImage {
   public_id: string;
@@ -26,6 +27,9 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteProductModal, setShowDeleteProductModal] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<{ index: number; url: string; public_id?: string } | null>(null);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
 
@@ -241,11 +245,7 @@ export default function EditProductPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm(`Are you sure you want to permanently delete "${formData.name}"? This action cannot be undone.`)) {
-      return;
-    }
-
+  async function handleConfirmDeleteProduct() {
     setIsDeleting(true);
     setMessage(null);
 
@@ -265,6 +265,7 @@ export default function EditProductPage() {
       }
 
       setMessage({ text: "Product deleted successfully.", type: "success" });
+      setShowDeleteProductModal(false);
       setTimeout(() => router.push("/admin/products"), 1000);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -274,6 +275,28 @@ export default function EditProductPage() {
       });
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function handleConfirmDeleteImage() {
+    if (!imageToDelete) return;
+    setIsDeletingImage(true);
+    try {
+      if (imageToDelete.public_id) {
+        await fetch("/api/admin/upload/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ public_id: imageToDelete.public_id }),
+        });
+      }
+      removeImage(imageToDelete.index);
+      setImageToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      removeImage(imageToDelete.index);
+      setImageToDelete(null);
+    } finally {
+      setIsDeletingImage(false);
     }
   }
 
@@ -297,7 +320,7 @@ export default function EditProductPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteProductModal(true)}
               disabled={isDeleting || isSaving}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 transition-colors disabled:opacity-50"
             >
@@ -514,7 +537,7 @@ export default function EditProductPage() {
                           )}
                           <button
                             type="button"
-                            onClick={() => removeImage(idx)}
+                            onClick={() => setImageToDelete({ index: idx, url: img.secure_url, public_id: img.public_id })}
                             className="text-red-600 hover:text-red-800 ml-auto p-0.5"
                             title="Remove image"
                           >
@@ -674,6 +697,30 @@ export default function EditProductPage() {
           </>
         )}
       </div>
+
+      {/* Delete Product Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteProductModal}
+        onClose={() => setShowDeleteProductModal(false)}
+        onConfirm={handleConfirmDeleteProduct}
+        itemType="product"
+        itemName={formData.name}
+        description={`Are you sure you want to permanently delete "${formData.name}"?`}
+        warningNote="Deleting this product will permanently erase all inventory data and destroy its associated images on Cloudinary."
+        isLoading={isDeleting}
+      />
+
+      {/* Delete Image Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(imageToDelete)}
+        onClose={() => setImageToDelete(null)}
+        onConfirm={handleConfirmDeleteImage}
+        itemType="image"
+        itemName="Product Gallery Image"
+        imagePreview={imageToDelete?.url}
+        description="Are you sure you want to remove this image? It will be permanently deleted from Cloudinary storage."
+        isLoading={isDeletingImage}
+      />
     </div>
   );
 }

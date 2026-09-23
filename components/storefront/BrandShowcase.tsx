@@ -29,7 +29,7 @@ export default function BrandShowcase({
   const displayImages = validImages.slice(0, 6);
 
   return (
-    <section className="bg-white py-12 md:py-20 lg:py-24" aria-labelledby="showcase-heading">
+    <section className="bg-white py-6 md:py-20 lg:py-24" aria-labelledby="showcase-heading">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center">
           {/* Left Column: 6-Image Grid (3 columns x 2 rows) */}

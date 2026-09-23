@@ -84,11 +84,11 @@ export default function BrandSection({ brands }: BrandSectionProps) {
       {shouldScroll && (
         <>
           <div
-            className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
+            className="hidden sm:block pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
             style={{ background: "linear-gradient(to right, #FAFAF8, transparent)" }}
           />
           <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
+            className="hidden sm:block pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
             style={{ background: "linear-gradient(to left, #FAFAF8, transparent)" }}
           />
         </>

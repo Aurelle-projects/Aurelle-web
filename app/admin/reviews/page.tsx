@@ -1,60 +1,40 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import Link from "next/link";
 import { Search, MessageSquare, RefreshCw, Trash2, Star, ExternalLink } from "lucide-react";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
+import { useAdminData, AdminReviewItem } from "@/context/AdminDataContext";
 
-interface ReviewItem {
-  id: string;
-  product_id: string;
-  product_name: string;
-  product_slug: string;
-  author_name: string;
-  author_email: string;
-  rating: number;
-  title: string | null;
-  body: string;
-  is_published: boolean;
-  is_verified_purchase: boolean;
-  created_at: string;
-}
+type ReviewItem = AdminReviewItem;
 
 export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    reviews: contextReviews,
+    reviewsLoading,
+    loadReviews,
+    setReviews,
+  } = useAdminData();
+
+  const reviews = useMemo(() => contextReviews ?? [], [contextReviews]);
+  const loading = contextReviews === null && reviewsLoading;
   const [searchTerm, setSearchTerm] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reviewToDelete, setReviewToDelete] = useState<ReviewItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadReviews();
-  }, []);
+  }, [loadReviews]);
 
-  async function loadReviews() {
-    setLoading(true);
+  async function handleConfirmDelete() {
+    if (!reviewToDelete) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch("/api/admin/reviews");
-      const data = await res.json();
-      if (res.ok && data.reviews) {
-        setReviews(data.reviews);
-      } else {
-        setReviews([]);
-      }
-    } catch (err) {
-      console.error("[AdminReviewsPage] load error:", err);
-      setReviews([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to permanently delete this review? This action cannot be undone.")) return;
-    setDeletingId(id);
-    try {
-      const res = await fetch(`/api/admin/reviews?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/reviews?id=${reviewToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        setReviews((prev) => prev.filter((r) => r.id !== id));
+        setReviews((prev) => (prev ? prev.filter((r) => r.id !== reviewToDelete.id) : null));
+        setReviewToDelete(null);
       } else {
         const data = await res.json();
         alert(data.error || "Failed to delete review.");
@@ -62,19 +42,20 @@ export default function AdminReviewsPage() {
     } catch {
       alert("Network error. Please try again.");
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   }
 
-  const filtered = reviews.filter((r) => {
-    const term = searchTerm.toLowerCase();
-    return (
+  const filtered = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return reviews;
+    return reviews.filter((r) =>
       r.author_name.toLowerCase().includes(term) ||
       r.author_email.toLowerCase().includes(term) ||
       r.product_name.toLowerCase().includes(term) ||
       r.body.toLowerCase().includes(term)
     );
-  });
+  }, [reviews, searchTerm]);
 
   return (
     <div className="flex flex-col">
@@ -83,44 +64,45 @@ export default function AdminReviewsPage() {
         subtitle="View and moderate all product reviews submitted by customers."
       />
 
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4">
         {/* Filter Bar */}
-        <div className="bg-white p-4 rounded-xl border border-[#DCCFB9]/60 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-white p-3 rounded-lg border border-[#DCCFB9]/60 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative flex-1 w-full max-w-md">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5C6460]" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#5C6460]" />
             <input
               type="text"
               placeholder="Search by customer, product, or review text..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 outline-none transition-all"
+              className="w-full h-8 pl-8 pr-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all"
             />
           </div>
           <button
-            onClick={loadReviews}
+            type="button"
+            onClick={() => loadReviews(true)}
             title="Refresh reviews"
-            className="h-10 w-10 flex items-center justify-center bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-[#5C6460] hover:text-[#183D2B] hover:bg-white transition-colors"
+            className="h-8 w-8 flex items-center justify-center bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-[#5C6460] hover:text-[#183D2B] hover:bg-white transition-colors"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="bg-white rounded-xl border border-[#DCCFB9]/60 shadow-xs p-16 text-center">
-            <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-[#5C6460]">Loading reviews from database…</p>
+          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs p-12 text-center">
+            <div className="w-6 h-6 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-2.5" />
+            <p className="text-xs text-[#5C6460]">Loading reviews from database…</p>
           </div>
         )}
 
         {/* Empty State */}
         {!loading && reviews.length === 0 && (
-          <div className="bg-white rounded-xl border border-[#DCCFB9]/60 shadow-xs p-16 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#F7F5EF] flex items-center justify-center mx-auto mb-4 text-[#A8B7A3]">
-              <MessageSquare size={24} strokeWidth={1.5} />
+          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs p-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#F7F5EF] flex items-center justify-center mx-auto mb-3 text-[#A8B7A3]">
+              <MessageSquare size={20} strokeWidth={1.5} />
             </div>
-            <h3 className="text-base font-bold text-[#1D211F] mb-1">No Reviews Yet</h3>
-            <p className="text-sm text-[#5C6460]">
+            <h3 className="text-sm font-bold text-[#1D211F] mb-1">No Reviews Yet</h3>
+            <p className="text-xs text-[#5C6460]">
               Customer reviews will appear here once they are submitted.
             </p>
           </div>
@@ -128,11 +110,11 @@ export default function AdminReviewsPage() {
 
         {/* No filter results */}
         {!loading && reviews.length > 0 && filtered.length === 0 && (
-          <div className="bg-white rounded-xl border border-[#DCCFB9]/60 shadow-xs p-10 text-center">
-            <p className="text-sm text-[#5C6460]">No reviews match your search.</p>
+          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs p-8 text-center">
+            <p className="text-xs text-[#5C6460]">No reviews match your search.</p>
             <button
               onClick={() => setSearchTerm("")}
-              className="mt-3 text-xs font-bold text-[#183D2B] hover:underline"
+              className="mt-2 text-xs font-bold text-[#183D2B] hover:underline"
             >
               Clear Search
             </button>
@@ -141,13 +123,13 @@ export default function AdminReviewsPage() {
 
         {/* Reviews Table */}
         {!loading && filtered.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#DCCFB9]/60 shadow-xs overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs overflow-hidden">
             {/* Summary bar */}
-            <div className="px-5 py-3 border-b border-[#DCCFB9]/40 flex items-center justify-between">
-              <p className="text-xs font-semibold text-[#5C6460]">
+            <div className="px-4 py-2.5 border-b border-[#DCCFB9]/40 flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-[#5C6460]">
                 Showing <strong className="text-[#1D211F]">{filtered.length}</strong> review{filtered.length !== 1 ? "s" : ""}
               </p>
-              <p className="text-xs font-semibold text-[#5C6460]">
+              <p className="text-[11px] font-semibold text-[#5C6460]">
                 Avg rating:{" "}
                 <strong className="text-[#1D211F]">
                   {filtered.length > 0
@@ -160,11 +142,11 @@ export default function AdminReviewsPage() {
 
             <div className="divide-y divide-[#DCCFB9]/40">
               {filtered.map((rev) => (
-                <div key={rev.id} className="flex flex-col sm:flex-row sm:items-start gap-4 p-5 hover:bg-[#F7F5EF]/50 transition-colors">
+                <div key={rev.id} className="flex flex-col sm:flex-row sm:items-start gap-3.5 p-3.5 sm:p-4 hover:bg-[#F7F5EF]/50 transition-colors">
                   {/* Star badge */}
-                  <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-amber-50 border border-amber-100">
-                    <span className="text-sm font-bold text-amber-600">{rev.rating}</span>
-                    <Star size={11} className="fill-amber-500 text-amber-500 ml-0.5 mb-0.5" />
+                  <div className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-amber-50 border border-amber-100">
+                    <span className="text-xs font-bold text-amber-600">{rev.rating}</span>
+                    <Star size={10} className="fill-amber-500 text-amber-500 ml-0.5 mb-0.5" />
                   </div>
 
                   {/* Content */}
@@ -174,18 +156,18 @@ export default function AdminReviewsPage() {
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star
                           key={s}
-                          size={13}
+                          size={12}
                           className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"}
                         />
                       ))}
                     </div>
 
                     {rev.title && (
-                      <p className="text-[13px] font-bold text-[#1D211F] mb-0.5">{rev.title}</p>
+                      <p className="text-xs font-bold text-[#1D211F] mb-0.5">{rev.title}</p>
                     )}
-                    <p className="text-sm text-[#4B534E] leading-relaxed break-words">{rev.body}</p>
+                    <p className="text-xs text-[#4B534E] leading-relaxed break-words">{rev.body}</p>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#5C6460]">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[#5C6460]">
                       <span>
                         By <strong className="text-[#1D211F]">{rev.author_name}</strong>
                         {rev.author_email ? ` · ${rev.author_email}` : ""}
@@ -206,23 +188,22 @@ export default function AdminReviewsPage() {
                   </div>
 
                   {/* Product + actions */}
-                  <div className="flex-shrink-0 flex flex-col items-end gap-2 min-w-[160px]">
+                  <div className="flex-shrink-0 flex flex-col items-end gap-1.5 min-w-[150px]">
                     <Link
                       href={`/products/${rev.product_slug}`}
                       target="_blank"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#183D2B] hover:underline truncate max-w-[160px]"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#183D2B] hover:underline truncate max-w-[150px]"
                     >
-                      <ExternalLink size={11} />
+                      <ExternalLink size={10} />
                       {rev.product_name}
                     </Link>
 
                     <button
-                      onClick={() => handleDelete(rev.id)}
-                      disabled={deletingId === rev.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[11px] font-bold border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-colors"
+                      onClick={() => setReviewToDelete(rev)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-50 text-red-600 text-[10px] font-bold border border-red-100 hover:bg-red-100 transition-colors"
                     >
-                      <Trash2 size={12} />
-                      {deletingId === rev.id ? "Deleting…" : "Delete"}
+                      <Trash2 size={11} />
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -231,6 +212,17 @@ export default function AdminReviewsPage() {
           </div>
         )}
       </div>
+
+      {/* Reusable Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(reviewToDelete)}
+        onClose={() => setReviewToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        itemType="review"
+        itemName={reviewToDelete ? `Review by ${reviewToDelete.author_name} for ${reviewToDelete.product_name}` : undefined}
+        description="Are you sure you want to permanently delete this customer review? It will be removed from the storefront immediately."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

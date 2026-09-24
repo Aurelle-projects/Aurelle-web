@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOrderDeliveredReviewEmail } from "@/lib/email/brevo";
 
@@ -11,14 +11,16 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const rawStatus = body.status;
 
-    if (!id || !status) {
+    if (!id || !rawStatus) {
       return NextResponse.json(
         { error: "Order ID and status are required." },
         { status: 400 }
       );
     }
+
+    const status = String(rawStatus).trim().toLowerCase();
 
     const admin = createAdminClient();
 
@@ -68,40 +70,87 @@ export async function PATCH(
     }
 
     // 3. If delivered, send review invitation email
-    if (status === "delivered" && updatedOrder) {
-      const customerEmail = updatedOrder.customer_email as string | undefined;
+    const normalizedStatus = String(status || "").trim().toLowerCase();
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (normalizedStatus === "delivered" && updatedOrder) {
+      const customerEmail =
+        (updatedOrder.customer_email as string | undefined)?.trim() ||
+        ((updatedOrder.shipping_address as Record<string, unknown>)?.email as string | undefined)?.trim();
       const shippingAddr = (updatedOrder.shipping_address as Record<string, unknown>) || {};
       const customerName =
         (shippingAddr.fullName as string) ||
         (shippingAddr.full_name as string) ||
         "";
 
+      // If relation join returned no items, fallback query order_items directly
+      let rawItems = updatedOrder.order_items;
+      if (!rawItems || rawItems.length === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: fallbackItems } = await (admin as any)
+          .from("order_items")
+          .select("id, product_id, product_snapshot, quantity")
+          .eq("order_id", id);
+        rawItems = fallbackItems || [];
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const items = (updatedOrder.order_items || []).map((item: any) => {
+      const items = (rawItems || []).map((item: any) => {
         const snap = item.product_snapshot || {};
         return {
+          productId: item.product_id || snap.id || snap.productId || "",
           name: snap.name || "Aurelle Product",
-          image: snap.image || null,
+          image: snap.primary_image_url || snap.image || null,
           quantity: item.quantity || 1,
         };
       });
 
       if (customerEmail) {
-        sendOrderDeliveredReviewEmail({
-          orderNumber: updatedOrder.order_number,
-          customerName,
-          customerEmail,
-          items,
-          orderId: updatedOrder.id,
-        }).catch((err) => {
-          console.error("[Brevo] Error sending delivery review email:", err);
-        });
+        try {
+          const emailRes = await sendOrderDeliveredReviewEmail({
+            orderNumber: updatedOrder.order_number,
+            customerName,
+            customerEmail,
+            items,
+            orderId: updatedOrder.id,
+          });
+
+          if (!emailRes.success) {
+            emailError = emailRes.error || "Failed to send email via Brevo.";
+            console.error(
+              `[Brevo] Failed to send delivery review email to ${customerEmail}:`,
+              emailRes.error
+            );
+          } else {
+            emailSent = true;
+            console.log(
+              `[Brevo] Successfully sent delivery review email to ${customerEmail} for order ${updatedOrder.order_number}`
+            );
+          }
+        } catch (emailErr) {
+          emailError =
+            emailErr instanceof Error
+              ? emailErr.message
+              : "Unexpected email error.";
+          console.error(
+            "[Brevo] Unexpected exception sending delivery review email:",
+            emailErr
+          );
+        }
+      } else {
+        emailError = "No customer email found for order.";
+        console.warn(
+          `[Admin Order Status] No customer email found for order ${updatedOrder.order_number} (${id})`
+        );
       }
     }
 
     return NextResponse.json({
       success: true,
       message: `Order status updated to ${status}.`,
+      emailSent,
+      emailError,
     });
   } catch (err) {
     console.error("[Admin Order Status exception]:", err);

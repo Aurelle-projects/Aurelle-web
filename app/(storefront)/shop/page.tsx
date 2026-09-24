@@ -131,6 +131,7 @@ function ShopContent() {
   const initialSubcategory = searchParams.get("subcategory") || searchParams.get("sub") || "all";
   const initialSort = searchParams.get("sort") || "price-low";
   const initialFilter = searchParams.get("filter") || "";
+  const initialSearch = searchParams.get("search") || searchParams.get("q") || "";
 
   const [allProducts, setAllProducts] = useState<SupabaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +140,7 @@ function ShopContent() {
   const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory);
   const [sortBy, setSortBy] = useState(initialSort);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [maxPrice, setMaxPrice] = useState(0);
   const [productTypeFilters, setProductTypeFilters] = useState<ProductTypeFilters>({
     featured: false,
@@ -168,10 +169,12 @@ function ShopContent() {
 
   useEffect(() => {
     const filter = searchParams.get("filter") || "";
+    const search = searchParams.get("search") || searchParams.get("q") || "";
     setSelectedCategory(searchParams.get("category") || "all");
     setSelectedBrand(searchParams.get("brand") || "all");
     setSelectedSubcategory(searchParams.get("subcategory") || searchParams.get("sub") || "all");
     setSortBy(searchParams.get("sort") || "price-low");
+    setSearchQuery(search);
     // Sync special filter flags from URL
     setProductTypeFilters(prev => ({
       ...prev,
@@ -264,6 +267,19 @@ function ShopContent() {
         const sub = norm(product.subcategory);
         const inv = norm(product.inventory);
 
+        // Search query filter (checks product name, brand, category, subcategory, sku)
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchesName = product.name?.toLowerCase().includes(q);
+          const matchesBrand = brand?.name?.toLowerCase().includes(q);
+          const matchesCategory = cat?.name?.toLowerCase().includes(q);
+          const matchesSub = sub?.name?.toLowerCase().includes(q);
+          const matchesSku = product.sku?.toLowerCase().includes(q);
+          if (!matchesName && !matchesBrand && !matchesCategory && !matchesSub && !matchesSku) {
+            return false;
+          }
+        }
+
         if (selectedCategory !== "all" && cat?.slug !== selectedCategory) return false;
         if (selectedBrand !== "all" && brand?.slug !== selectedBrand) return false;
         if (selectedSubcategory !== "all" && sub?.slug !== selectedSubcategory) return false;
@@ -310,7 +326,7 @@ function ShopContent() {
         subcategory: norm(product.subcategory),
         inventory: norm(product.inventory),
       }));
-  }, [allProducts, selectedCategory, selectedBrand, selectedSubcategory, sortBy, inStockOnly, maxPrice, productTypeFilters]);
+  }, [allProducts, selectedCategory, selectedBrand, selectedSubcategory, sortBy, inStockOnly, maxPrice, productTypeFilters, searchQuery]);
 
   const priceLimit = useMemo(
     () => Math.max(0, ...allProducts.map((product) => product.retail_price)),
@@ -343,7 +359,12 @@ function ShopContent() {
     setInStockOnly(false);
     setMaxPrice(0);
     setSortBy("price-low");
+    setSearchQuery("");
     setProductTypeFilters({ featured: false, newArrivals: false, bestSellers: false, topRated: false });
+    const params = new URLSearchParams(window.location.search);
+    params.delete("search");
+    params.delete("q");
+    window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const toggleTypeFilter = (key: keyof ProductTypeFilters) => {
@@ -351,6 +372,7 @@ function ShopContent() {
   };
 
   const anyFilterActive =
+    Boolean(searchQuery.trim()) ||
     selectedBrand !== "all" ||
     selectedCategory !== "all" ||
     selectedSubcategory !== "all" ||
@@ -536,11 +558,15 @@ function ShopContent() {
                 <p className="text-xs font-bold text-[#1D211F]">
                   {filteredProducts.length} {filteredProducts.length === 1 ? "Product" : "Products"}
                 </p>
-                {selectedCategory !== "all" && (
+                {searchQuery ? (
+                  <span className="inline-block text-[11px] text-[#183D2B] font-semibold truncate max-w-[150px]">
+                    &ldquo;{searchQuery}&rdquo;
+                  </span>
+                ) : selectedCategory !== "all" ? (
                   <span className="inline-block text-[11px] text-[#183D2B] font-semibold truncate max-w-[130px]">
                     {allCategories.find((c) => c.slug === selectedCategory)?.name || selectedCategory}
                   </span>
-                )}
+                ) : null}
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -630,6 +656,24 @@ function ShopContent() {
           <>
             <p className="hidden lg:block text-xs text-[#5C6460] pb-4">
               Showing <strong className="text-[#1D211F]">{filteredProducts.length}</strong> products
+              {searchQuery && (
+                <>
+                  {" "}matching &ldquo;<strong className="text-[#183D2B]">{searchQuery}</strong>&rdquo;
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("search");
+                      params.delete("q");
+                      window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
+                    }}
+                    className="ml-2 text-[#183D2B] font-bold hover:underline cursor-pointer"
+                  >
+                    ✕ Clear search
+                  </button>
+                </>
+              )}
               {selectedCategory !== "all" && (
                 <>
                   {" "}in <strong className="text-[#183D2B]">

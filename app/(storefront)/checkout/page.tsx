@@ -348,7 +348,7 @@ function CheckoutContent() {
 
         {/* Guest sign in reminder */}
         {!currentUser && !loadingAuth && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#EDE9DF] shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-transparent sm:bg-white p-0 sm:p-4 rounded-none sm:rounded-xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs">
             <div className="flex items-center gap-2.5">
               <User size={18} className="text-[#183D2B] shrink-0" />
               <p className="text-xs text-[#5C6460]">
@@ -376,7 +376,7 @@ function CheckoutContent() {
           {/* ── Left 2 Columns: Shipping & Payment ─────────────── */}
           <div className="lg:col-span-2 space-y-6">
             {/* 1. DELIVERY ADDRESS SELECTION */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EDE9DF] shadow-xs space-y-4">
+            <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-[#EDE9DF]/80 pb-3">
                 <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-[10px]">
@@ -475,7 +475,7 @@ function CheckoutContent() {
                         onChange={handleChange}
                         required
                         placeholder="Recipient full name"
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>
 
@@ -489,8 +489,8 @@ function CheckoutContent() {
                         value={formData.phone}
                         onChange={handleChange}
                         required
-                        placeholder="+971 50 123 4567"
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
+                        placeholder="+971 00 000 0000"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>
 
@@ -505,7 +505,7 @@ function CheckoutContent() {
                         onChange={handleChange}
                         required
                         placeholder="For order tracking & receipt"
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>
 
@@ -517,7 +517,7 @@ function CheckoutContent() {
                         name="emirate"
                         value={formData.emirate}
                         onChange={handleChange}
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs font-semibold text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white cursor-pointer"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs font-semibold text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white cursor-pointer transition-colors"
                       >
                         {UAE_EMIRATES.map((em) => (
                           <option key={em} value={em}>
@@ -536,8 +536,8 @@ function CheckoutContent() {
                         name="area"
                         value={formData.area}
                         onChange={handleChange}
-                        placeholder="e.g. Downtown / Marina / Jumeirah"
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
+                        placeholder="Enter Area"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>
 
@@ -552,7 +552,7 @@ function CheckoutContent() {
                         onChange={handleChange}
                         required
                         placeholder="Building name, street, apartment/villa number"
-                        className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#EDE9DF] rounded-md text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
+                        className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>
                   </div>
@@ -589,7 +589,7 @@ function CheckoutContent() {
             </div>
 
             {/* 2. DELIVERY SPEED */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EDE9DF] shadow-xs space-y-3">
+            <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-3">
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2 border-b border-[#EDE9DF]/80 pb-3">
                 <span className="w-5 h-5 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-[10px]">
                   2
@@ -649,7 +649,7 @@ function CheckoutContent() {
             </div>
 
             {/* 3. PAYMENT METHOD */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EDE9DF] shadow-xs space-y-3">
+            <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-3">
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2 border-b border-[#EDE9DF]/80 pb-3">
                 <span className="w-5 h-5 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-[10px]">
                   3
@@ -729,7 +729,7 @@ function CheckoutContent() {
 
           {/* ── Right Column: Order Summary ───────────────────── */}
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-[#EDE9DF] shadow-xs space-y-4 sticky top-24">
+            <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-4 sticky top-24">
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#EDE9DF] pb-3">
                 Order Summary ({items.length} {items.length === 1 ? "Item" : "Items"})
               </h2>

@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-// Dynamic fresh data on every request
-export const revalidate = 0;
+// Enable ISR caching (60s) to eliminate repeated slow DB queries on page navigation
+export const revalidate = 60;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SiteSettingsRow = { key: string; value: any };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import type { ProductItem } from "@/lib/products/mock-products";
 
 export interface CartItem {
@@ -62,14 +62,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = items.reduce((sum, item) => sum + item.product.retail_price * item.quantity, 0);
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
-  const vatAmount = Math.round(subtotal * UAE_VAT_RATE * 100) / 100;
-  const total = subtotal + shippingFee;
-  const amountUntilFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+  const itemCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
 
-  const addItem = (product: ProductItem, quantity = 1) => {
+  const subtotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.product.retail_price * item.quantity, 0),
+    [items]
+  );
+
+  const shippingFee = useMemo(
+    () => (subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0 ? 0 : STANDARD_SHIPPING_FEE),
+    [subtotal]
+  );
+
+  const vatAmount = useMemo(
+    () => Math.round(subtotal * UAE_VAT_RATE * 100) / 100,
+    [subtotal]
+  );
+
+  const total = useMemo(() => subtotal + shippingFee, [subtotal, shippingFee]);
+
+  const amountUntilFreeShipping = useMemo(
+    () => Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal),
+    [subtotal]
+  );
+
+  const addItem = useCallback((product: ProductItem, quantity = 1) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -81,15 +101,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { id: product.id, product, quantity }];
     });
-  };
+  }, []);
 
-  const removeItem = (itemId: string) => {
+  const removeItem = useCallback((itemId: string) => {
     setItems((prev) => prev.filter((item) => item.id !== itemId && item.product.id !== itemId));
-  };
+  }, []);
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = useCallback((itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(itemId);
+      setItems((prev) => prev.filter((item) => item.id !== itemId && item.product.id !== itemId));
       return;
     }
     setItems((prev) =>
@@ -99,29 +119,44 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           : item
       )
     );
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      items,
+      itemCount,
+      subtotal,
+      vatAmount,
+      shippingFee,
+      total,
+      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      amountUntilFreeShipping,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+    }),
+    [
+      items,
+      itemCount,
+      subtotal,
+      vatAmount,
+      shippingFee,
+      total,
+      amountUntilFreeShipping,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+    ]
+  );
 
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        itemCount,
-        subtotal,
-        vatAmount,
-        shippingFee,
-        total,
-        freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
-        amountUntilFreeShipping,
-        addItem,
-        removeItem,
-        updateQuantity,
-        clearCart,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

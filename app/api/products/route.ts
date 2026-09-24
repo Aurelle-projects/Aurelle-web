@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any;
-    const { data, error } = await supabase
+    const search = searchParams.get("search") || searchParams.get("q");
+
+    let query = supabase
       .from("products")
       .select(`
         id, name, slug, sku, retail_price, compare_at_price,
@@ -22,7 +24,13 @@ export async function GET(request: NextRequest) {
         inventory(stock_status)
       `)
       .eq("is_published", true)
-      .eq("status", "published")
+      .eq("status", "published");
+
+    if (search && search.trim()) {
+      query = query.ilike("name", `%${search.trim()}%`);
+    }
+
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 

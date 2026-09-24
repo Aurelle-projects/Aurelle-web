@@ -124,12 +124,14 @@ function AccountContent() {
   const handleTabChange = useCallback(
     (tabId: TabId) => {
       setActiveTab(tabId);
-      router.replace(`/account?tab=${tabId}`);
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `/account?tab=${tabId}`);
+      }
       if (mobileTabContainerRef.current) {
         mobileTabContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
       }
     },
-    [router]
+    []
   );
 
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -258,15 +260,21 @@ function AccountContent() {
     };
   }, []);
 
+  // Track whether initial fetches have occurred to prevent reloading flash
+  const fetchedOrdersRef = useRef(false);
+  const fetchedAddressesRef = useRef(false);
+  const fetchedReviewsRef = useRef(false);
+
   // Fetch Orders
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (showLoading = true) => {
     if (!user) return;
-    setLoadingOrders(true);
+    if (showLoading && !fetchedOrdersRef.current) setLoadingOrders(true);
     try {
       const res = await fetch("/api/orders");
       const data = await res.json();
       if (res.ok && data.orders) {
         setOrders(data.orders);
+        fetchedOrdersRef.current = true;
       }
     } catch (err) {
       console.error("Failed to load orders:", err);
@@ -276,14 +284,15 @@ function AccountContent() {
   }, [user]);
 
   // Fetch Addresses
-  const fetchAddresses = useCallback(async () => {
+  const fetchAddresses = useCallback(async (showLoading = true) => {
     if (!user) return;
-    setLoadingAddresses(true);
+    if (showLoading && !fetchedAddressesRef.current) setLoadingAddresses(true);
     try {
       const res = await fetch("/api/addresses");
       const data = await res.json();
       if (res.ok && data.addresses) {
         setAddresses(data.addresses);
+        fetchedAddressesRef.current = true;
       }
     } catch (err) {
       console.error("Failed to load addresses:", err);
@@ -293,14 +302,15 @@ function AccountContent() {
   }, [user]);
 
   // Fetch User's Reviews
-  const fetchUserReviews = useCallback(async () => {
+  const fetchUserReviews = useCallback(async (showLoading = true) => {
     if (!user) return;
-    setLoadingUserReviews(true);
+    if (showLoading && !fetchedReviewsRef.current) setLoadingUserReviews(true);
     try {
       const res = await fetch("/api/reviews?userOnly=true");
       const data = await res.json();
       if (res.ok && data.reviews) {
         setUserReviews(data.reviews);
+        fetchedReviewsRef.current = true;
       }
     } catch (err) {
       console.error("Failed to load reviews:", err);
@@ -309,12 +319,31 @@ function AccountContent() {
     }
   }, [user]);
 
+  // Fetch tab data once user is authenticated
   useEffect(() => {
     if (!user) return;
-    if (activeTab === "orders" || activeTab === "reviews") fetchOrders();
-    if (activeTab === "reviews") fetchUserReviews();
-    if (activeTab === "addresses") fetchAddresses();
-  }, [user, activeTab, fetchOrders, fetchUserReviews, fetchAddresses]);
+    fetchOrders(activeTab === "orders" || activeTab === "reviews");
+    fetchAddresses(activeTab === "addresses");
+    fetchUserReviews(activeTab === "reviews");
+  }, [user, fetchOrders, fetchAddresses, fetchUserReviews, activeTab]);
+
+  // Handle browser back / forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (
+        tabParam === "orders" ||
+        tabParam === "addresses" ||
+        tabParam === "profile" ||
+        tabParam === "reviews"
+      ) {
+        setActiveTab(tabParam);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const openReviewModal = useCallback(
     (
@@ -680,10 +709,7 @@ function AccountContent() {
         <div className="hidden sm:flex sm:mb-4 gap-2 sm:gap-6 overflow-x-auto">
           <button
             type="button"
-            onClick={() => {
-              setActiveTab("profile");
-              router.replace("/account?tab=profile");
-            }}
+            onClick={() => handleTabChange("profile")}
             className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "profile" ? " text-[#183D2B]" : " text-[#5C6460] hover:text-[#183D2B]"
             }`}
@@ -694,10 +720,7 @@ function AccountContent() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab("orders");
-              router.replace("/account?tab=orders");
-            }}
+            onClick={() => handleTabChange("orders")}
             className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "orders"
                 ? "border-[#183D2B] text-[#183D2B]"
@@ -715,10 +738,7 @@ function AccountContent() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab("addresses");
-              router.replace("/account?tab=addresses");
-            }}
+            onClick={() => handleTabChange("addresses")}
             className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "addresses"
                 ? "border-[#183D2B] text-[#183D2B]"
@@ -736,10 +756,7 @@ function AccountContent() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab("reviews");
-              router.replace("/account?tab=reviews");
-            }}
+            onClick={() => handleTabChange("reviews")}
             className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "reviews"
                 ? "border-[#183D2B] text-[#183D2B]"
@@ -810,13 +827,13 @@ function AccountContent() {
 
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1D211F] mb-1.5">
-                    Phone / Mobile Number
+                    Mobile Number
                   </label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+971 50 123 4567"
+                    placeholder="+971 00 000 0000"
                     className="h-10 w-full rounded-md border border-[#EDE9DF] bg-[#F7F5EF] px-3.5 text-xs text-[#1D211F] outline-none transition-all focus:border-[#183D2B] focus:bg-white focus:ring-1 focus:ring-[#183D2B]/20"
                   />
                 </div>
@@ -1359,7 +1376,7 @@ function AccountContent() {
                     required
                     value={addressForm.phone}
                     onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                    placeholder="+971 50 123 4567"
+                    placeholder="+971 00 000 0000"
                     className="h-10 w-full rounded-md border border-[#EDE9DF] bg-[#F7F5EF] px-3.5 text-xs text-[#1D211F] outline-none focus:border-[#183D2B] focus:bg-white"
                   />
                 </div>

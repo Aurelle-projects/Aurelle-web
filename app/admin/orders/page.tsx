@@ -24,11 +24,18 @@ export default function AdminOrdersPage() {
   const [channelFilter, setChannelFilter] = useState<"all" | "retail" | "wholesale">("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     loadOrders();
     loadProducts();
   }, [loadOrders, loadProducts]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 5000);
+    return () => clearTimeout(t);
+  }, [feedback]);
 
   function getOrderThumbnail(ord: OrderItem): string | null {
     const firstItem = ord.items?.[0];
@@ -55,11 +62,44 @@ export default function AdminOrdersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        console.error("[AdminOrdersPage] Failed to update status on server");
+        console.error("[AdminOrdersPage] Failed to update status on server:", data.error);
+        setFeedback({
+          type: "error",
+          text: `Status update failed: ${data.error || "Server error"}`,
+        });
+      } else {
+        if (newStatus.toLowerCase() === "delivered") {
+          if (data.emailSent) {
+            setFeedback({
+              type: "success",
+              text: `Order status updated to Delivered! Review email sent to customer.`,
+            });
+          } else if (data.emailError) {
+            setFeedback({
+              type: "error",
+              text: `Order updated, but email failed: ${data.emailError}`,
+            });
+          } else {
+            setFeedback({
+              type: "success",
+              text: `Order status updated to Delivered.`,
+            });
+          }
+        } else {
+          setFeedback({
+            type: "success",
+            text: `Order status updated to ${newStatus}.`,
+          });
+        }
       }
     } catch (err) {
       console.error("[AdminOrdersPage] Status change network error:", err);
+      setFeedback({
+        type: "error",
+        text: "Network error updating order status.",
+      });
     }
   }
 
@@ -105,6 +145,25 @@ export default function AdminOrdersPage() {
       />
 
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4">
+        {feedback && (
+          <div
+            className={`p-3.5 rounded-lg text-xs font-semibold flex items-center justify-between shadow-2xs transition-all ${
+              feedback.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            <span>{feedback.text}</span>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-xs opacity-60 hover:opacity-100 cursor-pointer ml-4"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Channel Selection & Filter Bar */}
         <div className="bg-white p-3.5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
           {/* Channel Tabs */}

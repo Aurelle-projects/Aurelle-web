@@ -25,73 +25,72 @@ export default async function StorefrontLayout({
 
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (user) {
+    // Fetch user auth, site settings, brands, and categories in parallel to eliminate waterfall
+    const [authRes, settingsRes, brandsRes, categoriesRes] = await Promise.all([
+      supabase.auth.getUser(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (profile?.role) {
-        userRole = profile.role as UserRole;
-      }
-
+      (supabase as any).from("site_settings").select("key, value"),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cartData } = await (supabase as any)
-        .from("carts")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
+      (supabase as any)
+        .from("brands")
+        .select("name, slug")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any)
+        .from("categories")
+        .select("name, slug")
+        .eq("is_active", true)
+        .is("parent_id", null)
+        .order("sort_order", { ascending: true }),
+    ]);
 
-      if (cartData?.id) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { count } = await (supabase as any)
-          .from("cart_items")
-          .select("id", { count: "exact", head: true })
-          .eq("cart_id", cartData.id);
-        cartCount = count ?? 0;
-      }
-    }
+    const user = authRes.data?.user;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: siteSettings } = await (supabase as any)
-      .from("site_settings")
-      .select("key, value");
-
-    if (Array.isArray(siteSettings)) {
-      for (const s of siteSettings as Array<{ key: string; value: unknown }>) {
+    if (Array.isArray(settingsRes.data)) {
+      for (const s of settingsRes.data as Array<{ key: string; value: unknown }>) {
         settings[s.key] = s.value;
       }
     }
 
-    // Fetch active brands for "Shop by Brand" dropdown
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: brandsData } = await (supabase as any)
-      .from("brands")
-      .select("name, slug")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-
-    if (Array.isArray(brandsData)) {
-      navBrands = brandsData as NavBrand[];
+    if (Array.isArray(brandsRes.data)) {
+      navBrands = brandsRes.data as NavBrand[];
     }
 
-    // Fetch top-level (parent) active categories for "Shop by Category" dropdown
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: categoriesData } = await (supabase as any)
-      .from("categories")
-      .select("name, slug")
-      .eq("is_active", true)
-      .is("parent_id", null)
-      .order("sort_order", { ascending: true });
+    if (Array.isArray(categoriesRes.data)) {
+      navCategories = categoriesRes.data as NavCategory[];
+    }
 
-    if (Array.isArray(categoriesData)) {
-      navCategories = categoriesData as NavCategory[];
+    if (user) {
+      // Parallelize profile and cart lookups
+      const [profileRes, cartRes] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("carts")
+          .select("id")
+          .eq("user_id", user.id)
+          .single(),
+      ]);
+
+      if (profileRes.data?.role) {
+        userRole = profileRes.data.role as UserRole;
+      }
+
+      if (cartRes.data?.id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { count } = await (supabase as any)
+          .from("cart_items")
+          .select("id", { count: "exact", head: true })
+          .eq("cart_id", cartRes.data.id);
+        cartCount = count ?? 0;
+      }
     }
   } catch {
     // No Supabase credentials yet — render with defaults

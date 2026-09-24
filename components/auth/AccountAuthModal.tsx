@@ -8,6 +8,9 @@ interface AccountAuthModalProps {
   open: boolean;
   onClose: () => void;
   initialMode?: "login" | "signup";
+  defaultEmail?: string;
+  defaultFullName?: string;
+  onSuccess?: () => void;
 }
 
 type AuthMode = "login" | "signup" | "forgot-email" | "forgot-otp" | "forgot-reset";
@@ -16,6 +19,9 @@ export default function AccountAuthModal({
   open,
   onClose,
   initialMode = "login",
+  defaultEmail = "",
+  defaultFullName = "",
+  onSuccess,
 }: AccountAuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [fullName, setFullName] = useState("");
@@ -39,6 +45,8 @@ export default function AccountAuthModal({
   useEffect(() => {
     if (!open) return;
     setMode(initialMode);
+    if (defaultEmail) setEmail(defaultEmail);
+    if (defaultFullName) setFullName(defaultFullName);
     setError(null);
     setMessage(null);
     setOtp("");
@@ -46,7 +54,7 @@ export default function AccountAuthModal({
     setResetToken(null);
     setNewPassword("");
     setConfirmPassword("");
-  }, [open, initialMode]);
+  }, [open, initialMode, defaultEmail, defaultFullName]);
 
   if (!open) return null;
 
@@ -93,7 +101,11 @@ export default function AccountAuthModal({
           setMessage("Account created successfully! Welcome to Aurelle.");
           setTimeout(() => {
             onClose();
-            window.location.assign("/");
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              window.location.assign("/");
+            }
           }, 800);
         }
       } else {
@@ -106,7 +118,11 @@ export default function AccountAuthModal({
         if (signInError) throw signInError;
 
         onClose();
-        window.location.assign("/");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.assign("/");
+        }
       }
     } catch (authError) {
       setError(

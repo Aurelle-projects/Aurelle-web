@@ -112,10 +112,17 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 5000);
+    return () => clearTimeout(t);
+  }, [feedback]);
 
   async function loadDashboardData() {
     try {
@@ -145,11 +152,44 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        console.error("[Dashboard] Failed to update order status");
+        console.error("[Dashboard] Failed to update order status:", data.error);
+        setFeedback({
+          type: "error",
+          text: `Status update failed: ${data.error || "Server error"}`,
+        });
+      } else {
+        if (newStatus.toLowerCase() === "delivered") {
+          if (data.emailSent) {
+            setFeedback({
+              type: "success",
+              text: `Order status updated to Delivered! Review email sent to customer.`,
+            });
+          } else if (data.emailError) {
+            setFeedback({
+              type: "error",
+              text: `Order updated, but email failed: ${data.emailError}`,
+            });
+          } else {
+            setFeedback({
+              type: "success",
+              text: `Order status updated to Delivered.`,
+            });
+          }
+        } else {
+          setFeedback({
+            type: "success",
+            text: `Order status updated to ${newStatus}.`,
+          });
+        }
       }
     } catch (err) {
       console.error("[Dashboard] Status update error:", err);
+      setFeedback({
+        type: "error",
+        text: "Network error updating order status.",
+      });
     } finally {
       setUpdatingOrderId(null);
     }
@@ -225,6 +265,25 @@ export default function AdminDashboardPage() {
       />
 
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+        {feedback && (
+          <div
+            className={`p-3.5 rounded-lg text-xs font-semibold flex items-center justify-between shadow-2xs transition-all ${
+              feedback.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            <span>{feedback.text}</span>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-xs opacity-60 hover:opacity-100 cursor-pointer ml-4"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* ── TOP ACTION & REFRESH BAR ───────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#DCCFB9]/30">
           <div>

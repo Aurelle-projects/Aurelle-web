@@ -349,15 +349,25 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (
-        order.user_id &&
-        order.user_id !== user.id &&
-        order.customer_email !== user.email
-      ) {
+      const orderCustomerEmail = (order.customer_email || "").toLowerCase().trim();
+      const userAuthEmail = (user.email || "").toLowerCase().trim();
+      const isOwner =
+        (order.user_id && order.user_id === user.id) ||
+        (orderCustomerEmail && orderCustomerEmail === userAuthEmail);
+
+      if (!isOwner) {
         return NextResponse.json(
           { error: "You can only review products from your own orders." },
           { status: 403 }
         );
+      }
+
+      // If order had no user_id (guest checkout) but customer is now registered with this email, link it
+      if (!order.user_id && user.id) {
+        await (admin as any)
+          .from("orders")
+          .update({ user_id: user.id })
+          .eq("id", order_id);
       }
 
       // Verify this order actually contains the product

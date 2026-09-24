@@ -4,6 +4,8 @@
  * All functions are server-only (never import from client components).
  */
 
+import { createReviewToken } from "@/lib/auth/reviewToken";
+
 // ── Types ──────────────────────────────────────────────────────────
 
 export interface OrderItem {
@@ -49,7 +51,7 @@ async function sendBrevoEmail({
 }): Promise<{ success: boolean; error?: string }> {
   const brevoApiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
-  const senderName = process.env.BREVO_SENDER_NAME || "Aurelle";
+  const senderName = (process.env.BREVO_SENDER_NAME || "Aurelle").replace(/^['"]|['"]$/g, "");
 
   if (!brevoApiKey || !senderEmail) {
     console.error("[Brevo] Configuration missing.");
@@ -378,7 +380,12 @@ export interface DeliveredEmailData {
   orderNumber: string;
   customerName?: string;
   customerEmail: string;
-  items: Array<{ name: string; image?: string | null; quantity?: number }>;
+  items: Array<{
+    productId?: string;
+    name: string;
+    image?: string | null;
+    quantity?: number;
+  }>;
   orderId: string;
 }
 
@@ -388,19 +395,42 @@ export async function sendOrderDeliveredReviewEmail(
   const { orderNumber, customerName, customerEmail, items, orderId } = data;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
   const displayName = customerName?.trim() || "Valued Customer";
-  const reviewLink = `${siteUrl}/account?tab=reviews&orderId=${orderId}`;
+  const token = createReviewToken(orderId, customerEmail);
 
   const itemRows = items
-    .map(
-      (item) => `
+    .map((item) => {
+      const pId = item.productId || "";
+      const productReviewLink = `${siteUrl}/review?orderId=${encodeURIComponent(
+        orderId
+      )}&productId=${encodeURIComponent(pId)}&token=${encodeURIComponent(token)}`;
+
+      return `
       <tr>
-        <td style="padding:10px 0; border-bottom:1px solid #EDE9DF; font-size:13px; color:#1D211F; vertical-align:middle;">
-          <strong>${item.name}</strong>
-          ${item.quantity && item.quantity > 1 ? `<span style="color:#5C6460; font-size:12px;"> (x${item.quantity})</span>` : ""}
+        <td style="padding:12px 0; border-bottom:1px solid #EDE9DF; font-size:13px; color:#1D211F; vertical-align:middle;">
+          ${
+            item.image
+              ? `<img src="${item.image}" alt="${item.name}" width="48" height="48" style="border-radius:6px; object-fit:cover; margin-right:12px; vertical-align:middle; border:1px solid #EDE9DF; display:inline-block;" />`
+              : ""
+          }
+          <strong style="vertical-align:middle;">${item.name}</strong>
+          ${
+            item.quantity && item.quantity > 1
+              ? `<span style="color:#5C6460; font-size:12px; font-weight:normal;"> (x${item.quantity})</span>`
+              : ""
+          }
         </td>
-      </tr>`
-    )
+        <td style="padding:12px 0; border-bottom:1px solid #EDE9DF; text-align:right; vertical-align:middle; white-space:nowrap;">
+          <a href="${productReviewLink}" style="background:#183D2B; color:#ffffff; padding:8px 16px; text-decoration:none; font-size:12px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.3px;">
+            ★ Review Product
+          </a>
+        </td>
+      </tr>`;
+    })
     .join("");
+
+  const mainReviewLink = `${siteUrl}/review?orderId=${encodeURIComponent(
+    orderId
+  )}${items[0]?.productId ? `&productId=${encodeURIComponent(items[0].productId)}` : ""}&token=${encodeURIComponent(token)}`;
 
   const htmlContent = emailWrapper(`
     <div style="background:#F0F7F3; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
@@ -413,30 +443,31 @@ export async function sendOrderDeliveredReviewEmail(
     </p>
 
     <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 20px;">
-      Your feedback matters deeply to us and helps fellow connoisseurs discover the perfect beauty essentials. As a registered member, you can now share your authentic review and star rating.
+      Your feedback matters deeply to us and helps fellow connoisseurs discover the perfect beauty essentials. As a registered member, you can now share your authentic review and star rating for each purchased product below.
     </p>
 
     <div style="background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:16px 20px; margin-bottom:24px;">
-      <h3 style="margin:0 0 10px; font-size:12px; font-weight:700; color:#183D2B; text-transform:uppercase; letter-spacing:1px;">Delivered Products</h3>
+      <h3 style="margin:0 0 12px; font-size:12px; font-weight:700; color:#183D2B; text-transform:uppercase; letter-spacing:1px;">Delivered Products (${items.length})</h3>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tbody>${itemRows}</tbody>
       </table>
     </div>
 
     <div style="text-align:center; margin:30px 0 10px;">
-      <a href="${reviewLink}" class="btn" style="background:#183D2B; color:#ffffff; padding:14px 32px; text-decoration:none; font-size:14px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.5px;">
-        ★ Rate & Review Your Products
+      <a href="${mainReviewLink}" class="btn" style="background:#183D2B; color:#ffffff; padding:14px 32px; text-decoration:none; font-size:14px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.5px;">
+        ★ ${items.length > 1 ? "Review All Products From This Order" : "Rate & Review Your Product"}
       </a>
     </div>
     <p style="text-align:center; font-size:11px; color:#8C938F; margin:10px 0 0;">
-      Please sign in to your Aurelle account to submit your review.
+      A registered Aurelle account is required to submit your review.
     </p>
   `);
 
   return sendBrevoEmail({
-    to: [{ email: customerEmail, name: customerName || undefined }],
+    to: [{ email: customerEmail, name: displayName }],
     subject: `Your order ${orderNumber} has arrived! Share your review | Aurelle`,
     htmlContent,
   });
 }
+
 

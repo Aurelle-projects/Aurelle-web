@@ -109,7 +109,11 @@ export async function POST(req: NextRequest) {
         sort_order: idx,
       }));
       const { error: imgErr } = await supabase.from("product_images").insert(imageRows);
-      if (imgErr) console.error("[API] Image insert error:", imgErr);
+      if (imgErr) {
+        console.error("[API] Image insert error, rolling back product:", imgErr);
+        await supabase.from("products").delete().eq("id", productId);
+        return NextResponse.json({ error: `Failed to save product images: ${imgErr.message}` }, { status: 500 });
+      }
     }
 
     // Insert inventory row
@@ -119,7 +123,12 @@ export async function POST(req: NextRequest) {
       low_stock_threshold: parseInt(low_stock_threshold) || 5,
       stock_status: (parseInt(stock_quantity) || 0) > 0 ? "in_stock" : "out_of_stock",
     });
-    if (invErr) console.error("[API] Inventory insert error:", invErr);
+    if (invErr) {
+      console.error("[API] Inventory insert error, rolling back product:", invErr);
+      await supabase.from("product_images").delete().eq("product_id", productId);
+      await supabase.from("products").delete().eq("id", productId);
+      return NextResponse.json({ error: `Failed to create inventory record: ${invErr.message}` }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, id: productId });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

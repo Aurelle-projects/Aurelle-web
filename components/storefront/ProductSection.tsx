@@ -15,6 +15,7 @@ interface ProductSectionProps {
   maxProducts?: number;
   desktopColumns?: 5 | 6;
   badge?: string;
+  isWholesaleUser?: boolean;
 }
 
 export default function ProductSection({
@@ -29,6 +30,7 @@ export default function ProductSection({
   maxProducts = 4,
   desktopColumns = 6,
   badge,
+  isWholesaleUser,
 }: ProductSectionProps) {
   if (products.length === 0 && !emptyMessage) return null;
 
@@ -72,6 +74,7 @@ export default function ProductSection({
                 <ProductCard
                   product={product}
                   badge={badge ?? (title.toLowerCase().includes("new arrival") ? "New Arrival" : undefined)}
+                  isWholesaleUser={isWholesaleUser}
                 />
               </div>
             ))}

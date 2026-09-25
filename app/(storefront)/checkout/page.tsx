@@ -4,8 +4,6 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import {
-  CreditCard,
-  Banknote,
   CheckCircle2,
   Lock,
   ArrowLeft,
@@ -64,7 +62,7 @@ function CheckoutContent() {
     area: "",
     streetAddress: "",
     deliveryNotes: "",
-    paymentMethod: "cod", // card | cod | apple_pay
+    paymentMethod: "stripe",
     deliverySpeed: "standard", // standard | express
     saveToAccount: true,
     setAsDefault: false,
@@ -291,8 +289,8 @@ function CheckoutContent() {
               </div>
               <div className="flex justify-between">
                 <span className="text-[#5C6460]">Payment:</span>
-                <span className="font-semibold text-[#1D211F] uppercase">
-                  {formData.paymentMethod === "cod" ? "Cash on Delivery" : formData.paymentMethod}
+                <span className="font-semibold text-[#1D211F]">
+                  Online Payment (Stripe)
                 </span>
               </div>
               <div className="flex justify-between pt-1 border-t border-[#EDE9DF]">
@@ -644,84 +642,6 @@ function CheckoutContent() {
                     </div>
                   </div>
                   <span className="text-xs font-bold text-[#1D211F]">+ AED 15</span>
-                </label>
-              </div>
-            </div>
-
-            {/* 3. PAYMENT METHOD */}
-            <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-3">
-              <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2 border-b border-[#EDE9DF]/80 pb-3">
-                <span className="w-5 h-5 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-[10px]">
-                  3
-                </span>
-                Payment Options
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label
-                  className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    formData.paymentMethod === "cod"
-                      ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
-                      : "border-[#EDE9DF] bg-[#F7F5EF]/40 hover:border-[#183D2B]/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <Banknote size={20} className="text-[#183D2B]" />
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === "cod"}
-                      onChange={handleChange}
-                      className="text-[#183D2B] focus:ring-[#183D2B]"
-                    />
-                  </div>
-                  <p className="text-xs font-bold text-[#1D211F]">Cash on Delivery</p>
-                  <p className="text-[10px] text-[#5C6460]">Pay when package arrives</p>
-                </label>
-
-                <label
-                  className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    formData.paymentMethod === "card"
-                      ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
-                      : "border-[#EDE9DF] bg-[#F7F5EF]/40 hover:border-[#183D2B]/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <CreditCard size={20} className="text-[#183D2B]" />
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={formData.paymentMethod === "card"}
-                      onChange={handleChange}
-                      className="text-[#183D2B] focus:ring-[#183D2B]"
-                    />
-                  </div>
-                  <p className="text-xs font-bold text-[#1D211F]">Credit / Debit Card</p>
-                  <p className="text-[10px] text-[#5C6460]">Visa, Mastercard, Amex</p>
-                </label>
-
-                <label
-                  className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    formData.paymentMethod === "apple_pay"
-                      ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
-                      : "border-[#EDE9DF] bg-[#F7F5EF]/40 hover:border-[#183D2B]/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-xs">Pay</span>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="apple_pay"
-                      checked={formData.paymentMethod === "apple_pay"}
-                      onChange={handleChange}
-                      className="text-[#183D2B] focus:ring-[#183D2B]"
-                    />
-                  </div>
-                  <p className="text-xs font-bold text-[#1D211F]">Apple Pay</p>
-                  <p className="text-[10px] text-[#5C6460]">Touch ID / Face ID</p>
                 </label>
               </div>
             </div>

@@ -672,7 +672,7 @@ export default function AdminDashboardPage() {
                     <th className="py-2.5 px-3.5">Total Amount</th>
                     <th className="py-2.5 px-3.5">Payment</th>
                     <th className="py-2.5 px-3.5">Fulfillment Status</th>
-                    <th className="py-2.5 px-3.5">Date</th>
+                    <th className="py-2.5 px-3.5 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCCFB9]/30 text-[11px]">
@@ -766,13 +766,15 @@ export default function AdminDashboardPage() {
                           </div>
                         </td>
 
-                        {/* Date */}
-                        <td className="py-2.5 px-3.5 align-top text-[10px] text-[#5C6460] whitespace-nowrap">
-                          {new Date(order.created_at).toLocaleDateString("en-AE", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                        {/* Action - Redirect to Retail or Wholesale Order Tab */}
+                        <td className="py-2.5 px-3.5 align-middle text-center">
+                          <Link
+                            href={isWholesale ? "/admin/orders?tab=wholesale" : "/admin/orders?tab=retail"}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-[#F7F5EF] hover:bg-[#183D2B] text-[#5C6460] hover:text-white border border-[#DCCFB9] transition-all cursor-pointer shadow-2xs group"
+                            title={isWholesale ? "Go to Wholesale Orders tab" : "Go to Retail Orders tab"}
+                          >
+                            <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                          </Link>
                         </td>
                       </tr>
                     );

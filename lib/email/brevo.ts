@@ -205,8 +205,7 @@ export async function sendOrderConfirmationEmail(
     .filter(Boolean)
     .join(", ");
 
-  const paymentLabel =
-    paymentMethod === "cod" ? "Cash on Delivery" : "Card / Online Payment";
+  const paymentLabel = "Online Payment (Stripe)";
 
   const htmlContent = emailWrapper(`
     <div style="background:#F0F7F3; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
@@ -314,8 +313,7 @@ export async function sendAdminOrderNotificationEmail(
     .filter(Boolean)
     .join(", ");
 
-  const paymentLabel =
-    paymentMethod === "cod" ? "Cash on Delivery" : "Card / Online Payment";
+  const paymentLabel = "Online Payment (Stripe)";
 
   const htmlContent = emailWrapper(`
     <div style="background:#FFF3CD; border-left:4px solid #856404; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
@@ -469,5 +467,209 @@ export async function sendOrderDeliveredReviewEmail(
     htmlContent,
   });
 }
+
+// ── 5. Wholesale Enquiry Transactional Emails ───────────────────────
+
+export interface WholesaleEnquiryEmailData {
+  contactPerson: string;
+  companyName: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  categoryName?: string;
+  productName?: string;
+  quantity?: string;
+  message?: string;
+}
+
+export async function sendAdminWholesaleEnquiryNotificationEmail(
+  data: WholesaleEnquiryEmailData
+): Promise<{ success: boolean; error?: string }> {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
+
+  if (!adminEmail) {
+    console.warn("[Brevo] No ADMIN_NOTIFICATION_EMAIL or ADMIN_EMAIL set - skipping admin wholesale notification.");
+    return { success: false, error: "Admin email not configured." };
+  }
+
+  const {
+    contactPerson,
+    companyName,
+    phone,
+    whatsapp,
+    email,
+    categoryName,
+    productName,
+    quantity,
+    message,
+  } = data;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const displayEmail = email && !email.includes("@wholesale.aurelle.ae") ? email : "Not provided";
+  const cleanPhone = (whatsapp || phone).replace(/\D/g, "");
+
+  const htmlContent = emailWrapper(`
+    <div style="background:#EBF3EF; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
+      <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">New B2B Wholesale Enquiry</p>
+      <p style="margin:4px 0 0; font-size:20px; font-weight:700; color:#1D211F;">${companyName}</p>
+    </div>
+
+    <h2 style="font-size:13px; font-weight:700; color:#1D211F; margin:0 0 10px; text-transform:uppercase; letter-spacing:1px;">Client Information</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:6px 0; width:140px;">Contact Person</td>
+        <td style="font-size:13px; color:#1D211F; font-weight:600;">${contactPerson}</td>
+      </tr>
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:6px 0;">Company / Salon</td>
+        <td style="font-size:13px; color:#1D211F; font-weight:600;">${companyName}</td>
+      </tr>
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:6px 0;">Mobile Phone</td>
+        <td style="font-size:13px; color:#1D211F;"><a href="tel:${phone}" style="color:#183D2B; text-decoration:none; font-weight:600;">${phone}</a></td>
+      </tr>
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:6px 0;">WhatsApp</td>
+        <td style="font-size:13px; color:#1D211F;"><a href="https://wa.me/${cleanPhone}" style="color:#25D366; text-decoration:none; font-weight:600;">${whatsapp || phone}</a></td>
+      </tr>
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:6px 0;">Business Email</td>
+        <td style="font-size:13px; color:#1D211F;">${displayEmail}</td>
+      </tr>
+    </table>
+
+    <h2 style="font-size:13px; font-weight:700; color:#1D211F; margin:0 0 10px; text-transform:uppercase; letter-spacing:1px;">Enquiry Requirements</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px; background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:12px 16px;">
+      ${
+        categoryName
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0; width:140px;">Category</td>
+              <td style="font-size:13px; color:#1D211F; font-weight:600;">${categoryName}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        productName
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0;">Product</td>
+              <td style="font-size:13px; color:#1D211F; font-weight:600;">${productName}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        quantity
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0;">Estimated Units</td>
+              <td style="font-size:13px; color:#183D2B; font-weight:700;">${quantity}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        message
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0; vertical-align:top;">Trade Notes / Destination</td>
+              <td style="font-size:13px; color:#1D211F; line-height:1.5;">${message}</td>
+            </tr>`
+          : ""
+      }
+    </table>
+
+    <div style="text-align:center; margin-top:20px;">
+      <a href="${siteUrl}/admin/wholesale" class="btn">View in Wholesale Admin Portal</a>
+    </div>
+  `);
+
+  return sendBrevoEmail({
+    to: [{ email: adminEmail, name: "Aurelle Wholesale Admin" }],
+    subject: `New B2B Wholesale Enquiry: ${companyName} (${contactPerson}) | Aurelle`,
+    htmlContent,
+  });
+}
+
+export async function sendClientWholesaleEnquiryConfirmationEmail(
+  data: WholesaleEnquiryEmailData
+): Promise<{ success: boolean; error?: string }> {
+  const { contactPerson, companyName, email, categoryName, productName, quantity, message } = data;
+
+  if (!email || email.includes("@wholesale.aurelle.ae")) {
+    return { success: false, error: "No valid client email provided." };
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const displayName = contactPerson?.trim() || "Valued Partner";
+
+  const htmlContent = emailWrapper(`
+    <div style="background:#EBF3EF; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
+      <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Wholesale Enquiry Received</p>
+      <p style="margin:4px 0 0; font-size:18px; font-weight:700; color:#1D211F;">Thank You, ${displayName}</p>
+    </div>
+
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      Thank you for your commercial interest in partnering with Aurelle Wholesale. We have successfully received your trade enquiry on behalf of <strong>${companyName}</strong>.
+    </p>
+
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 20px;">
+      Our commercial B2B desk is currently reviewing your product and volume requirements. A procurement specialist will contact you directly via phone or WhatsApp shortly to provide formal quotation, carton breakdown, and logistics arrangements.
+    </p>
+
+    <h2 style="font-size:13px; font-weight:700; color:#1D211F; margin:0 0 10px; text-transform:uppercase; letter-spacing:1px;">Summary of Your Enquiry</h2>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px; background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:12px 16px;">
+      <tr>
+        <td style="font-size:13px; color:#5C6460; padding:5px 0; width:140px;">Company / Salon</td>
+        <td style="font-size:13px; color:#1D211F; font-weight:600;">${companyName}</td>
+      </tr>
+      ${
+        categoryName
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0;">Category</td>
+              <td style="font-size:13px; color:#1D211F; font-weight:600;">${categoryName}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        productName
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0;">Product</td>
+              <td style="font-size:13px; color:#1D211F; font-weight:600;">${productName}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        quantity
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0;">Estimated Units</td>
+              <td style="font-size:13px; color:#183D2B; font-weight:700;">${quantity}</td>
+            </tr>`
+          : ""
+      }
+      ${
+        message
+          ? `<tr>
+              <td style="font-size:13px; color:#5C6460; padding:5px 0; vertical-align:top;">Notes</td>
+              <td style="font-size:13px; color:#1D211F; line-height:1.5;">${message}</td>
+            </tr>`
+          : ""
+      }
+    </table>
+
+    <div style="background:#F7F5EF; border-radius:6px; padding:14px 18px; margin-bottom:24px;">
+      <p style="font-size:12px; font-weight:700; color:#183D2B; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.5px;">Urgent Trade Inquiries?</p>
+      <p style="font-size:12px; color:#5C6460; margin:0; line-height:1.6;">
+        Reach our Dubai commercial distribution desk directly via WhatsApp or call: <strong style="color:#1D211F;">+971 50 123 4567</strong> or email <a href="mailto:wholesale@aurelle.ae" style="color:#183D2B; text-decoration:none; font-weight:600;">wholesale@aurelle.ae</a>.
+      </p>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${siteUrl}/wholesale" class="btn">Visit Aurelle Wholesale Portal</a>
+    </div>
+  `);
+
+  return sendBrevoEmail({
+    to: [{ email, name: displayName }],
+    subject: `We've Received Your Wholesale Enquiry | Aurelle B2B (${companyName})`,
+    htmlContent,
+  });
+}
+
 
 

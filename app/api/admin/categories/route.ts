@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
+import {
+  getWholesaleCatalogSettings,
+  setWholesaleCategoryAvailability,
+} from "@/lib/wholesale/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -18,18 +22,22 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
-    const [{ data: categories, error: catErr }, { data: subcategories, error: subErr }] =
-      await Promise.all([
-        supabase
-          .from("categories")
-          .select("id, name, slug, description, image_url, image_public_id, sort_order, is_active")
-          .is("parent_id", null)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("subcategories")
-          .select("id, name, slug, category_id, sort_order, is_active")
-          .order("sort_order", { ascending: true }),
-      ]);
+    const [
+      { data: categories, error: catErr },
+      { data: subcategories, error: subErr },
+      catalogSettings,
+    ] = await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, name, slug, description, image_url, image_public_id, sort_order, is_active")
+        .is("parent_id", null)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("subcategories")
+        .select("id, name, slug, category_id, sort_order, is_active")
+        .order("sort_order", { ascending: true }),
+      getWholesaleCatalogSettings(supabase),
+    ]);
 
     if (catErr) throw catErr;
     if (subErr) throw subErr;
@@ -40,9 +48,21 @@ export async function GET() {
       (s: any) => ({ ...s, parent_id: s.category_id })
     );
 
+    const enabledCatIds = catalogSettings.enabled_category_ids;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const normalisedCats = (categories ?? []).map((c: any) => ({
+      ...c,
+      is_wholesale:
+        c.is_wholesale !== undefined
+          ? Boolean(c.is_wholesale)
+          : enabledCatIds.length === 0
+          ? true
+          : enabledCatIds.includes(c.id),
+    }));
+
     return NextResponse.json({
       success: true,
-      categories: categories ?? [],
+      categories: normalisedCats,
       subcategories: normalisedSubs,
     });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,7 +109,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Single Category (no parent_id) ─────────────────────────────────────
-    const { name, slug, description, image_url, image_public_id, sort_order, is_active } = body;
+    const { name, slug, description, image_url, image_public_id, sort_order, is_active, is_wholesale } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Category name is required." }, { status: 400 });
@@ -122,7 +142,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: catError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: catData });
+    if (catData?.id && is_wholesale !== undefined) {
+      await setWholesaleCategoryAvailability(supabase, catData.id, !!is_wholesale);
+    }
+
+    return NextResponse.json({ success: true, data: { ...catData, is_wholesale: is_wholesale !== false } });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[API categories POST unexpected]:", err);
@@ -134,7 +158,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, slug, description, image_url, image_public_id, parent_id, sort_order, is_active } = body;
+    const { id, name, slug, description, image_url, image_public_id, parent_id, sort_order, is_active, is_wholesale } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID is required." }, { status: 400 });
@@ -216,7 +240,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    if (is_wholesale !== undefined) {
+      await setWholesaleCategoryAvailability(supabase, id, !!is_wholesale);
+    }
+
+    return NextResponse.json({ success: true, data: { ...data, is_wholesale: is_wholesale !== undefined ? !!is_wholesale : true } });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[API categories PATCH unexpected]:", err);

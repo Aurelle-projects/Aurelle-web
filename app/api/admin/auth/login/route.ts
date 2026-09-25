@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdminPassword } from "@/lib/auth/adminPassword";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,8 +23,30 @@ export async function POST(request: NextRequest) {
 
     let isAuthenticated = false;
 
-    if (cleanEmail === configuredAdminEmail && cleanPassword === configuredAdminPassword) {
-      isAuthenticated = true;
+    if (cleanEmail === configuredAdminEmail) {
+      // Check if a custom password hash exists in site_settings
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabaseAdmin = createAdminClient() as any;
+        const { data: credSetting } = await supabaseAdmin
+          .from("site_settings")
+          .select("value")
+          .eq("key", "admin_custom_credentials")
+          .maybeSingle();
+
+        if (credSetting?.value?.hash && credSetting?.value?.salt) {
+          if (verifyAdminPassword(cleanPassword, credSetting.value.salt, credSetting.value.hash)) {
+            isAuthenticated = true;
+          }
+        } else if (cleanPassword === configuredAdminPassword) {
+          isAuthenticated = true;
+        }
+      } catch (dbErr) {
+        console.warn("[Admin login site_settings check]:", dbErr);
+        if (cleanPassword === configuredAdminPassword) {
+          isAuthenticated = true;
+        }
+      }
     }
 
     // 2. Also check Supabase Auth if credentials didn't match env default

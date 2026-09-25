@@ -25,6 +25,7 @@ export interface AdminCategory {
   image_public_id: string | null;
   sort_order: number;
   is_active: boolean;
+  is_wholesale?: boolean;
   subcategories_count?: number;
 }
 
@@ -47,6 +48,7 @@ export interface AdminBrand {
   logo_public_id: string | null;
   sort_order: number;
   is_active: boolean;
+  is_wholesale?: boolean;
   created_at?: string;
 }
 

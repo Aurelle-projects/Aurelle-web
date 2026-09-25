@@ -42,6 +42,31 @@ export async function PATCH(
       );
     }
 
+    // Sync wholesale application status if this is a linked wholesale order
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: ordNotes } = await (admin as any)
+        .from("orders")
+        .select("notes")
+        .eq("id", id)
+        .single();
+
+      if (ordNotes?.notes) {
+        const match = ordNotes.notes.match(/\[Wholesale Application ID:\s*([a-f0-9\-]+)\]/i);
+        if (match && match[1]) {
+          const appId = match[1];
+          const appStatus = status === "delivered" ? "approved" : status === "cancelled" ? "rejected" : "pending";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (admin as any)
+            .from("wholesale_applications")
+            .update({ status: appStatus, updated_at: new Date().toISOString() })
+            .eq("id", appId);
+        }
+      }
+    } catch (appSyncErr) {
+      console.warn("[Admin Order Status] Wholesale app sync error:", appSyncErr);
+    }
+
     // 2. Fetch updated order with items separately (avoids PostgREST join limitation on update)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: updatedOrder, error: fetchError } = await (admin as any)

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye } from "lucide-react";
@@ -8,7 +9,8 @@ import { useAdminData, AdminOrderItem } from "@/context/AdminDataContext";
 
 type OrderItem = AdminOrderItem;
 
-export default function AdminOrdersPage() {
+function OrdersContent() {
+  const searchParams = useSearchParams();
   const {
     orders: contextOrders,
     ordersLoading,
@@ -25,6 +27,13 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab") || searchParams.get("channel") || searchParams.get("type");
+    if (tabParam === "retail" || tabParam === "wholesale" || tabParam === "all") {
+      setChannelFilter(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadOrders();
@@ -441,5 +450,13 @@ export default function AdminOrdersPage() {
         products={products}
       />
     </div>
+  );
+}
+
+export default function AdminOrdersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-[#5C6460]">Loading orders...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

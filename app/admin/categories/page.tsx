@@ -30,6 +30,7 @@ interface Category {
   image_public_id: string | null;
   sort_order: number;
   is_active: boolean;
+  is_wholesale?: boolean;
   subcategories_count?: number;
 }
 
@@ -45,6 +46,7 @@ const EMPTY_CAT_FORM = {
   image_public_id: null as string | null,
   sort_order: 0,
   is_active: true,
+  is_wholesale: true,
 };
 
 export default function AdminCategoriesPage() {
@@ -83,7 +85,7 @@ export default function AdminCategoriesPage() {
   }
 
   function openCreate() {
-    setForm({ ...EMPTY_CAT_FORM, sort_order: categories.length + 1 });
+    setForm({ ...EMPTY_CAT_FORM, sort_order: categories.length + 1, is_wholesale: true });
     setEditingId(null);
     setShowModal(true);
   }
@@ -97,6 +99,7 @@ export default function AdminCategoriesPage() {
       image_public_id: cat.image_public_id,
       sort_order: cat.sort_order,
       is_active: cat.is_active,
+      is_wholesale: cat.is_wholesale ?? true,
     });
     setEditingId(cat.id);
     setShowModal(true);
@@ -130,6 +133,7 @@ export default function AdminCategoriesPage() {
         image_public_id: form.image_public_id,
         sort_order: form.sort_order,
         is_active: form.is_active,
+        is_wholesale: form.is_wholesale,
         parent_id: null,
       };
 
@@ -344,15 +348,22 @@ export default function AdminCategoriesPage() {
 
                       {/* Status */}
                       <td className="py-2.5 px-3.5">
-                        <span
-                          className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                            cat.is_active
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {cat.is_active ? "Active" : "Inactive"}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                              cat.is_active
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {cat.is_active ? "Active" : "Inactive"}
+                          </span>
+                          {cat.is_wholesale !== false && (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#183D2B]/10 text-[#183D2B]">
+                              Wholesale
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -493,8 +504,8 @@ export default function AdminCategoriesPage() {
                   />
                 </div>
 
-                <div className="flex flex-col justify-end">
-                  <label className="inline-flex items-center gap-2 cursor-pointer pb-2.5">
+                <div className="flex flex-col justify-end gap-2">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       name="is_active"
@@ -503,6 +514,16 @@ export default function AdminCategoriesPage() {
                       className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B] accent-[#183D2B]"
                     />
                     <span className="text-sm font-semibold text-[#1A1A1A]">Is Active</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_wholesale"
+                      checked={form.is_wholesale}
+                      onChange={handleChange}
+                      className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B] accent-[#183D2B]"
+                    />
+                    <span className="text-sm font-semibold text-[#1A1A1A]">Available on Wholesale Website</span>
                   </label>
                 </div>
               </div>

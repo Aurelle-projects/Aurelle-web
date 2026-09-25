@@ -32,23 +32,11 @@ export default function ContactPage() {
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <span className="inline-block px-3 py-1 bg-[#183D2B]/10 text-[#183D2B] text-xs font-bold uppercase tracking-widest rounded-full">
-            Customer Support & Offices
-          </span>
-          <h1 className="text-3xl md:text-5xl font-serif font-bold text-[#1D211F] tracking-tight">
-            We’re Here to Help
-          </h1>
-          <p className="text-xs sm:text-sm text-[#5C6460]">
-            Get in touch with our Dubai headquarters for order assistance, wholesale inquiries, or cosmetic formulation consultations.
-          </p>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* ── Left Column: Contact Cards ─────────────────────────────── */}
           <div className="space-y-4">
-            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <MapPin size={20} />
               </div>
@@ -62,7 +50,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <Clock size={20} />
               </div>
@@ -74,7 +62,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-sm border border-[#DCCFB9]/60 shadow-xs space-y-3">
+            <div className="bg-white p-6 rounded-sm space-y-3">
               <div className="w-10 h-10 rounded-xl bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center">
                 <Mail size={20} />
               </div>
@@ -88,7 +76,7 @@ export default function ContactPage() {
           </div>
 
           {/* ── Right 2 Cols: Form ─────────────────────────────────────── */}
-          <div className="lg:col-span-2 bg-white rounded-sm border border-[#DCCFB9]/60 shadow-xs p-6 md:p-10">
+          <div className="lg:col-span-2 bg-white rounded-sm p-6 md:p-10">
             {submitted ? (
               <div className="text-center py-12 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
@@ -113,7 +101,7 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="border-b border-[#DCCFB9]/30 pb-3">
+                <div className="pb-3">
                   <h2 className="text-xl font-serif font-bold text-[#1D211F]">
                     Send a Direct Message
                   </h2>
@@ -133,7 +121,7 @@ export default function ContactPage() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Your name"
-                      className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none"
+                      className="w-full h-10 px-3.5 bg-[#F7F5EF] rounded-lg text-sm text-[#1D211F] outline-none"
                     />
                   </div>
 
@@ -147,7 +135,7 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="name@example.com"
-                      className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none"
+                      className="w-full h-10 px-3.5 bg-[#F7F5EF] rounded-lg text-sm text-[#1D211F] outline-none"
                     />
                   </div>
                 </div>
@@ -159,7 +147,7 @@ export default function ContactPage() {
                   <select
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer"
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer"
                   >
                     <option value="Customer Care">Customer Care & Order Tracking</option>
                     <option value="Wholesale Inquiry">B2B Wholesale & Trade Licensing</option>
@@ -178,7 +166,7 @@ export default function ContactPage() {
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder="Describe how we can assist you..."
-                    className="w-full p-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none resize-none"
+                    className="w-full p-3.5 bg-[#F7F5EF] rounded-lg text-sm text-[#1D211F] outline-none resize-none"
                   />
                 </div>
 

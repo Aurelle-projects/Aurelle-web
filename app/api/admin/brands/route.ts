@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
+import {
+  getWholesaleCatalogSettings,
+  setWholesaleBrandAvailability,
+} from "@/lib/wholesale/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +14,16 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
-    // Try with sort_order first; if column doesn't exist yet fall back to name order
-    let result = await supabase
-      .from("brands")
-      .select("id, name, slug, description, logo_url, logo_public_id, sort_order, is_active, created_at")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
+    const [brandsRes, catalogSettings] = await Promise.all([
+      supabase
+        .from("brands")
+        .select("id, name, slug, description, logo_url, logo_public_id, sort_order, is_active, created_at")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+      getWholesaleCatalogSettings(supabase),
+    ]);
+
+    let result = brandsRes;
 
     // If sort_order column is missing (migration not yet applied) retry without it
     if (result.error && result.error.message?.includes("sort_order")) {
@@ -27,11 +35,19 @@ export async function GET() {
 
     if (result.error) throw result.error;
 
-    // Normalise: add sort_order: 0 if column is absent
+    const enabledBrandIds = catalogSettings.enabled_brand_ids;
+
+    // Normalise: add sort_order: 0 if column is absent and include is_wholesale
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const brands = (result.data ?? []).map((b: any) => ({
       sort_order: 0,
       ...b,
+      is_wholesale:
+        b.is_wholesale !== undefined
+          ? Boolean(b.is_wholesale)
+          : enabledBrandIds.length === 0
+          ? true
+          : enabledBrandIds.includes(b.id),
     }));
 
     return NextResponse.json({ success: true, brands });
@@ -46,7 +62,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, slug, description, logo_url, logo_public_id, is_active, sort_order } = body;
+    const { name, slug, description, logo_url, logo_public_id, is_active, sort_order, is_wholesale } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Brand name is required." }, { status: 400 });
@@ -85,7 +101,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    if (result.data?.id && is_wholesale !== undefined) {
+      await setWholesaleBrandAvailability(supabase, result.data.id, !!is_wholesale);
+    }
+
+    return NextResponse.json({ success: true, data: { ...result.data, is_wholesale: is_wholesale !== false } });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[API brands POST unexpected]:", err);
@@ -97,7 +117,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, slug, description, logo_url, logo_public_id, is_active, sort_order } = body;
+    const { id, name, slug, description, logo_url, logo_public_id, is_active, sort_order, is_wholesale } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Brand ID is required." }, { status: 400 });
@@ -147,7 +167,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: result.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    if (is_wholesale !== undefined) {
+      await setWholesaleBrandAvailability(supabase, id, !!is_wholesale);
+    }
+
+    return NextResponse.json({ success: true, data: { ...result.data, is_wholesale: is_wholesale !== undefined ? !!is_wholesale : true } });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[API brands PATCH unexpected]:", err);

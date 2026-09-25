@@ -33,6 +33,7 @@ const EMPTY_FORM = {
   logo_public_id: null as string | null,
   sort_order: 0,
   is_active: true,
+  is_wholesale: true,
 };
 
 export default function AdminBrandsPage() {
@@ -68,7 +69,7 @@ export default function AdminBrandsPage() {
     const nextOrder = brands.length > 0
       ? Math.max(...brands.map((b) => b.sort_order ?? 0)) + 1
       : 1;
-    setForm({ ...EMPTY_FORM, sort_order: nextOrder });
+    setForm({ ...EMPTY_FORM, sort_order: nextOrder, is_wholesale: true });
     setEditingId(null);
     setShowForm(true);
   }
@@ -82,6 +83,8 @@ export default function AdminBrandsPage() {
       logo_public_id: b.logo_public_id,
       sort_order: b.sort_order ?? 0,
       is_active: b.is_active,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      is_wholesale: (b as any).is_wholesale ?? true,
     });
     setEditingId(b.id);
     setShowForm(true);
@@ -133,6 +136,7 @@ export default function AdminBrandsPage() {
         logo_public_id: form.logo_public_id,
         sort_order: form.sort_order,
         is_active: form.is_active,
+        is_wholesale: form.is_wholesale,
       };
 
       const res = await fetch("/api/admin/brands", {
@@ -339,8 +343,8 @@ export default function AdminBrandsPage() {
                     </div>
                   </div>
 
-                  {/* Active toggle */}
-                  <div className="md:col-span-2">
+                  {/* Active & Wholesale toggles */}
+                  <div className="md:col-span-2 space-y-2">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#1D211F]">
                       <input
                         type="checkbox"
@@ -350,6 +354,16 @@ export default function AdminBrandsPage() {
                         className="w-3.5 h-3.5 rounded text-[#183D2B] focus:ring-[#183D2B]"
                       />
                       <span>Active (visible in storefront nav &amp; filters)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#1D211F]">
+                      <input
+                        type="checkbox"
+                        name="is_wholesale"
+                        checked={form.is_wholesale}
+                        onChange={handleFormChange}
+                        className="w-3.5 h-3.5 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Available on Wholesale Website</span>
                     </label>
                   </div>
                 </div>
@@ -435,11 +449,19 @@ export default function AdminBrandsPage() {
                   </div>
 
                   {/* Status badge */}
-                  <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase w-fit ${
-                    brand.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
-                  }`}>
-                    {brand.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <div className="flex flex-col gap-1 items-start">
+                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase w-fit ${
+                      brand.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {brand.is_active ? "Active" : "Inactive"}
+                    </span>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {(brand as any).is_wholesale !== false && (
+                      <span className="inline-flex px-1.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase w-fit bg-[#183D2B]/10 text-[#183D2B]">
+                        Wholesale
+                      </span>
+                    )}
+                  </div>
 
                   {/* Up / Down buttons */}
                   <div className="flex items-center justify-center gap-0.5">

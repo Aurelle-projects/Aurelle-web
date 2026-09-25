@@ -195,3 +195,16 @@
   }
 }
 
+/* ─── Dark Theme Autofill Override (Admin & Dark Panels) ──────────────── */
+.dark-autofill:-webkit-autofill,
+.dark-autofill:-webkit-autofill:hover,
+.dark-autofill:-webkit-autofill:focus,
+.dark-autofill:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #133324 inset !important;
+  box-shadow: 0 0 0 1000px #133324 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+

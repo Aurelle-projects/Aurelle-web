@@ -123,12 +123,16 @@ export default function ProductCard({
   const isOnSale =
     Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
 
+  const productLink = isWholesaleUser
+    ? `/wholesale/products/${product.slug}`
+    : `/products/${product.slug}`;
+
   return (
     <div className="group flex flex-col rounded-none" aria-label={product.name}>
       {/* ── Top Image Container (Elevated Portrait Aspect Ratio, White Canvas) ── */}
       <div className="relative aspect-[3/4] w-full bg-gray-200 overflow-hidden rounded-none flex items-center justify-center">
         <Link
-          href={`/products/${product.slug}`}
+          href={productLink}
           className="relative w-full h-full block"
           tabIndex={-1}
           aria-hidden="true"
@@ -160,9 +164,13 @@ export default function ProductCard({
           <span className="absolute top-3 left-3 bg-orange-500 text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             {badge}
           </span>
-        ) : isOnSale ? (
+        ) : !isWholesaleUser && isOnSale ? (
           <span className="absolute top-3 left-3 bg-blue-900 text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             Sale
+          </span>
+        ) : isWholesaleUser && product.wholesale_moq ? (
+          <span className="absolute top-3 left-3 bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+            MOQ: {product.wholesale_moq}
           </span>
         ) : null}
 
@@ -186,8 +194,8 @@ export default function ProductCard({
           />
         </button>
 
-        {/* Desktop View: Slide-up Hover Add to Cart Button */}
-        {!isOutOfStock && (
+        {/* Desktop View: Slide-up Hover Add to Cart Button (retail only) */}
+        {!isOutOfStock && !isWholesaleUser && (
           <button
             type="button"
             onClick={handleAddToCart}
@@ -208,8 +216,8 @@ export default function ProductCard({
           </button>
         )}
 
-        {/* Mobile View: Bottom-Right Round Add to Cart Button (Icon Only) */}
-        {!isOutOfStock && (
+        {/* Mobile View: Bottom-Right Round Add to Cart Button (Icon Only - retail only) */}
+        {!isOutOfStock && !isWholesaleUser && (
           <button
             type="button"
             onClick={handleAddToCart}
@@ -228,21 +236,26 @@ export default function ProductCard({
       {/* ── Product Info Below Image (Left-Aligned, Clean Minimal) ── */}
       <div className="pt-3 flex flex-col text-left">
         <Link
-          href={`/products/${product.slug}`}
+          href={productLink}
           className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-1"
         >
           {product.name}
         </Link>
 
-        <div className="mt-1 flex items-baseline gap-2">
+        <div className="mt-1 flex items-baseline gap-2 flex-wrap">
           <span className="text-[13px] sm:text-[14px] font-semibold text-[#1D211F]">
             {isWholesaleUser && product.wholesale_price
               ? formatPrice(product.wholesale_price)
               : formatPrice(product.retail_price)}
           </span>
-          {isOnSale && product.compare_at_price && (
+          {!isWholesaleUser && isOnSale && product.compare_at_price && (
             <span className="text-xs text-[#8E9590] line-through">
               {formatPrice(product.compare_at_price)}
+            </span>
+          )}
+          {isWholesaleUser && product.wholesale_moq && (
+            <span className="text-[10px] text-[#183D2B] font-semibold bg-[#183D2B]/10 px-1.5 py-0.5 rounded-sm">
+              MOQ: {product.wholesale_moq} pcs
             </span>
           )}
         </div>

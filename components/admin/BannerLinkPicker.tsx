@@ -74,7 +74,7 @@ export default function BannerLinkPicker({
     // 1. Check if value is a specific product URL
     const productPrefix = mode === "wholesale" ? "/wholesale/products/" : "/products/";
     if (trimmed.startsWith(productPrefix)) {
-      const slug = trimmed.replace(productPrefix, "").split("?")[0].split("#")[0];
+      const slug = (trimmed.replace(productPrefix, "").split("?")[0] ?? "").split("#")[0] ?? "";
       const matchedProd = products.find((p) => p.slug === slug);
       if (matchedProd) {
         setSelectedProductId(matchedProd.id);
@@ -88,7 +88,7 @@ export default function BannerLinkPicker({
     // 2. Check if value is a category shop filter URL
     const shopPrefix = mode === "wholesale" ? "/wholesale/shop?category=" : "/shop?category=";
     if (trimmed.startsWith(shopPrefix)) {
-      const catParam = trimmed.replace(shopPrefix, "").split("&")[0].split("#")[0];
+      const catParam = (trimmed.replace(shopPrefix, "").split("&")[0] ?? "").split("#")[0] ?? "";
       const matchedCat = categories.find((c) => c.slug === catParam || c.id === catParam);
       if (matchedCat) {
         setCategoryId(matchedCat.id);

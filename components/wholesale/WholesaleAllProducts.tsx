@@ -91,7 +91,6 @@ export default function WholesaleAllProducts({
                 <ProductCard
                   product={product}
                   isWholesaleUser={true}
-                  badge={product.is_new_arrival ? "New Arrival" : undefined}
                 />
               </div>
             ))}

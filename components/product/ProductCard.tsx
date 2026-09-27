@@ -155,22 +155,22 @@ export default function ProductCard({
           )}
         </Link>
 
-        {/* Top-Left Badge: Sold Out, Custom Badge (e.g. New Arrival), or Sale */}
+        {/* Top-Left Badge: Sold Out, or MOQ Badge for Wholesale, or Custom/Sale Badge for Retail */}
         {isOutOfStock ? (
           <span className="absolute top-3 left-3 bg-[#8E9590] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             Sold out
+          </span>
+        ) : isWholesaleUser ? (
+          <span className="absolute top-3 left-3 bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+            MOQ: {product.wholesale_moq || 1}
           </span>
         ) : badge ? (
           <span className="absolute top-3 left-3 bg-orange-500 text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             {badge}
           </span>
-        ) : !isWholesaleUser && isOnSale ? (
+        ) : isOnSale ? (
           <span className="absolute top-3 left-3 bg-blue-900 text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             Sale
-          </span>
-        ) : isWholesaleUser && product.wholesale_moq ? (
-          <span className="absolute top-3 left-3 bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
-            MOQ: {product.wholesale_moq}
           </span>
         ) : null}
 

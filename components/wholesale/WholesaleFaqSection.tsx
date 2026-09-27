@@ -63,7 +63,7 @@ export default function WholesaleFaqSection({ data }: WholesaleFaqSectionProps) 
         {(heading || description) && (
           <div className="max-w-3xl mb-8 md:mb-4 space-y-2.5">
             {heading && (
-              <h2 className="text-3xl sm:text-4xl text-[#14231B] tracking-tight leading-tight">
+              <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-wide text-[#14231B]">
                 {heading}
               </h2>
             )}
@@ -75,32 +75,32 @@ export default function WholesaleFaqSection({ data }: WholesaleFaqSectionProps) 
           </div>
         )}
 
-        {/* Two Columns: Image and Accordion with equal width (50/50) and matching height */}
+        {/* Two Columns: Image and Accordion */}
         <div
           className={`grid grid-cols-1 ${
-            imageSrc ? "lg:grid-cols-2 items-stretch" : ""
+            imageSrc ? "lg:grid-cols-2 items-start" : ""
           } gap-6 lg:gap-10`}
         >
-          {/* Left Column: Image with exact same width (50%) and matching height */}
+          {/* Left Column: Fixed aspect ratio image (never changes height on accordion toggle) */}
           {imageSrc && (
-            <div className="w-full flex">
-              <div className="relative w-full min-h-[340px] sm:min-h-[420px] lg:min-h-0 h-full overflow-hidden rounded-sm border border-[#DCCFB9]/60 shadow-xs bg-[#FAF8F5]">
+            <div className="w-full self-start">
+              <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/3] overflow-hidden rounded-sm border border-[#DCCFB9]/60 shadow-xs bg-[#FAF8F5]">
                 <Image
                   src={imageSrc}
                   alt={heading || "Wholesale FAQ Image"}
                   fill
                   sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-cover object-center"
+                  className="object-fill object-center"
                 />
               </div>
             </div>
           )}
 
-          {/* Right Column: Accordion with exact same width (50%) and clean borderless '+' button */}
+          {/* Right Column: Accordion */}
           <div
             className={`${
               imageSrc ? "w-full" : "max-w-3xl mx-auto w-full"
-            } flex flex-col justify-between space-y-3`}
+            } flex flex-col space-y-3 self-start`}
           >
             {validItems.map((item, idx) => {
               const isOpen = openIndex === idx;

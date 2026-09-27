@@ -26,7 +26,7 @@ interface CloudinaryUploaderProps {
 
 export default function CloudinaryUploader({
   label = "Upload Image",
-  description = "PNG, JPG, WEBP up to 2MB (Auto-compressed to WebP)",
+  description = "PNG, JPG, WEBP up to 4MB",
   folder = "aurelle/categories",
   value,
   publicId,
@@ -46,8 +46,9 @@ export default function CloudinaryUploader({
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError("File size exceeds 2MB limit. Please choose an image up to 2MB.");
+    const MAX_ORIGINAL_SIZE = 4 * 1024 * 1024; // 4 MB
+    if (file.size > MAX_ORIGINAL_SIZE) {
+      setError("Image size exceeds 4 MB limit. Please select an image under 4 MB.");
       return;
     }
 

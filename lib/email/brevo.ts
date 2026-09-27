@@ -205,7 +205,10 @@ export async function sendOrderConfirmationEmail(
     .filter(Boolean)
     .join(", ");
 
-  const paymentLabel = "Online Payment (Stripe)";
+  const paymentLabel =
+    paymentMethod === "cod"
+      ? "Normal Payment (Cash on Delivery)"
+      : "Online Payment (Stripe)";
 
   const htmlContent = emailWrapper(`
     <div style="background:#F0F7F3; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
@@ -313,7 +316,10 @@ export async function sendAdminOrderNotificationEmail(
     .filter(Boolean)
     .join(", ");
 
-  const paymentLabel = "Online Payment (Stripe)";
+  const paymentLabel =
+    paymentMethod === "cod"
+      ? "Normal Payment (Cash on Delivery)"
+      : "Online Payment (Stripe)";
 
   const htmlContent = emailWrapper(`
     <div style="background:#FFF3CD; border-left:4px solid #856404; padding:14px 18px; border-radius:4px; margin-bottom:24px;">

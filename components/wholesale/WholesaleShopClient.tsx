@@ -11,6 +11,7 @@ import {
   Check,
   Package,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface WholesaleShopCategory {
   id: string;
@@ -226,6 +227,18 @@ export default function WholesaleShopClient({
       }
     }
   }, [searchParams]);
+
+  // Lock background scroll when mobile filter bottom sheet is open
+  useEffect(() => {
+    if (mobileFiltersOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileFiltersOpen]);
 
   // Compute category product counts
   const categoryCounts = useMemo(() => {
@@ -698,9 +711,6 @@ export default function WholesaleShopClient({
                     <ProductCard
                       product={product}
                       isWholesaleUser={true}
-                      badge={
-                        product.is_new_arrival ? "New Arrival" : undefined
-                      }
                     />
                   </div>
                 ))}
@@ -710,64 +720,89 @@ export default function WholesaleShopClient({
         </div>
       </div>
 
-      {/* ─── Mobile Filters Drawer ─── */}
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 transition-opacity"
-            onClick={() => setMobileFiltersOpen(false)}
-          />
+      {/* ─── Mobile Bottom Sheet Filters with Motion ─── */}
+      <AnimatePresence>
+        {mobileFiltersOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
+              onClick={() => setMobileFiltersOpen(false)}
+            />
 
-          {/* Drawer content */}
-          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-200">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-[#EFEAE0] flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-sm text-[#14231B] uppercase tracking-wider">
-                <SlidersHorizontal size={16} />
-                <span>Filters</span>
-                {activeFiltersCount > 0 && (
-                  <span className="w-5 h-5 bg-[#183D2B] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
+            {/* Bottom Sheet Modal */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 32, stiffness: 340 }}
+              className="fixed inset-x-0 bottom-0 max-h-[85vh] w-full bg-white rounded-t-2xl shadow-2xl flex flex-col z-50 border-t border-[#DCCFB9]/60"
+            >
+              {/* Grab Handle */}
+              <div
+                className="pt-3 pb-1 flex justify-center cursor-pointer"
+                onClick={() => setMobileFiltersOpen(false)}
+              >
+                <span className="w-12 h-1.5 bg-[#DCCFB9]/80 rounded-full" />
               </div>
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(false)}
-                className="p-1.5 text-[#8E9590] hover:text-[#14231B] cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            {/* Drawer Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {renderFilterControls()}
-            </div>
+              {/* Bottom Sheet Header */}
+              <div className="px-5 py-3 border-b border-[#EFEAE0] flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-sm text-[#14231B] uppercase tracking-wider">
+                  <SlidersHorizontal size={16} />
+                  <span>Filters</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="w-5 h-5 bg-[#183D2B] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="text-xs text-[#8E9590] hover:text-red-600 transition-colors font-semibold cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="p-1.5 text-[#5C6460] hover:text-[#14231B] cursor-pointer rounded-full hover:bg-neutral-100 transition-colors"
+                    aria-label="Close filters"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
 
-            {/* Drawer Footer */}
-            <div className="p-4 border-t border-[#EFEAE0] space-y-2">
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(false)}
-                className="w-full h-11 bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider rounded-sm flex items-center justify-center cursor-pointer"
-              >
-                View {filteredProducts.length} Results
-              </button>
-              {activeFiltersCount > 0 && (
+              {/* Bottom Sheet Body */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+                {renderFilterControls()}
+              </div>
+
+              {/* Bottom Sheet Footer: Apply Button */}
+              <div className="p-4 border-t border-[#EFEAE0] bg-white space-y-2">
                 <button
                   type="button"
-                  onClick={handleResetFilters}
-                  className="w-full py-2 text-xs text-[#8E9590] hover:text-red-700 font-semibold text-center cursor-pointer"
+                  onClick={() => setMobileFiltersOpen(false)}
+                  className="w-full h-12 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider rounded-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors active:scale-[0.99]"
                 >
-                  Reset All Filters
+                  <span>Apply Filters</span>
+                  <span>•</span>
+                  <span>{filteredProducts.length} Results</span>
                 </button>
-              )}
-            </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -240,13 +240,13 @@ export default function WholesaleEnquiryModal({
                     </p>
                   </div>
 
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto w-full">
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="w-full sm:w-auto px-6 py-2.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
+                      className="w-full sm:flex-1 h-11 px-4 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer flex items-center justify-center text-center whitespace-nowrap"
                     >
-                      Done / Close
+                      Done
                     </button>
                     <a
                       href={`https://wa.me/971501234567?text=${encodeURIComponent(
@@ -254,10 +254,10 @@ export default function WholesaleEnquiryModal({
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
+                      className="w-full sm:flex-1 h-11 inline-flex items-center justify-center gap-2 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer text-center whitespace-nowrap"
                     >
-                      <MessageCircle size={15} />
-                      <span>Chat on WhatsApp</span>
+                      <MessageCircle size={15} className="shrink-0" />
+                      <span className="whitespace-nowrap">Chat on WhatsApp</span>
                     </a>
                   </div>
                 </div>

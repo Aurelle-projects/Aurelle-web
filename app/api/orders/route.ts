@@ -165,15 +165,20 @@ export async function POST(request: NextRequest) {
         user_id: userId || null,
         customer_email: customerEmail.trim().toLowerCase(),
         customer_type: customerType || "retail",
-        status: "processing",
-        payment_status: paymentMethod === "stripe" ? "paid" : "pending",
+        status: paymentMethod === "stripe" ? "pending" : "processing",
+        payment_status: "pending", // Never hardcode as paid; verified only upon Stripe payment
         subtotal: subtotal || 0,
         discount_amount: 0,
         tax_amount: taxAmount || 0,
         shipping_amount: shippingAmount || 0,
         total: total || 0,
-        shipping_address: shippingAddress,
-        notes: notes || null,
+        shipping_address: {
+          ...shippingAddress,
+          payment_method: paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment",
+        },
+        notes: notes
+          ? `${notes}\n[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`
+          : `[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`,
       })
       .select()
       .single();
@@ -242,7 +247,83 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Send transactional emails (fire-and-forget — never block the order response)
+    // 4. Handle Online Payment (Stripe Checkout Session)
+    if (paymentMethod === "stripe") {
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      if (!secretKey) {
+        return NextResponse.json(
+          {
+            error:
+              "Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const { getStripe } = await import("@/lib/stripe/client");
+      const stripe = getStripe();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      // Build Stripe line items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lineItems = (items || []).map((item: any) => ({
+        price_data: {
+          currency: "aed",
+          product_data: {
+            name: item.name || "Aurelle Product",
+            images: item.image ? [item.image] : [],
+          },
+          unit_amount: Math.round(Number(item.price || 0) * 100),
+        },
+        quantity: item.quantity || 1,
+      }));
+
+      // Add shipping fee if applicable
+      if (shippingAmount && shippingAmount > 0) {
+        lineItems.push({
+          price_data: {
+            currency: "aed",
+            product_data: {
+              name: "UAE Delivery Fee",
+            },
+            unit_amount: Math.round(Number(shippingAmount) * 100),
+          },
+          quantity: 1,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: customerEmail.trim().toLowerCase(),
+        client_reference_id: order.id,
+        line_items: lineItems,
+        metadata: {
+          order_id: order.id,
+          order_number: order.order_number,
+        },
+        success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+        cancel_url: `${siteUrl}/checkout?cancelled=true`,
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any)
+        .from("orders")
+        .update({
+          stripe_checkout_session_id: session.id,
+        })
+        .eq("id", order.id);
+
+      return NextResponse.json({
+        success: true,
+        orderNumber: order.order_number,
+        orderId: order.id,
+        checkoutUrl: session.url,
+        paymentMethod: "stripe",
+      });
+    }
+
+    // 5. For Normal Payment (Cash on Delivery): dispatch confirmation emails immediately
     const emailData = {
       orderNumber: order.order_number,
       customerName: customerName || "",
@@ -270,6 +351,7 @@ export async function POST(request: NextRequest) {
       success: true,
       orderNumber: order.order_number,
       orderId: order.id,
+      paymentMethod: "cod",
       message: "Order placed successfully!",
     });
   } catch (err) {

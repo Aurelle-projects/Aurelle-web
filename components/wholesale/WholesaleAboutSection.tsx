@@ -67,7 +67,7 @@ export default function WholesaleAboutSection({
             )}
 
             {description && (
-              <div className="text-sm sm:text-base text-[#5C6460] leading-relaxed whitespace-pre-line space-y-3">
+              <div className="text-sm  text-[#5C6460] leading-relaxed whitespace-pre-line space-y-3">
                 {description}
               </div>
             )}

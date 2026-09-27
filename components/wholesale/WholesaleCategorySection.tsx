@@ -210,7 +210,7 @@ export default function WholesaleCategorySection({
                   className="group shrink-0 w-36 sm:w-44 md:w-48 flex flex-col transition-all duration-200"
                 >
                   {/* ── Square Shape Category Image Container ── */}
-                  <div className="relative aspect-square w-full rounded-sm overflow-hidden bg-[#FAF8F5] border border-[#EDE9DF] shadow-2xs group-hover:border-[#183D2B] transition-all duration-300">
+                  <div className="relative aspect-square w-full rounded-sm overflow-hidden bg-[#FAF8F5] shadow-2xs group-hover:border-[#183D2B] transition-all duration-300">
                     {imageUrl ? (
                       <Image
                         src={imageUrl}

@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Max file size: 2MB
-    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    // Prevent upload if original image exceeds 4 MB limit
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "File size exceeds maximum upload limit of 2MB" },
+        { error: "Image size exceeds 4 MB limit. Please upload an image under 4 MB." },
         { status: 400 }
       );
     }
@@ -37,21 +37,28 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const rawBuffer = Buffer.from(bytes);
 
-    // Compress and resize image before uploading to storage:
-    // - Maximum dimensions: 1600 × 1600 px
-    // - Format: WebP
-    // - Quality: 80–85%
-    // - Target compressed size: 300 KB – 800 KB
-    const compressed = await compressImageForUpload(rawBuffer, {
-      maxWidth: 1600,
-      maxHeight: 1600,
-      initialQuality: 82,
-      maxSizeBytes: 800 * 1024,
-    });
+    let uploadBuffer: Buffer = rawBuffer;
+    let uploadOptions: Record<string, unknown> = {};
 
-    const asset = await uploadToCloudinary(compressed.buffer, folder, {
-      format: "webp",
-    });
+    // If the uploaded image size is more than 2 MB, automatically compress the image
+    const COMPRESSION_THRESHOLD = 2 * 1024 * 1024; // 2 MB
+    if (file.size > COMPRESSION_THRESHOLD) {
+      // Compress and resize image before uploading to storage:
+      // - Maximum dimensions: 1600 × 1600 px
+      // - Format: WebP
+      // - Quality: 80–85%
+      // - Target compressed size: 300 KB – 800 KB
+      const compressed = await compressImageForUpload(rawBuffer, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        initialQuality: 82,
+        maxSizeBytes: 800 * 1024,
+      });
+      uploadBuffer = compressed.buffer;
+      uploadOptions = { format: "webp" };
+    }
+
+    const asset = await uploadToCloudinary(uploadBuffer, folder, uploadOptions);
 
     return NextResponse.json({
       success: true,

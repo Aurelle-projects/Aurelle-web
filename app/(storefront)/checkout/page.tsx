@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import {
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
   User,
   ShieldCheck,
   Check,
+  CreditCard,
+  Banknote,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import AccountAuthModal from "@/components/auth/AccountAuthModal";
@@ -43,6 +46,8 @@ const UAE_EMIRATES = [
 ];
 
 function CheckoutContent() {
+  const searchParams = useSearchParams();
+  const wasCancelled = searchParams?.get("cancelled") === "true";
   const { items, subtotal, shippingFee, total, clearCart } = useCart();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,7 +68,6 @@ function CheckoutContent() {
     streetAddress: "",
     deliveryNotes: "",
     paymentMethod: "stripe",
-    deliverySpeed: "standard", // standard | express
     saveToAccount: true,
     setAsDefault: false,
   });
@@ -72,8 +76,7 @@ function CheckoutContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orderComplete, setOrderComplete] = useState<string | null>(null);
 
-  const expressFee = formData.deliverySpeed === "express" ? 15 : 0;
-  const finalTotal = total + expressFee;
+  const finalTotal = total;
 
   // Load User & Saved Addresses
   useEffect(() => {
@@ -217,7 +220,7 @@ function CheckoutContent() {
           slug: item.product?.slug || "",
         })),
         subtotal,
-        shippingAmount: shippingFee + expressFee,
+        shippingAmount: shippingFee,
         total: finalTotal,
         paymentMethod: formData.paymentMethod,
         notes: formData.deliveryNotes,
@@ -234,6 +237,12 @@ function CheckoutContent() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to place order.");
+      }
+
+      if (data.checkoutUrl) {
+        // Online Payment: redirect to Stripe's secure hosted checkout gateway
+        window.location.href = data.checkoutUrl;
+        return;
       }
 
       setOrderComplete(data.orderNumber);
@@ -290,7 +299,9 @@ function CheckoutContent() {
               <div className="flex justify-between">
                 <span className="text-[#5C6460]">Payment:</span>
                 <span className="font-semibold text-[#1D211F]">
-                  Online Payment (Stripe)
+                  {formData.paymentMethod === "cod"
+                    ? "Normal Payment (Cash on Delivery)"
+                    : "Online Payment"}
                 </span>
               </div>
               <div className="flex justify-between pt-1 border-t border-[#EDE9DF]">
@@ -367,6 +378,12 @@ function CheckoutContent() {
         {errorMessage && (
           <div className="rounded-md bg-red-50 border border-red-200 p-3 text-xs text-red-700">
             {errorMessage}
+          </div>
+        )}
+
+        {wasCancelled && (
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+            Online payment checkout was cancelled. Your bag items have been retained. You can try again or choose Normal Payment (Cash on Delivery).
           </div>
         )}
 
@@ -586,62 +603,72 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* 2. DELIVERY SPEED */}
+            {/* 2. PAYMENT METHOD */}
             <div className="bg-transparent sm:bg-white p-0 sm:p-6 rounded-none sm:rounded-2xl border-0 sm:border border-[#EDE9DF] shadow-none sm:shadow-xs space-y-3">
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2 border-b border-[#EDE9DF]/80 pb-3">
                 <span className="w-5 h-5 rounded-full bg-[#183D2B] text-white flex items-center justify-center text-[10px]">
                   2
                 </span>
-                Delivery Method
+                Payment Method
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    formData.deliverySpeed === "standard"
+                  className={`flex items-start justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    formData.paymentMethod === "stripe"
                       ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
                       : "border-[#EDE9DF] bg-[#F7F5EF]/40 hover:border-[#183D2B]/40"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <input
                       type="radio"
-                      name="deliverySpeed"
-                      value="standard"
-                      checked={formData.deliverySpeed === "standard"}
+                      name="paymentMethod"
+                      value="stripe"
+                      checked={formData.paymentMethod === "stripe"}
                       onChange={handleChange}
-                      className="text-[#183D2B] focus:ring-[#183D2B]"
+                      className="mt-0.5 text-[#183D2B] focus:ring-[#183D2B]"
                     />
                     <div>
-                      <p className="text-xs font-bold text-[#1D211F]">Standard UAE Delivery</p>
-                      <p className="text-[11px] text-[#5C6460]">2 – 3 Business Days</p>
+                      <div className="flex items-center gap-1.5">
+                        <CreditCard size={14} className="text-[#183D2B]" />
+                        <p className="text-xs font-bold text-[#1D211F]">Online Payment</p>
+                      </div>
+                      <p className="text-[11px] text-[#5C6460] mt-0.5">Credit / Debit Card, Apple Pay</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-emerald-700">FREE</span>
+                  <span className="text-[10px] font-bold text-[#183D2B] bg-[#183D2B]/10 px-2 py-0.5 rounded">
+                    Cards / Apple Pay
+                  </span>
                 </label>
 
                 <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    formData.deliverySpeed === "express"
+                  className={`flex items-start justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    formData.paymentMethod === "cod"
                       ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
                       : "border-[#EDE9DF] bg-[#F7F5EF]/40 hover:border-[#183D2B]/40"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <input
                       type="radio"
-                      name="deliverySpeed"
-                      value="express"
-                      checked={formData.deliverySpeed === "express"}
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === "cod"}
                       onChange={handleChange}
-                      className="text-[#183D2B] focus:ring-[#183D2B]"
+                      className="mt-0.5 text-[#183D2B] focus:ring-[#183D2B]"
                     />
                     <div>
-                      <p className="text-xs font-bold text-[#1D211F]">Express Same-Day</p>
-                      <p className="text-[11px] text-[#5C6460]">Orders before 1 PM</p>
+                      <div className="flex items-center gap-1.5">
+                        <Banknote size={14} className="text-[#183D2B]" />
+                        <p className="text-xs font-bold text-[#1D211F]">Normal Payment (COD)</p>
+                      </div>
+                      <p className="text-[11px] text-[#5C6460] mt-0.5">Pay with cash upon delivery</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#1D211F]">+ AED 15</span>
+                  <span className="text-[10px] font-bold text-[#5C6460] bg-[#EDE9DF] px-2 py-0.5 rounded">
+                    Cash on Delivery
+                  </span>
                 </label>
               </div>
             </div>
@@ -709,12 +736,6 @@ function CheckoutContent() {
                     )}
                   </span>
                 </div>
-                {expressFee > 0 && (
-                  <div className="flex justify-between text-[#183D2B]">
-                    <span>Express Delivery</span>
-                    <span className="font-bold">+ AED {expressFee.toFixed(2)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between pt-2 border-t border-[#EDE9DF] text-sm font-bold text-[#1D211F]">
                   <span>Total Amount</span>
                   <span className="text-[#183D2B]">AED {finalTotal.toFixed(2)}</span>
@@ -728,7 +749,13 @@ function CheckoutContent() {
                 className="w-full py-3.5 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Lock size={14} />
-                {isSubmitting ? "Placing Order..." : `Place Order • AED ${finalTotal.toFixed(2)}`}
+                {isSubmitting
+                  ? formData.paymentMethod === "stripe"
+                    ? "Redirecting to Stripe..."
+                    : "Placing Order..."
+                  : formData.paymentMethod === "stripe"
+                  ? `Proceed to Pay • AED ${finalTotal.toFixed(2)}`
+                  : `Place Order • AED ${finalTotal.toFixed(2)}`}
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-[#8C938F] pt-1">
@@ -758,7 +785,11 @@ function CheckoutContent() {
             className="py-3 px-6 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <Lock size={12} />
-            {isSubmitting ? "Placing..." : "Place Order"}
+            {isSubmitting
+              ? "Connecting..."
+              : formData.paymentMethod === "stripe"
+              ? "Pay with Card"
+              : "Place Order"}
           </button>
         </div>
 

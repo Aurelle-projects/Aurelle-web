@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
+import BannerLinkPicker from "@/components/admin/BannerLinkPicker";
 import {
   Check,
   X,
@@ -1118,18 +1119,12 @@ export default function AdminWholesalePage() {
                       setBanner1((prev) => ({ ...prev, url: null, public_id: null }));
                     }}
                   />
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C6460] mb-1">
-                      Banner 1 Link Href
-                    </label>
-                    <input
-                      type="text"
-                      value={banner1.link}
-                      onChange={(e) => setBanner1({ ...banner1, link: e.target.value })}
-                      placeholder="#all-products or /wholesale/products/..."
-                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded-sm text-xs text-[#14231B] outline-none"
-                    />
-                  </div>
+                  <BannerLinkPicker
+                    label="Banner 1 Link Href"
+                    value={banner1.link}
+                    onChange={(newLink) => setBanner1((prev) => ({ ...prev, link: newLink }))}
+                    mode="wholesale"
+                  />
                 </div>
 
                 {/* Banner 2 */}
@@ -1149,18 +1144,12 @@ export default function AdminWholesalePage() {
                       setBanner2((prev) => ({ ...prev, url: null, public_id: null }));
                     }}
                   />
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#5C6460] mb-1">
-                      Banner 2 Link Href
-                    </label>
-                    <input
-                      type="text"
-                      value={banner2.link}
-                      onChange={(e) => setBanner2({ ...banner2, link: e.target.value })}
-                      placeholder="#all-products"
-                      className="w-full h-8 px-2.5 bg-white border border-[#DCCFB9] rounded-sm text-xs text-[#14231B] outline-none"
-                    />
-                  </div>
+                  <BannerLinkPicker
+                    label="Banner 2 Link Href"
+                    value={banner2.link}
+                    onChange={(newLink) => setBanner2((prev) => ({ ...prev, link: newLink }))}
+                    mode="wholesale"
+                  />
                 </div>
               </div>
             </div>

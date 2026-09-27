@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
+import BannerLinkPicker from "@/components/admin/BannerLinkPicker";
 import { createClient } from "@/lib/supabase/client";
 import {
   Check,
@@ -293,81 +294,7 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
   );
 }
 
-interface BannerProductPickerProps {
-  value: string;
-  onChange: (value: string) => void;
-}
 
-function BannerProductPicker({ value, onChange }: BannerProductPickerProps) {
-  const [categories, setCategories] = React.useState<{ id: string; name: string }[]>([]);
-  const [products, setProducts] = React.useState<{ id: string; name: string; slug: string; category_id: string | null }[]>([]);
-  const [categoryId, setCategoryId] = React.useState("");
-  const [loaded, setLoaded] = React.useState(false);
-
-  React.useEffect(() => {
-    async function load() {
-      try {
-        const [catRes, prodRes] = await Promise.all([
-          fetch("/api/admin/categories"),
-          fetch("/api/admin/products"),
-        ]);
-        const catData = await catRes.json();
-        const prodData = await prodRes.json();
-        if (catData.success) setCategories(catData.categories ?? []);
-        if (prodData.success) setProducts(prodData.products ?? []);
-      } catch {}
-      setLoaded(true);
-    }
-    load();
-  }, []);
-
-  React.useEffect(() => {
-    const selectedProduct = products.find((product) => value === `/products/${product.slug}`);
-    if (selectedProduct) setCategoryId(selectedProduct.category_id ?? "");
-  }, [products, value]);
-
-  const filteredProducts = products.filter((product) => product.category_id === categoryId);
-  const selectClass = "w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]";
-
-  return (
-    <div className="mt-3 space-y-2">
-      <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider">
-        Product Link
-      </label>
-      <select
-        className={selectClass}
-        value={categoryId}
-        onChange={(event) => {
-          setCategoryId(event.target.value);
-          onChange("");
-        }}
-        disabled={!loaded}
-      >
-        <option value="">Select Category</option>
-        {categories.map((category) => (
-          <option key={category.id} value={category.id}>{category.name}</option>
-        ))}
-      </select>
-      <select
-        className={`${selectClass} ${categoryId ? "bg-white" : "bg-[#F7F5EF] text-[#8C938F] cursor-not-allowed"}`}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={!categoryId || !loaded || filteredProducts.length === 0}
-      >
-        <option value="">
-          {!categoryId
-            ? "Select a category first"
-            : filteredProducts.length === 0
-              ? "No products in this category"
-              : "Select Product"}
-        </option>
-        {filteredProducts.map((product) => (
-          <option key={product.id} value={`/products/${product.slug}`}>{product.name}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 export default function AdminHeroPage() {
   const [formData, setFormData] = useState<HeroData>(DEFAULT_HERO_DATA);
@@ -1028,10 +955,14 @@ export default function AdminHeroPage() {
                         }));
                       }}
                     />
-                    <BannerProductPicker
-                      value={formData[linkKey] as string}
-                      onChange={(value) => handleChange(linkKey, value)}
-                    />
+                    <div className="mt-3">
+                      <BannerLinkPicker
+                        label={`Banner ${num} Link Href`}
+                        value={formData[linkKey] as string}
+                        onChange={(value) => handleChange(linkKey, value)}
+                        mode="retail"
+                      />
+                    </div>
                   </div>
                 );
               })}

@@ -44,7 +44,13 @@ const NAV_GROUPS: NavGroup[] = [
     title: "SALES & ORDERS",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-      { href: "/admin/wholesale", label: "B2B Wholesale", icon: Briefcase },
+    ],
+  },
+  {
+    title: "B2B WHOLESALE",
+    items: [
+      { href: "/admin/wholesale", label: "Account Applications", icon: Briefcase, smallFont: true },
+      { href: "/admin/wholesale/enquiries", label: "Enquiries", icon: MessageSquare, smallFont: true },
     ],
   },
   {
@@ -120,6 +126,8 @@ export default function AdminSidebar() {
                 const isActive =
                   item.href === "/admin"
                     ? pathname === "/admin"
+                    : item.href === "/admin/wholesale"
+                    ? pathname === "/admin/wholesale"
                     : item.href === "/admin/categories"
                     ? pathname.startsWith("/admin/categories") || pathname.startsWith("/admin/subcategories")
                     : pathname.startsWith(item.href);

@@ -8,7 +8,7 @@ import {
   verifyResetToken,
   sendOtpEmail,
 } from "@/lib/auth/otp";
-import { hashAdminPassword } from "@/lib/auth/adminPassword";
+import { hashAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const configuredAdminEmail = (process.env.ADMIN_EMAIL || "admin@aurelle.ae").trim().toLowerCase();
 
     // Verify the email matches the configured admin email
-    if (email !== configuredAdminEmail) {
+    if (!safeCompare(email, configuredAdminEmail)) {
       return NextResponse.json(
         { success: false, error: "This email address is not recognized as an administrator." },
         { status: 403 }

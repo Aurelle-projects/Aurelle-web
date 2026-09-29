@@ -138,11 +138,13 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Ensure profile exists before writing orders (FK guard)
+    // Ensure profile exists before writing orders (FK guard) & verify userId
+    let verifiedUserId: string | null = null;
     if (userId) {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && user.id === userId) {
+        verifiedUserId = user.id;
         await ensureProfile(
           admin,
           user.id,
@@ -153,8 +155,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique order number (e.g. AUR-2026-84920)
-    const orderNumber = `AUR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+    // Generate unique order number with timestamp + random entropy to eliminate collision
+    const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 
     // 1. Insert order
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,7 +164,7 @@ export async function POST(request: NextRequest) {
       .from("orders")
       .insert({
         order_number: orderNumber,
-        user_id: userId || null,
+        user_id: verifiedUserId,
         customer_email: customerEmail.trim().toLowerCase(),
         customer_type: customerType || "retail",
         status: paymentMethod === "stripe" ? "pending" : "processing",
@@ -219,19 +221,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. If user requested saving this address to their account
-    if (saveAddress && userId) {
+    if (saveAddress && verifiedUserId) {
       try {
         if (isDefaultAddress) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (admin as any)
             .from("addresses")
             .update({ is_default: false })
-            .eq("user_id", userId);
+            .eq("user_id", verifiedUserId);
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (admin as any).from("addresses").insert({
-          user_id: userId,
+          user_id: verifiedUserId,
           label: shippingAddress.label || "Home",
           full_name: customerName || shippingAddress.fullName,
           phone: customerPhone || shippingAddress.phone,

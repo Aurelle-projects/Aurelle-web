@@ -135,15 +135,15 @@ export default function WholesaleHeroSection({
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link
               href="/wholesale/shop"
-              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer bg-white text-[#14231B] hover:bg-[#FAF8F5]"
+              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer bg-[#183D2B] text-white hover:bg-[#102D20]"
             >
-              <Package size={15} className="text-[#14231B]" />
+              <Package size={15} className="text-white" />
               <span>Explore Products</span>
             </Link>
 
             <Link
               href="/wholesale/contact"
-              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer bg-black/40 hover:bg-black/60 text-white border border-white/25 backdrop-blur-xs"
+              className="hidden sm:flex px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all items-center gap-2 shadow-xs cursor-pointer bg-black/40 hover:bg-black/60 text-white border border-white/25 backdrop-blur-xs"
             >
               <span>Contact Us</span>
               <ArrowRight size={14} />

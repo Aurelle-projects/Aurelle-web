@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyAdminPassword } from "@/lib/auth/adminPassword";
+import { verifyAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     let isAuthenticated = false;
 
-    if (cleanEmail === configuredAdminEmail) {
+    if (safeCompare(cleanEmail, configuredAdminEmail)) {
       // Check if a custom password hash exists in site_settings
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,12 +38,12 @@ export async function POST(request: NextRequest) {
           if (verifyAdminPassword(cleanPassword, credSetting.value.salt, credSetting.value.hash)) {
             isAuthenticated = true;
           }
-        } else if (cleanPassword === configuredAdminPassword) {
+        } else if (safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       } catch (dbErr) {
         console.warn("[Admin login site_settings check]:", dbErr);
-        if (cleanPassword === configuredAdminPassword) {
+        if (safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       }

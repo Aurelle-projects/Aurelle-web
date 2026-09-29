@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 
 // GET /api/admin/products — Lightweight list for dropdowns (id, name, slug)
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
     const { data, error } = await supabase
@@ -24,6 +31,12 @@ export async function GET() {
 // POST /api/admin/products — Create a new product (bypasses RLS via service role)
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
@@ -144,6 +157,12 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/products — Update an existing product (bypasses RLS via service role)
 export async function PATCH(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       id,
@@ -303,6 +322,12 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/products?id=<uuid> — Delete a product and its related data
 export async function DELETE(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

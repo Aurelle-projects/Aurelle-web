@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 import {
@@ -19,6 +20,12 @@ function slugify(str: string) {
 // GET /api/admin/categories — Fetch all categories and subcategories from DB
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
@@ -75,6 +82,12 @@ export async function GET() {
 // POST /api/admin/categories — Create a category or subcategory
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
@@ -157,6 +170,12 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/categories — Update a category or subcategory
 export async function PATCH(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, name, slug, description, image_url, image_public_id, parent_id, sort_order, is_active, is_wholesale } = body;
 
@@ -255,6 +274,12 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/categories?id=<uuid> — Delete a category or subcategory
 export async function DELETE(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

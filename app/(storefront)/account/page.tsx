@@ -515,7 +515,7 @@ function AccountContent() {
         addressLine1: addressForm.addressLine1,
         addressLine2: addressForm.addressLine2,
         city: addressForm.city,
-        state: addressForm.city,
+        state: addressForm.city, // UAE addresses use emirate as state
         country: addressForm.country,
         isDefault: addressForm.isDefault,
       };

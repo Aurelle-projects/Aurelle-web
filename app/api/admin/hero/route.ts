@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -193,6 +194,12 @@ function flatToDbRows(flat: Record<string, any>) {
 
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
     const { data: rows, error } = await supabase
@@ -213,6 +220,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
     const body = await req.json();

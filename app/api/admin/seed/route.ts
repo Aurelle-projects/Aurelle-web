@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
 
@@ -6,6 +7,12 @@ export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const supabase = await createClient();
 
     // Check if categories table exists

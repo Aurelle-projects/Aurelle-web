@@ -6,9 +6,9 @@ import WholesaleAboutSection from "@/components/wholesale/WholesaleAboutSection"
 import WholesaleStatisticsSection from "@/components/wholesale/WholesaleStatisticsSection";
 import WholesaleFaqSection from "@/components/wholesale/WholesaleFaqSection";
 import WholesaleContactSection from "@/components/wholesale/WholesaleContactSection";
-import BrandSection from "@/components/storefront/BrandSection";
+import WholesaleShopByBrand from "@/components/wholesale/WholesaleShopByBrand";
 import WholesaleCategorySection from "@/components/wholesale/WholesaleCategorySection";
-import ProductSection from "@/components/storefront/ProductSection";
+import WholesaleNewArrivals from "@/components/wholesale/WholesaleNewArrivals";
 import HomeBanners from "@/components/storefront/HomeBanners";
 import WholesaleAllProducts from "@/components/wholesale/WholesaleAllProducts";
 import { getWholesaleCatalogSettings } from "@/lib/wholesale/catalog";
@@ -160,9 +160,9 @@ export default async function WholesalePage() {
 
    
 
-      {/* ─── 4. Shop by Brand (Reusing BrandSection) ───────────────── */}
+      {/* ─── 4. Wholesale Shop by Brand ──────────────────────────── */}
       <div id="shop-by-brand">
-        <BrandSection brands={brands} />
+        <WholesaleShopByBrand brands={brands} />
       </div>
 
       {/* ─── 5. Shop by Category (Separate Wholesale Square Design) ─────────── */}
@@ -170,20 +170,12 @@ export default async function WholesalePage() {
         <WholesaleCategorySection categories={categories} />
       </div>
 
-      {/* ─── 6. New Arrivals (Reusing ProductSection with wholesale pricing) ── */}
+      {/* ─── 6. Wholesale New Arrivals (standalone carousel) ────────── */}
       <div id="new-arrivals">
-        <ProductSection
-          title="New Arrivals"
-          badge="New Arrival"
-          viewAllHref="/wholesale/shop"
+        <WholesaleNewArrivals
           products={newArrivalProducts}
-          maxProducts={10}
-          desktopColumns={5}
-          emptyMessage="No wholesale new arrival products found."
-          background="white"
-          showBottomButton={true}
-          bottomButtonText="View All Products"
-          isWholesaleUser={true}
+          viewAllHref="/wholesale/shop?filter=new-arrivals"
+          maxProducts={5}
         />
       </div>
 

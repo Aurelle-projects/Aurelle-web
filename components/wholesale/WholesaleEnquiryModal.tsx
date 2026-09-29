@@ -249,7 +249,7 @@ export default function WholesaleEnquiryModal({
                       Done
                     </button>
                     <a
-                      href={`https://wa.me/971501234567?text=${encodeURIComponent(
+                      href={`https://wa.me/971559998765?text=${encodeURIComponent(
                         `Hi Aurelle Wholesale Team, I just submitted an enquiry for ${product.name} (Quantity: ${quantity} units).`
                       )}`}
                       target="_blank"

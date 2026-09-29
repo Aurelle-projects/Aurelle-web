@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 import {
@@ -11,6 +12,12 @@ export const dynamic = "force-dynamic";
 // GET /api/admin/brands — Fetch all brands from DB
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
 
@@ -61,6 +68,12 @@ export async function GET() {
 // POST /api/admin/brands — Create a brand
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { name, slug, description, logo_url, logo_public_id, is_active, sort_order, is_wholesale } = body;
 
@@ -116,6 +129,12 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/brands — Update a brand
 export async function PATCH(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, name, slug, description, logo_url, logo_public_id, is_active, sort_order, is_wholesale } = body;
 
@@ -182,6 +201,12 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/brands?id=<uuid> — Delete a brand
 export async function DELETE(req: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("aurelle_admin_session");
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

@@ -27,7 +27,10 @@ export async function GET() {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mapped = (data || []).map((app: any) => ({
+    const allRows = data || [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapped = allRows.map((app: any) => ({
       id: app.id,
       company_name: app.business_name || app.company_name || "Company",
       trade_license_number: app.trade_license_number || app.trade_license_url || "—",
@@ -43,6 +46,19 @@ export async function GET() {
       tax_number: app.tax_number || null,
       trade_license_url: app.trade_license_url || null,
     }));
+
+    // Separate Account Applications vs Trade Enquiries
+    const applications = mapped.filter(
+      (item: any) =>
+        item.business_type !== "Wholesale Trade Enquiry" &&
+        !(item.notes && item.notes.includes("[Wholesale Product Enquiry]"))
+    );
+
+    const enquiries = mapped.filter(
+      (item: any) =>
+        item.business_type === "Wholesale Trade Enquiry" ||
+        (item.notes && item.notes.includes("[Wholesale Product Enquiry]"))
+    );
 
     // Also fetch wholesale site_settings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,7 +99,8 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      applications: mapped,
+      applications,
+      enquiries,
       wholesale_home_banners,
       wholesale_hero,
       wholesale_about,
@@ -93,7 +110,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[Admin Wholesale API] exception:", err);
-    return NextResponse.json({ success: true, applications: [] });
+    return NextResponse.json({ success: true, applications: [], enquiries: [] });
   }
 }
 
@@ -142,6 +159,8 @@ export async function POST(request: Request) {
   }
 }
 
+import { sendWholesaleApprovalEmail } from "@/lib/email/brevo";
+
 export async function PATCH(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -151,37 +170,141 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, status } = await request.json();
+    const { id, status, rejection_reason } = await request.json();
     if (!id || !status) {
       return NextResponse.json({ error: "Missing id or status" }, { status: 400 });
     }
 
     const admin = createAdminClient();
+
+    // 1. Fetch application details
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (admin as any)
+    const { data: application, error: appFetchErr } = await (admin as any)
       .from("wholesale_applications")
-      .update({ status, updated_at: new Date().toISOString() })
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (appFetchErr || !application) {
+      return NextResponse.json(
+        { error: appFetchErr?.message || "Wholesale application not found." },
+        { status: 404 }
+      );
+    }
+
+    // 2. Idempotency Check
+    if (application.status === status && status === "approved") {
+      return NextResponse.json({
+        success: true,
+        message: "Application is already approved.",
+      });
+    }
+
+    let authUserId: string | null = application.user_id || null;
+
+    // 3. Handle Admin Approval Action
+    if (status === "approved") {
+      const normalizedEmail = application.email.trim().toLowerCase();
+
+      // If user_id is missing (legacy application record), look up by email in profiles/auth
+      if (!authUserId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingProfile } = await (admin as any)
+          .from("profiles")
+          .select("id")
+          .ilike("email", normalizedEmail)
+          .maybeSingle();
+
+        if (existingProfile?.id) {
+          authUserId = existingProfile.id;
+        } else {
+          const { data: usersList } = await admin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const existingAuthUser = usersList?.users?.find(
+            (u) => u.email?.toLowerCase() === normalizedEmail
+          );
+          if (existingAuthUser) {
+            authUserId = existingAuthUser.id;
+          }
+        }
+      }
+
+      if (!authUserId) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot approve application: No linked authentication account found for this application.",
+          },
+          { status: 400 }
+        );
+      }
+
+      // 4. Elevate Profile Role to 'wholesale_customer'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (admin as any)
+        .from("profiles")
+        .upsert({
+          id: authUserId,
+          email: normalizedEmail,
+          full_name: application.contact_person || application.business_name,
+          phone: application.phone,
+          role: "wholesale_customer",
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error("[Admin Wholesale Approval] Profile update error:", profileError);
+        return NextResponse.json(
+          { error: "Failed to update profile role to wholesale_customer." },
+          { status: 500 }
+        );
+      }
+
+      // 5. Send Approval Email via Brevo (Non-blocking)
+      try {
+        await sendWholesaleApprovalEmail({
+          email: normalizedEmail,
+          companyName: application.business_name,
+          contactPerson: application.contact_person,
+        });
+      } catch (emailErr) {
+        console.error("[Admin Wholesale Approval] Brevo email failure:", emailErr);
+      }
+    }
+
+    // 6. Update Application Record Status
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (admin as any)
+      .from("wholesale_applications")
+      .update({
+        status,
+        user_id: authUserId,
+        rejection_reason: status === "rejected" ? rejection_reason || null : null,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (updateError) {
+      console.error("[Admin Wholesale PATCH error]:", updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Also sync matching order in orders table
-    try {
-      const ordStatus = status === "approved" ? "delivered" : status === "rejected" ? "cancelled" : "pending";
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin as any)
-        .from("orders")
-        .update({ status: ordStatus, updated_at: new Date().toISOString() })
-        .ilike("notes", `%[Wholesale Application ID: ${id}]%`);
-    } catch (orderSyncErr) {
-      console.warn("[Admin Wholesale PATCH] Order sync error:", orderSyncErr);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("[Admin Wholesale PATCH error]:", err);
-    return NextResponse.json({ error: "Failed to update status." }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message:
+        status === "approved"
+          ? "Application approved successfully and wholesale customer account activated."
+          : `Application status updated to ${status}.`,
+    });
+  } catch (err: any) {
+    console.error("[Admin Wholesale PATCH exception]:", err);
+    return NextResponse.json(
+      { error: err?.message || "Failed to update application status." },
+      { status: 500 }
+    );
   }
 }
+

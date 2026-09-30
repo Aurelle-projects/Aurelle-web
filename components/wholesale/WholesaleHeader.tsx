@@ -186,11 +186,23 @@ export default function WholesaleHeader({
               })}
             </nav>
 
-            {/* Actions: Enquiry Button */}
-            <div className="flex items-center">
+            {/* Actions: B2B Register, Login, Enquiry Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/login?redirect=/wholesale"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/wholesale/register"
+                className="px-3.5 sm:px-4 py-2 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider transition-all text-center whitespace-nowrap"
+              >
+                Register B2B
+              </Link>
               <Link
                 href="/wholesale/contact"
-                className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs sm:text-sm font-bold uppercase tracking-wider transition-all shadow-xs hover:shadow-md text-center"
+                className="px-4 sm:px-5 py-2 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs sm:text-xs font-bold uppercase tracking-wider transition-all shadow-xs hover:shadow-md text-center whitespace-nowrap"
               >
                 Enquiry
               </Link>
@@ -322,13 +334,27 @@ export default function WholesaleHeader({
                 })}
               </nav>
 
-              <div className="pt-4 border-t border-[#EFEAE0]">
+              <div className="pt-4 border-t border-[#EFEAE0] space-y-2">
+                <Link
+                  href="/wholesale/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider text-center block transition-colors"
+                >
+                  Register B2B Account
+                </Link>
                 <Link
                   href="/wholesale/contact"
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full py-2.5 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider text-center block shadow-xs transition-colors"
                 >
                   Enquiry
+                </Link>
+                <Link
+                  href="/login?redirect=/wholesale"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2 text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] text-center block"
+                >
+                  Already a wholesale customer? Sign In
                 </Link>
               </div>
             </motion.div>

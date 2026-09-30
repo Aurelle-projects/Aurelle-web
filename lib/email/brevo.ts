@@ -677,5 +677,106 @@ export async function sendClientWholesaleEnquiryConfirmationEmail(
   });
 }
 
+// ── 6. B2B Application Received Email ─────────────────────────────
+
+export async function sendWholesaleApplicationReceivedEmail(data: {
+  email: string;
+  companyName: string;
+  contactPerson: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { email, companyName, contactPerson } = data;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const displayName = contactPerson?.trim() || "Valued Partner";
+
+  const htmlContent = emailWrapper(`
+    <div style="background:#EBF3EF; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
+      <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Application Received</p>
+      <p style="margin:4px 0 0; font-size:18px; font-weight:700; color:#1D211F;">B2B Account Application Pending Review</p>
+    </div>
+
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      Dear ${displayName},
+    </p>
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      Thank you for submitting your wholesale account application on behalf of <strong>${companyName}</strong>.
+      Your application is currently under manual review by our commercial trade desk.
+    </p>
+
+    <div style="background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:16px 20px; margin-bottom:24px;">
+      <p style="font-size:13px; color:#183D2B; font-weight:700; margin:0 0 6px; text-transform:uppercase; letter-spacing:0.5px;">What Happens Next?</p>
+      <ul style="margin:0; padding-left:20px; font-size:13px; color:#5C6460; line-height:1.7;">
+        <li>Our team will verify your business credentials.</li>
+        <li>You created your account password during registration. Please keep it secure.</li>
+        <li>Upon approval, you can sign in using <strong>${email}</strong> and the password created during registration.</li>
+      </ul>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${siteUrl}/wholesale" class="btn">Explore Wholesale Catalog</a>
+    </div>
+  `);
+
+  return sendBrevoEmail({
+    to: [{ email, name: displayName }],
+    subject: `Wholesale Account Application Received — ${companyName} | Aurelle B2B`,
+    htmlContent,
+  });
+}
+
+// ── 7. B2B Account Approval Email ──────────────────────────────────
+
+export async function sendWholesaleApprovalEmail(data: {
+  email: string;
+  companyName: string;
+  contactPerson: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { email, companyName, contactPerson } = data;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const displayName = contactPerson?.trim() || "Valued Partner";
+  const destinationUrl = `${siteUrl}/login?redirect=/wholesale`;
+
+  const htmlContent = emailWrapper(`
+    <div style="background:#EBF3EF; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
+      <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Application Approved &#10004;</p>
+      <p style="margin:4px 0 0; font-size:20px; font-weight:700; color:#1D211F;">Welcome to Aurelle Wholesale</p>
+    </div>
+
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      Dear ${displayName},
+    </p>
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      We are pleased to inform you that your B2B wholesale account application for <strong>${companyName}</strong> has been officially approved!
+    </p>
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 20px;">
+      Your account is now active and has access to verified wholesale pricing, starter MOQs, and dedicated commercial trade features.
+    </p>
+
+    <div style="background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:16px 20px; margin-bottom:24px;">
+      <p style="font-size:13px; font-weight:700; color:#183D2B; margin:0 0 8px;">Account Sign In Details</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Company:</strong> ${companyName}</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Email:</strong> ${email}</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Password:</strong> The password you created during registration</p>
+      <p style="font-size:13px; color:#1D211F; margin:0;"><strong>Account Type:</strong> Wholesale Customer</p>
+    </div>
+
+    <div style="text-align:center; margin-bottom:24px;">
+      <a href="${destinationUrl}" class="btn" style="background:#183D2B; color:#ffffff; padding:14px 32px; text-decoration:none; font-size:14px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.5px;">
+        Access Wholesale Account
+      </a>
+    </div>
+
+    <p style="font-size:12px; color:#8C938F; text-align:center; margin:0;">
+      If you ever need to reset your password, click "Forgot Password" on the sign in page.
+    </p>
+  `);
+
+  return sendBrevoEmail({
+    to: [{ email, name: displayName }],
+    subject: `Application Approved — Welcome to Aurelle Wholesale (${companyName})`,
+    htmlContent,
+  });
+}
+
+
 
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check, X, ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
@@ -23,6 +24,9 @@ export default function AccountAuthModal({
   defaultFullName = "",
   onSuccess,
 }: AccountAuthModalProps) {
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams ? (searchParams.get("redirect") || searchParams.get("next")) : null;
+
   const [mode, setMode] = useState<AuthMode>("login");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -137,7 +141,13 @@ export default function AccountAuthModal({
             if (onSuccess) {
               onSuccess();
             } else {
-              window.location.assign("/wholesale");
+              const target =
+                redirectParam &&
+                redirectParam.startsWith("/") &&
+                !redirectParam.startsWith("//")
+                  ? redirectParam
+                  : "/wholesale";
+              window.location.assign(target);
             }
             return;
           }
@@ -147,7 +157,13 @@ export default function AccountAuthModal({
         if (onSuccess) {
           onSuccess();
         } else {
-          window.location.assign("/");
+          const target =
+            redirectParam &&
+            redirectParam.startsWith("/") &&
+            !redirectParam.startsWith("//")
+              ? redirectParam
+              : "/account";
+          window.location.assign(target);
         }
       }
     } catch (authError) {

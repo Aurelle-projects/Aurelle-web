@@ -18,7 +18,7 @@ const PROTECTED_ROUTES = ["/account"];
 const ADMIN_ROUTES = ["/admin"];
 
 // Routes that require wholesale approval
-const WHOLESALE_PORTAL_ROUTES = ["/wholesale/portal"];
+const WHOLESALE_PORTAL_ROUTES = ["/wholesale/portal", "/wholesale/account"];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -99,6 +99,29 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/login") || pathname.startsWith("/signup");
 
   if (isAuthPage && user) {
+    const redirectParam =
+      request.nextUrl.searchParams.get("redirect") ||
+      request.nextUrl.searchParams.get("next");
+
+    if (
+      redirectParam &&
+      redirectParam.startsWith("/") &&
+      !redirectParam.startsWith("//")
+    ) {
+      return NextResponse.redirect(new URL(redirectParam, request.url));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "wholesale_customer") {
+      return NextResponse.redirect(new URL("/wholesale", request.url));
+    }
+
     return NextResponse.redirect(new URL("/account", request.url));
   }
 

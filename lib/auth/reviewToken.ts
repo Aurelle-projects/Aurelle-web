@@ -2,7 +2,6 @@ import crypto from "crypto";
 
 const SECRET =
   process.env.SUPABASE_SECRET_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.BREVO_API_KEY ||
   "aurelle-secure-delivery-review-token-key-2026";
 

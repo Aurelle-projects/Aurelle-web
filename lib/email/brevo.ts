@@ -706,8 +706,8 @@ export async function sendWholesaleApplicationReceivedEmail(data: {
       <p style="font-size:13px; color:#183D2B; font-weight:700; margin:0 0 6px; text-transform:uppercase; letter-spacing:0.5px;">What Happens Next?</p>
       <ul style="margin:0; padding-left:20px; font-size:13px; color:#5C6460; line-height:1.7;">
         <li>Our team will verify your business credentials.</li>
-        <li>Once approved, you will receive an account activation email with login instructions.</li>
-        <li>You will gain access to wholesale tier pricing and commercial ordering capabilities.</li>
+        <li>You created your account password during registration. Please keep it secure.</li>
+        <li>Upon approval, you can sign in using <strong>${email}</strong> and the password created during registration.</li>
       </ul>
     </div>
 
@@ -729,12 +729,11 @@ export async function sendWholesaleApprovalEmail(data: {
   email: string;
   companyName: string;
   contactPerson: string;
-  setupUrl?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const { email, companyName, contactPerson, setupUrl } = data;
+  const { email, companyName, contactPerson } = data;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
   const displayName = contactPerson?.trim() || "Valued Partner";
-  const destinationUrl = setupUrl || `${siteUrl}/login?redirect=/wholesale`;
+  const destinationUrl = `${siteUrl}/login?redirect=/wholesale`;
 
   const htmlContent = emailWrapper(`
     <div style="background:#EBF3EF; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
@@ -746,17 +745,18 @@ export async function sendWholesaleApprovalEmail(data: {
       Dear ${displayName},
     </p>
     <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
-      We are delighted to inform you that your B2B wholesale account application for <strong>${companyName}</strong> has been officially approved!
+      We are pleased to inform you that your B2B wholesale account application for <strong>${companyName}</strong> has been officially approved!
     </p>
     <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 20px;">
-      Your account now has access to verified wholesale pricing, low starter MOQs, and dedicated B2B commercial features.
+      Your account is now active and has access to verified wholesale pricing, starter MOQs, and dedicated commercial trade features.
     </p>
 
     <div style="background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:16px 20px; margin-bottom:24px;">
-      <p style="font-size:13px; font-weight:700; color:#183D2B; margin:0 0 8px;">Account Details</p>
+      <p style="font-size:13px; font-weight:700; color:#183D2B; margin:0 0 8px;">Account Sign In Details</p>
       <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Company:</strong> ${companyName}</p>
-      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Email Login:</strong> ${email}</p>
-      <p style="font-size:13px; color:#1D211F; margin:0;"><strong>Account Role:</strong> Wholesale Customer</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Email:</strong> ${email}</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Password:</strong> The password you created during registration</p>
+      <p style="font-size:13px; color:#1D211F; margin:0;"><strong>Account Type:</strong> Wholesale Customer</p>
     </div>
 
     <div style="text-align:center; margin-bottom:24px;">
@@ -766,13 +766,13 @@ export async function sendWholesaleApprovalEmail(data: {
     </div>
 
     <p style="font-size:12px; color:#8C938F; text-align:center; margin:0;">
-      If you need to set or reset your password, click "Forgot Password" on the sign in page.
+      If you ever need to reset your password, click "Forgot Password" on the sign in page.
     </p>
   `);
 
   return sendBrevoEmail({
     to: [{ email, name: displayName }],
-    subject: `Congratulations! Your Aurelle Wholesale Account is Approved — ${companyName}`,
+    subject: `Application Approved — Welcome to Aurelle Wholesale (${companyName})`,
     htmlContent,
   });
 }

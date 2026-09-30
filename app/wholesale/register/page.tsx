@@ -28,6 +28,8 @@ export default function WholesaleRegisterPage() {
     expectedOrderVolume: "50-200 Units / Month",
     tradeLicenseUrl: "",
     notes: "",
+    password: "",
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -50,6 +52,18 @@ export default function WholesaleRegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Password and confirm password do not match.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/wholesale/register", {
@@ -122,7 +136,7 @@ export default function WholesaleRegisterPage() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-[#183D2B] font-bold">2.</span>
-                <span>Upon approval, an account activation link is sent to <strong className="text-[#1D211F]">{formData.email}</strong>.</span>
+                <span>Upon approval, your account for <strong className="text-[#1D211F]">{formData.email}</strong> will be activated. You can sign in using your email and the password created during registration.</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-[#183D2B] font-bold">3.</span>
@@ -337,7 +351,7 @@ export default function WholesaleRegisterPage() {
                       value={formData.tradeLicenseUrl}
                       onChange={handleChange}
                       placeholder="e.g. License #1234567 or document URL"
-                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-white focus:ring-1 focus:ring-[#183D2B]/20"
+                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
                     />
                   </div>
 
@@ -351,10 +365,55 @@ export default function WholesaleRegisterPage() {
                       value={formData.notes}
                       onChange={handleChange}
                       placeholder="Specify targeted brands, preferred delivery timelines, or specific store locations..."
-                      className="w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] p-3 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-white focus:ring-1 focus:ring-[#183D2B]/20"
+                      className="w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] p-3 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Section 4: Create Account Password */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#183D2B] mb-4 pb-2 border-b border-[#EDE9DF] flex items-center gap-2">
+                  <ShieldCheck size={16} />
+                  4. Account Security (Create Password)
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1D211F] mb-1.5">
+                      Create Account Password *
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      minLength={6}
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Minimum 6 characters"
+                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1D211F] mb-1.5">
+                      Confirm Password *
+                    </label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      required
+                      minLength={6}
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Re-enter password"
+                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] text-[#5C6460]">
+                  This password will be used to log into your Aurelle Wholesale account once approved by admin.
+                </p>
               </div>
 
               {/* Submission CTA */}

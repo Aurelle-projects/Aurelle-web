@@ -8,6 +8,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  let newlyCreatedAuthUserId: string | null = null;
+  const admin = createAdminClient();
+
   try {
     const body = await request.json();
     const {
@@ -20,6 +23,8 @@ export async function POST(request: Request) {
       expectedOrderVolume,
       tradeLicenseUrl,
       notes,
+      password,
+      confirmPassword,
     } = body;
 
     // ─── 1. Validation ──────────────────────────────────────────────────────────
@@ -51,6 +56,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long." },
+        { status: 400 }
+      );
+    }
+
+    if (password !== confirmPassword) {
+      return NextResponse.json(
+        { error: "Password and confirm password do not match." },
+        { status: 400 }
+      );
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
     const cleanCompanyName = companyName.trim();
     const cleanContactPerson = contactPerson.trim();
@@ -58,11 +77,9 @@ export async function POST(request: Request) {
     const cleanCountry = country?.trim() || "United Arab Emirates";
     const cleanBusinessType = businessType?.trim() || "Wholesale Retailer";
 
-    const admin = createAdminClient();
+    // ─── 2. Existing Account Checks (Rules A, B, C, D) ─────────────────────────
 
-    // ─── 2. Duplicate Handling (Phase 7 Requirements) ───────────────────────────
-
-    // Check existing profiles for this email
+    // Check existing profile in database
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existingProfile } = await (admin as any)
       .from("profiles")
@@ -74,17 +91,37 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "An active wholesale customer account already exists for this email. Please log in.",
+            "An active wholesale account already exists for this email address. Please log in.",
         },
         { status: 400 }
       );
     }
 
-    // Check existing applications for this email
+    if (existingProfile?.role === "wholesale_pending") {
+      return NextResponse.json(
+        {
+          error:
+            "Your wholesale application is already pending admin review.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (existingProfile?.role === "customer") {
+      return NextResponse.json(
+        {
+          error:
+            "An account with this email address already exists as a retail customer account. Please use a distinct business email address for wholesale registration.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check existing wholesale applications
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existingApps } = await (admin as any)
       .from("wholesale_applications")
-      .select("id, status, created_at")
+      .select("id, status")
       .ilike("email", normalizedEmail)
       .order("created_at", { ascending: false });
 
@@ -98,33 +135,91 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error:
-              "A wholesale application for this email address is currently pending review. Our team will contact you shortly.",
-          },
-          { status: 400 }
-        );
-      }
-
-      const activeApproved = existingApps.find(
-        (app: { status: string }) => app.status === "approved"
-      );
-
-      if (activeApproved) {
-        return NextResponse.json(
-          {
-            error:
-              "An approved wholesale application already exists for this email address. Please sign in.",
+              "Your wholesale application is already pending admin review.",
           },
           { status: 400 }
         );
       }
     }
 
-    // ─── 3. Store Application as PENDING ────────────────────────────────────────
+    // Also check auth.users directly to prevent duplicate auth user creation
+    const { data: usersList } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    const existingAuthUser = usersList?.users?.find(
+      (u) => u.email?.toLowerCase() === normalizedEmail
+    );
+
+    if (existingAuthUser) {
+      return NextResponse.json(
+        {
+          error:
+            "An account with this email address already exists. Please sign in or use a different business email address.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ─── 3. Create Supabase Auth User with Chosen Password ──────────────────────
+    const { data: newUserData, error: createAuthError } =
+      await admin.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: cleanContactPerson,
+          company_name: cleanCompanyName,
+          phone: cleanPhone,
+          is_wholesale: true,
+        },
+      });
+
+    if (createAuthError || !newUserData.user) {
+      console.error("[Wholesale Register API] createUser error:", createAuthError);
+      return NextResponse.json(
+        {
+          error:
+            createAuthError?.message ||
+            "Failed to create authentication credentials. Please try again.",
+        },
+        { status: 400 }
+      );
+    }
+
+    newlyCreatedAuthUserId = newUserData.user.id;
+
+    // ─── 4. Set Profile Role to 'wholesale_pending' ─────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: profileError } = await (admin as any)
+      .from("profiles")
+      .upsert({
+        id: newlyCreatedAuthUserId,
+        email: normalizedEmail,
+        full_name: cleanContactPerson,
+        phone: cleanPhone,
+        role: "wholesale_pending",
+        updated_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      console.error("[Wholesale Register API] Profile setup error:", profileError);
+      // Rollback Auth user if profile setup fails
+      await admin.auth.admin.deleteUser(newlyCreatedAuthUserId).catch((e) =>
+        console.error("[Rollback] Delete user error:", e)
+      );
+      return NextResponse.json(
+        { error: "Failed to initialize wholesale application profile." },
+        { status: 500 }
+      );
+    }
+
+    // ─── 5. Insert wholesale_applications Record ────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: newApp, error: insertError } = await (admin as any)
       .from("wholesale_applications")
       .insert({
-        user_id: existingProfile?.id || null,
+        user_id: newlyCreatedAuthUserId,
         business_name: cleanCompanyName,
         contact_person: cleanContactPerson,
         email: normalizedEmail,
@@ -140,14 +235,19 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) {
-      console.error("[Wholesale Register API] Insert error:", insertError);
+      console.error("[Wholesale Register API] Application insert error:", insertError);
+      // Rollback Auth user if application insertion fails
+      await admin.auth.admin.deleteUser(newlyCreatedAuthUserId).catch((e) =>
+        console.error("[Rollback] Delete user error:", e)
+      );
       return NextResponse.json(
         { error: insertError.message || "Failed to submit B2B application." },
         { status: 500 }
       );
     }
 
-    // ─── 4. Send Confirmation & Admin Notification Email (Non-blocking) ─────────
+    // ─── 6. Send Transactional Emails (Non-blocking) ────────────────────────────
+    // Notice: Brevo email failures do NOT trigger Auth user deletion (Section 6 requirement)
     try {
       sendAdminWholesaleEnquiryNotificationEmail({
         contactPerson: cleanContactPerson,
@@ -168,18 +268,19 @@ export async function POST(request: Request) {
       console.warn("[Wholesale Register API] Email notification warning:", emailErr);
     }
 
-    const isExistingRetailUser = existingProfile?.role === "customer";
-    const responseMessage = isExistingRetailUser
-      ? "Your wholesale application has been submitted for admin review. Your existing retail account will be upgraded upon approval."
-      : "Your wholesale registration application has been submitted successfully and is pending admin review.";
-
     return NextResponse.json({
       success: true,
       applicationId: newApp?.id,
-      message: responseMessage,
+      message:
+        "Your wholesale registration application has been submitted successfully with account password setup and is pending admin review.",
     });
   } catch (error: any) {
     console.error("[Wholesale Register API exception]:", error);
+    if (newlyCreatedAuthUserId) {
+      await admin.auth.admin.deleteUser(newlyCreatedAuthUserId).catch((e) =>
+        console.error("[Rollback] Delete user error on exception:", e)
+      );
+    }
     return NextResponse.json(
       { error: error?.message || "Internal server error." },
       { status: 500 }

@@ -110,12 +110,38 @@ export default function AccountAuthModal({
         }
       } else {
         // Standard Sign In
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) throw signInError;
+
+        if (authData?.user) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: profile } = await (supabase as any)
+            .from("profiles")
+            .select("role")
+            .eq("id", authData.user.id)
+            .maybeSingle();
+
+          if (profile?.role === "wholesale_pending") {
+            setMessage(
+              "Your wholesale account application is currently pending admin review. You will receive an email notification once your application is approved."
+            );
+            return;
+          }
+
+          if (profile?.role === "wholesale_customer") {
+            onClose();
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              window.location.assign("/wholesale");
+            }
+            return;
+          }
+        }
 
         onClose();
         if (onSuccess) {

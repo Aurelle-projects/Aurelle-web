@@ -201,98 +201,73 @@ export async function PATCH(request: Request) {
     }
 
     let authUserId: string | null = application.user_id || null;
-    let setupUrl: string | undefined;
 
     // 3. Handle Admin Approval Action
     if (status === "approved") {
       const normalizedEmail = application.email.trim().toLowerCase();
 
-      // Check if Supabase Auth user already exists
-      const { data: usersList } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-
-      const existingAuthUser = usersList?.users?.find(
-        (u) => u.email?.toLowerCase() === normalizedEmail
-      );
-
-      if (!existingAuthUser) {
-        // Create Supabase Auth user securely with email_confirm: true (no default unconfirmed login)
-        const randomTempPassword = `AurW_${Math.random().toString(36).slice(2, 10)}${Math.floor(Math.random() * 899 + 100)}!`;
-        const { data: createdUserData, error: createUserError } =
-          await admin.auth.admin.createUser({
-            email: normalizedEmail,
-            password: randomTempPassword,
-            email_confirm: true,
-            user_metadata: {
-              full_name: application.contact_person,
-              company_name: application.business_name,
-              phone: application.phone,
-              is_wholesale: true,
-            },
-          });
-
-        if (createUserError || !createdUserData.user) {
-          console.error("[Admin Wholesale Approval] createUser error:", createUserError);
-          return NextResponse.json(
-            { error: createUserError?.message || "Failed to create wholesale auth account." },
-            { status: 500 }
-          );
-        }
-
-        authUserId = createdUserData.user.id;
-
-        // Generate password setup / recovery link via Supabase Auth admin
-        try {
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
-          const { data: linkData } = await admin.auth.admin.generateLink({
-            type: "recovery",
-            email: normalizedEmail,
-            options: {
-              redirectTo: `${siteUrl}/login?setup=true`,
-            },
-          });
-          if (linkData?.properties?.action_link) {
-            setupUrl = linkData.properties.action_link;
-          }
-        } catch (linkErr) {
-          console.warn("[Admin Wholesale Approval] generateLink error:", linkErr);
-        }
-      } else {
-        authUserId = existingAuthUser.id;
-      }
-
-      // 4. Update / Upsert Profile with wholesale_customer role
-      if (authUserId) {
+      // If user_id is missing (legacy application record), look up by email in profiles/auth
+      if (!authUserId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: profileError } = await (admin as any)
+        const { data: existingProfile } = await (admin as any)
           .from("profiles")
-          .upsert({
-            id: authUserId,
-            email: normalizedEmail,
-            full_name: application.contact_person || application.business_name,
-            phone: application.phone,
-            role: "wholesale_customer",
-            updated_at: new Date().toISOString(),
-          });
+          .select("id")
+          .ilike("email", normalizedEmail)
+          .maybeSingle();
 
-        if (profileError) {
-          console.error("[Admin Wholesale Approval] Profile update error:", profileError);
-          return NextResponse.json(
-            { error: "Failed to set user role to wholesale_customer." },
-            { status: 500 }
+        if (existingProfile?.id) {
+          authUserId = existingProfile.id;
+        } else {
+          const { data: usersList } = await admin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const existingAuthUser = usersList?.users?.find(
+            (u) => u.email?.toLowerCase() === normalizedEmail
           );
+          if (existingAuthUser) {
+            authUserId = existingAuthUser.id;
+          }
         }
       }
 
-      // 5. Send Approval Email via Brevo (Non-blocking: email failure will NOT revert account approval)
+      if (!authUserId) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot approve application: No linked authentication account found for this application.",
+          },
+          { status: 400 }
+        );
+      }
+
+      // 4. Elevate Profile Role to 'wholesale_customer'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (admin as any)
+        .from("profiles")
+        .upsert({
+          id: authUserId,
+          email: normalizedEmail,
+          full_name: application.contact_person || application.business_name,
+          phone: application.phone,
+          role: "wholesale_customer",
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error("[Admin Wholesale Approval] Profile update error:", profileError);
+        return NextResponse.json(
+          { error: "Failed to update profile role to wholesale_customer." },
+          { status: 500 }
+        );
+      }
+
+      // 5. Send Approval Email via Brevo (Non-blocking)
       try {
         await sendWholesaleApprovalEmail({
           email: normalizedEmail,
           companyName: application.business_name,
           contactPerson: application.contact_person,
-          setupUrl,
         });
       } catch (emailErr) {
         console.error("[Admin Wholesale Approval] Brevo email failure:", emailErr);

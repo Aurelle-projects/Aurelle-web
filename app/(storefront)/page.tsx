@@ -11,6 +11,7 @@ import BrandShowcase from "@/components/storefront/BrandShowcase";
 import HomeBanners from "@/components/storefront/HomeBanners";
 import TopRatedProducts from "@/components/storefront/TopRatedProducts";
 import AllProductsSection from "@/components/storefront/AllProductsSection";
+import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
 
 export const metadata: Metadata = {
   title: "Aurelle — Everyday Essentials. Elevated.",
@@ -283,7 +284,6 @@ export default async function HomePage() {
 
    
 
-      {/* ─── 7. Promotional Dual Banners ──── */}
       <PromoBanners
         leftTagline={promoSettings.left?.tagline}
         leftTitle={promoSettings.left?.title}
@@ -298,6 +298,9 @@ export default async function HomePage() {
         rightBtnLink={promoSettings.right?.btn_link}
         rightImageUrl={promoSettings.right?.image_url || null}
       />
+
+      {/* ─── 8. B2B Wholesale Entry Point ──── */}
+      <B2BHomeCTASection />
 
       <AllProductsSection initialProducts={allProducts as any[]} />
 

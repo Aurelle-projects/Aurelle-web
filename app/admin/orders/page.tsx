@@ -277,14 +277,22 @@ function OrdersContent() {
 
         {/* No filter results */}
         {!loading && orders.length > 0 && filtered.length === 0 && (
-          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs p-8 text-center">
-            <p className="text-xs text-[#5C6460]">No orders match your current filters.</p>
-            <button
-              onClick={() => { setSearchTerm(""); setStatusFilter("all"); setChannelFilter("all"); }}
-              className="mt-2 text-xs font-bold text-[#183D2B] hover:underline cursor-pointer"
-            >
-              Clear Filters
-            </button>
+          <div className="bg-white rounded-lg border border-[#DCCFB9]/60 shadow-xs p-8 text-center space-y-2">
+            <p className="text-xs text-[#5C6460]">
+              {channelFilter === "wholesale"
+                ? "No wholesale commercial orders placed yet. Account applications and trade enquiries are managed under B2B Wholesale in the sidebar."
+                : channelFilter === "retail"
+                ? "No retail orders match your current filters."
+                : "No orders match your current filters."}
+            </p>
+            <div>
+              <button
+                onClick={() => { setSearchTerm(""); setStatusFilter("all"); setChannelFilter("all"); }}
+                className="text-xs font-bold text-[#183D2B] hover:underline cursor-pointer"
+              >
+                Clear Filters
+              </button>
+            </div>
           </div>
         )}
 

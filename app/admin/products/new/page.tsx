@@ -70,6 +70,12 @@ export default function NewProductPage() {
     retail_price: "",
     compare_at_price: "",
     wholesale_price: "",
+    wholesale_unit_price: "",
+    wholesale_unit_enabled: true,
+    wholesale_box_enabled: false,
+    wholesale_units_per_box: "24",
+    wholesale_box_price: "",
+    wholesale_custom_quantity_enabled: true,
     wholesale_moq: "12",
     stock_quantity: "50",
     low_stock_threshold: "5",
@@ -390,22 +396,135 @@ export default function NewProductPage() {
                     className="w-full h-10 pl-14 pr-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#5C6460] outline-none" />
                 </div>
               </div>
-              <div className="pt-3 border-t border-[#DCCFB9]/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#C9A84C]">B2B Wholesale</span>
-                  <span className="text-[10px] text-[#5C6460]">For licensed trade</span>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase mb-1">Wholesale Price (AED)</label>
-                  <input type="number" step="0.01" name="wholesale_price" value={formData.wholesale_price} onChange={handleChange} placeholder="65.00"
-                    className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#C9A84C] outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase mb-1">Wholesale MOQ</label>
-                  <input type="number" name="wholesale_moq" value={formData.wholesale_moq} onChange={handleChange}
-                    className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none" />
-                </div>
+            {/* Wholesale Selling Configuration */}
+            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-[#DCCFB9]/30 pb-2">
+                <h2 className="text-sm font-bold text-[#183D2B] uppercase tracking-wider">Wholesale Selling Configuration</h2>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#183D2B]">
+                  <input
+                    type="checkbox"
+                    name="is_wholesale_available"
+                    checked={formData.is_wholesale_available}
+                    onChange={handleChange}
+                    className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                  />
+                  <span>Enable B2B Wholesale</span>
+                </label>
               </div>
+
+              {formData.is_wholesale_available ? (
+                <div className="space-y-4 pt-1">
+                  {/* Single Unit Option */}
+                  <div className="p-3.5 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0] space-y-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#14231B]">
+                      <input
+                        type="checkbox"
+                        name="wholesale_unit_enabled"
+                        checked={formData.wholesale_unit_enabled}
+                        onChange={handleChange}
+                        className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Sell by Single Unit / Piece</span>
+                    </label>
+
+                    {formData.wholesale_unit_enabled && (
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Wholesale Unit Price (AED)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8E9590]">AED</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            name="wholesale_unit_price"
+                            value={formData.wholesale_unit_price || formData.wholesale_price}
+                            onChange={(e) => {
+                              handleChange(e);
+                              setFormData((prev) => ({ ...prev, wholesale_price: e.target.value }));
+                            }}
+                            placeholder="15.00"
+                            className="w-full h-9 pl-12 pr-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#183D2B] outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Full Box Option */}
+                  <div className="p-3.5 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0] space-y-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#14231B]">
+                      <input
+                        type="checkbox"
+                        name="wholesale_box_enabled"
+                        checked={formData.wholesale_box_enabled}
+                        onChange={handleChange}
+                        className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Sell by Full Box / Carton</span>
+                    </label>
+
+                    {formData.wholesale_box_enabled && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Units Per Box</label>
+                          <input
+                            type="number"
+                            min="1"
+                            name="wholesale_units_per_box"
+                            value={formData.wholesale_units_per_box}
+                            onChange={handleChange}
+                            placeholder="24"
+                            className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#14231B] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Wholesale Box Price (AED)</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8E9590]">AED</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              name="wholesale_box_price"
+                              value={formData.wholesale_box_price}
+                              onChange={handleChange}
+                              placeholder="320.00"
+                              className="w-full h-9 pl-12 pr-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#183D2B] outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custom Quantity Option */}
+                  <div className="p-3.5 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0] space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#14231B]">
+                      <input
+                        type="checkbox"
+                        name="wholesale_custom_quantity_enabled"
+                        checked={formData.wholesale_custom_quantity_enabled}
+                        onChange={handleChange}
+                        className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Allow Custom Quantity Purchasing (Applies Price Tiers)</span>
+                    </label>
+                  </div>
+
+                  {/* MOQ */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Default Wholesale Minimum Order Qty (MOQ)</label>
+                    <input
+                      type="number"
+                      name="wholesale_moq"
+                      value={formData.wholesale_moq}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-bold text-[#1D211F] outline-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[#8E9590] italic">Wholesale ordering is disabled for this product.</p>
+              )}
+            </div>
             </div>
 
             {/* Inventory */}

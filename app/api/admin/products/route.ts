@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
       retail_price, compare_at_price, wholesale_price, wholesale_moq,
+      wholesale_unit_enabled, wholesale_unit_price,
+      wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
+      wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
       stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
@@ -50,8 +53,37 @@ export async function POST(req: NextRequest) {
     if (!name?.trim()) {
       return NextResponse.json({ error: "Product name is required." }, { status: 400 });
     }
-    if (!retail_price || isNaN(Number(retail_price))) {
+    if (!retail_price || isNaN(Number(retail_price)) || Number(retail_price) < 0) {
       return NextResponse.json({ error: "Valid retail price is required." }, { status: 400 });
+    }
+
+    const isWs = !!is_wholesale_available;
+    const wsUnitEnabled = isWs ? (wholesale_unit_enabled !== undefined ? !!wholesale_unit_enabled : true) : true;
+    const wsBoxEnabled = isWs ? !!wholesale_box_enabled : false;
+    const wsCustomEnabled = isWs ? (wholesale_custom_quantity_enabled !== undefined ? !!wholesale_custom_quantity_enabled : true) : true;
+
+    const wsUnitPriceVal = wholesale_unit_price !== undefined && wholesale_unit_price !== "" && wholesale_unit_price !== null
+      ? parseFloat(wholesale_unit_price)
+      : (wholesale_price !== undefined && wholesale_price !== "" && wholesale_price !== null ? parseFloat(wholesale_price) : null);
+
+    const wsBoxPriceVal = wholesale_box_price !== undefined && wholesale_box_price !== "" && wholesale_box_price !== null ? parseFloat(wholesale_box_price) : null;
+    const wsUnitsPerBoxVal = wholesale_units_per_box !== undefined && wholesale_units_per_box !== "" && wholesale_units_per_box !== null ? parseInt(wholesale_units_per_box, 10) : null;
+
+    if (isWs) {
+      if (!wsUnitEnabled && !wsBoxEnabled && !wsCustomEnabled) {
+        return NextResponse.json({ error: "At least one wholesale purchasing method (Single Unit, Full Box, or Custom Quantity) must be enabled." }, { status: 400 });
+      }
+      if (wsUnitEnabled && (wsUnitPriceVal === null || isNaN(wsUnitPriceVal) || wsUnitPriceVal < 0)) {
+        return NextResponse.json({ error: "A valid non-negative wholesale unit price is required when Single Unit selling is enabled." }, { status: 400 });
+      }
+      if (wsBoxEnabled) {
+        if (!wsUnitsPerBoxVal || isNaN(wsUnitsPerBoxVal) || wsUnitsPerBoxVal <= 0) {
+          return NextResponse.json({ error: "Units per box must be a positive integer when Full Box selling is enabled." }, { status: 400 });
+        }
+        if (wsBoxPriceVal === null || isNaN(wsBoxPriceVal) || wsBoxPriceVal < 0) {
+          return NextResponse.json({ error: "A valid non-negative wholesale box price is required when Full Box selling is enabled." }, { status: 400 });
+        }
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,13 +125,19 @@ export async function POST(req: NextRequest) {
         usage_instructions: usage_instructions || null,
         retail_price: parseFloat(retail_price),
         compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
-        wholesale_price: wholesale_price ? parseFloat(wholesale_price) : null,
+        wholesale_price: wsUnitPriceVal ?? (wsBoxPriceVal && wsUnitsPerBoxVal ? wsBoxPriceVal / wsUnitsPerBoxVal : null),
         wholesale_moq: parseInt(wholesale_moq) || 1,
+        wholesale_unit_enabled: wsUnitEnabled,
+        wholesale_unit_price: wsUnitPriceVal,
+        wholesale_box_enabled: wsBoxEnabled,
+        wholesale_units_per_box: wsUnitsPerBoxVal,
+        wholesale_box_price: wsBoxPriceVal,
+        wholesale_custom_quantity_enabled: wsCustomEnabled,
         is_published: !!is_published,
         is_featured: !!is_featured,
         is_best_seller: !!is_best_seller,
         is_new_arrival: !!is_new_arrival,
-        is_wholesale_available: !!is_wholesale_available,
+        is_wholesale_available: isWs,
         status: is_published ? "published" : "draft",
       })
       .select("id")
@@ -169,6 +207,9 @@ export async function PATCH(req: NextRequest) {
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
       retail_price, compare_at_price, wholesale_price, wholesale_moq,
+      wholesale_unit_enabled, wholesale_unit_price,
+      wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
+      wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
       stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
@@ -176,6 +217,35 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "Product ID is required." }, { status: 400 });
+    }
+
+    const isWs = is_wholesale_available !== undefined ? !!is_wholesale_available : true;
+    const wsUnitEnabled = wholesale_unit_enabled !== undefined ? !!wholesale_unit_enabled : true;
+    const wsBoxEnabled = wholesale_box_enabled !== undefined ? !!wholesale_box_enabled : false;
+    const wsCustomEnabled = wholesale_custom_quantity_enabled !== undefined ? !!wholesale_custom_quantity_enabled : true;
+
+    const wsUnitPriceVal = wholesale_unit_price !== undefined && wholesale_unit_price !== "" && wholesale_unit_price !== null
+      ? parseFloat(wholesale_unit_price)
+      : (wholesale_price !== undefined && wholesale_price !== "" && wholesale_price !== null ? parseFloat(wholesale_price) : null);
+
+    const wsBoxPriceVal = wholesale_box_price !== undefined && wholesale_box_price !== "" && wholesale_box_price !== null ? parseFloat(wholesale_box_price) : null;
+    const wsUnitsPerBoxVal = wholesale_units_per_box !== undefined && wholesale_units_per_box !== "" && wholesale_units_per_box !== null ? parseInt(wholesale_units_per_box, 10) : null;
+
+    if (isWs) {
+      if (!wsUnitEnabled && !wsBoxEnabled && !wsCustomEnabled) {
+        return NextResponse.json({ error: "At least one wholesale purchasing method (Single Unit, Full Box, or Custom Quantity) must be enabled." }, { status: 400 });
+      }
+      if (wsUnitEnabled && (wsUnitPriceVal === null || isNaN(wsUnitPriceVal) || wsUnitPriceVal < 0)) {
+        return NextResponse.json({ error: "A valid non-negative wholesale unit price is required when Single Unit selling is enabled." }, { status: 400 });
+      }
+      if (wsBoxEnabled) {
+        if (!wsUnitsPerBoxVal || isNaN(wsUnitsPerBoxVal) || wsUnitsPerBoxVal <= 0) {
+          return NextResponse.json({ error: "Units per box must be a positive integer when Full Box selling is enabled." }, { status: 400 });
+        }
+        if (wsBoxPriceVal === null || isNaN(wsBoxPriceVal) || wsBoxPriceVal < 0) {
+          return NextResponse.json({ error: "A valid non-negative wholesale box price is required when Full Box selling is enabled." }, { status: 400 });
+        }
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -206,13 +276,19 @@ export async function PATCH(req: NextRequest) {
       usage_instructions: usage_instructions || null,
       retail_price: parseFloat(retail_price),
       compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
-      wholesale_price: wholesale_price ? parseFloat(wholesale_price) : null,
+      wholesale_price: wsUnitPriceVal ?? (wsBoxPriceVal && wsUnitsPerBoxVal ? wsBoxPriceVal / wsUnitsPerBoxVal : null),
       wholesale_moq: parseInt(wholesale_moq) || 1,
+      wholesale_unit_enabled: wsUnitEnabled,
+      wholesale_unit_price: wsUnitPriceVal,
+      wholesale_box_enabled: wsBoxEnabled,
+      wholesale_units_per_box: wsUnitsPerBoxVal,
+      wholesale_box_price: wsBoxPriceVal,
+      wholesale_custom_quantity_enabled: wsCustomEnabled,
       is_published: !!is_published,
       is_featured: !!is_featured,
       is_best_seller: !!is_best_seller,
       is_new_arrival: !!is_new_arrival,
-      is_wholesale_available: !!is_wholesale_available,
+      is_wholesale_available: isWs,
       status: is_published ? "published" : "draft",
       updated_at: new Date().toISOString(),
     };

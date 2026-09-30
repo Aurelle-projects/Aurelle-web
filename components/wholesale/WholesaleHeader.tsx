@@ -12,9 +12,11 @@ import {
   Settings,
   Package,
   MapPin,
+  ShoppingBag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { useWholesaleCart } from "@/context/WholesaleCartContext";
 
 export interface WholesaleNavBrand {
   id: string;
@@ -67,6 +69,7 @@ export default function WholesaleHeader({
   navBrands = [],
   navCategories = [],
 }: WholesaleHeaderProps) {
+  const wholesaleCart = useWholesaleCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -294,6 +297,20 @@ export default function WholesaleHeader({
 
             {/* Actions: B2B Register, Login, Enquiry Buttons / Authenticated Wholesale State */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Wholesale Cart Icon */}
+              <Link
+                href="/wholesale/cart"
+                className="relative p-2 text-[#14231B] hover:text-[#183D2B] transition-colors"
+                title="Wholesale Cart"
+              >
+                <ShoppingBag size={20} />
+                {wholesaleCart.itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#183D2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {wholesaleCart.itemCount}
+                  </span>
+                )}
+              </Link>
+
               {authLoading ? (
                 <div className="hidden sm:block w-28 h-8 bg-neutral-100 rounded-sm animate-pulse" />
               ) : currentUser && currentProfile?.role === "wholesale_customer" ? (

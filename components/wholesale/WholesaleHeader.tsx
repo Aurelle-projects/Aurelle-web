@@ -7,8 +7,14 @@ import {
   Menu,
   X,
   ChevronDown,
+  User,
+  LogOut,
+  Settings,
+  Package,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
 
 export interface WholesaleNavBrand {
   id: string;
@@ -64,7 +70,107 @@ export default function WholesaleHeader({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const accountDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Auth State
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentProfile, setCurrentProfile] = useState<{
+    full_name?: string;
+    company_name?: string;
+    role?: string;
+    email?: string;
+  } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function loadUserProfile(user: any) {
+      if (!user) {
+        setCurrentProfile(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        // Query valid profiles table columns (id, email, full_name, role)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profileData } = await (supabase as any)
+          .from("profiles")
+          .select("full_name, email, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        let companyName: string | undefined = undefined;
+        if (profileData?.role === "wholesale_customer") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: appData } = await (supabase as any)
+            .from("wholesale_applications")
+            .select("company_name")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (appData?.company_name) {
+            companyName = appData.company_name;
+          }
+        }
+
+        if (profileData) {
+          setCurrentProfile({
+            full_name: profileData.full_name,
+            role: profileData.role,
+            email: profileData.email,
+            company_name: companyName,
+          });
+        } else {
+          setCurrentProfile(null);
+        }
+      } catch (err) {
+        console.error("WholesaleHeader profile load error:", err);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+      loadUserProfile(user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      setCurrentUser(user);
+      loadUserProfile(user);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setCurrentProfile(null);
+    setAccountMenuOpen(false);
+    window.location.assign("/wholesale");
+  };
 
   // Lock scroll when mobile menu is open
   useEffect(() => {
@@ -186,20 +292,107 @@ export default function WholesaleHeader({
               })}
             </nav>
 
-            {/* Actions: B2B Register, Login, Enquiry Buttons */}
+            {/* Actions: B2B Register, Login, Enquiry Buttons / Authenticated Wholesale State */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <Link
-                href="/login?redirect=/wholesale"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/wholesale/register"
-                className="px-3.5 sm:px-4 py-2 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider transition-all text-center whitespace-nowrap"
-              >
-                Register B2B
-              </Link>
+              {authLoading ? (
+                <div className="hidden sm:block w-28 h-8 bg-neutral-100 rounded-sm animate-pulse" />
+              ) : currentUser && currentProfile?.role === "wholesale_customer" ? (
+                <div className="relative" ref={accountDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setAccountMenuOpen((prev) => !prev)}
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#183D2B]/10 hover:bg-[#183D2B]/15 text-[#183D2B] text-xs font-semibold border border-[#183D2B]/20 cursor-pointer transition-colors"
+                  >
+                    <User size={14} className="shrink-0 text-[#183D2B]" />
+                    <span className="max-w-[130px] md:max-w-[170px] truncate">
+                      {currentProfile.full_name || currentProfile.company_name || "Wholesale Partner"}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-wider bg-[#183D2B] text-white px-1.5 py-0.5 rounded-xs font-bold shrink-0">
+                      B2B
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 text-[#183D2B] ${
+                        accountMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {accountMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-sm shadow-xl border border-[#EFEAE0] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="px-4 py-2.5 border-b border-[#EFEAE0] bg-[#FAF8F5]">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8E9590]">
+                          Wholesale Account
+                        </p>
+                        <p className="text-xs font-bold text-[#14231B] truncate mt-0.5">
+                          {currentProfile.full_name || "Wholesale Partner"}
+                        </p>
+                        {currentProfile.company_name && (
+                          <p className="text-xs text-[#183D2B] font-semibold truncate">
+                            {currentProfile.company_name}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          href="/wholesale/account"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#14231B] hover:bg-[#FAF8F5] hover:text-[#183D2B] transition-colors"
+                        >
+                          <Settings size={14} />
+                          <span>Account Settings</span>
+                        </Link>
+                        <Link
+                          href="/wholesale/account?section=orders"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#14231B] hover:bg-[#FAF8F5] hover:text-[#183D2B] transition-colors"
+                        >
+                          <Package size={14} />
+                          <span>Orders</span>
+                        </Link>
+                        <Link
+                          href="/wholesale/account?section=addresses"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs text-[#14231B] hover:bg-[#FAF8F5] hover:text-[#183D2B] transition-colors"
+                        >
+                          <MapPin size={14} />
+                          <span>Saved Addresses</span>
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-[#EFEAE0] pt-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAccountMenuOpen(false);
+                            handleSignOut();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-700 hover:bg-red-50 transition-colors text-left cursor-pointer font-medium"
+                        >
+                          <LogOut size={14} />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/login?redirect=/wholesale"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/wholesale/register"
+                    className="px-3.5 sm:px-4 py-2 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider transition-all text-center whitespace-nowrap"
+                  >
+                    Register B2B
+                  </Link>
+                </>
+              )}
               <Link
                 href="/wholesale/contact"
                 className="px-4 sm:px-5 py-2 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs sm:text-xs font-bold uppercase tracking-wider transition-all shadow-xs hover:shadow-md text-center whitespace-nowrap"
@@ -334,29 +527,90 @@ export default function WholesaleHeader({
                 })}
               </nav>
 
-              <div className="pt-4 border-t border-[#EFEAE0] space-y-2">
-                <Link
-                  href="/wholesale/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider text-center block transition-colors"
-                >
-                  Register B2B Account
-                </Link>
-                <Link
-                  href="/wholesale/contact"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider text-center block shadow-xs transition-colors"
-                >
-                  Enquiry
-                </Link>
-                <Link
-                  href="/login?redirect=/wholesale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2 text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] text-center block"
-                >
-                  Already a wholesale customer? Sign In
-                </Link>
-              </div>
+              {authLoading ? (
+                <div className="pt-4 border-t border-[#EFEAE0]">
+                  <div className="w-full h-10 bg-neutral-100 rounded-sm animate-pulse" />
+                </div>
+              ) : currentUser && currentProfile?.role === "wholesale_customer" ? (
+                <div className="pt-4 border-t border-[#EFEAE0] space-y-2.5">
+                  <div className="p-3 rounded-sm bg-[#183D2B]/10 text-[#183D2B] border border-[#183D2B]/20">
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="shrink-0 text-[#183D2B]" />
+                      <span className="text-xs font-bold truncate">
+                        {currentProfile.full_name || "Wholesale Partner"}
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wider bg-[#183D2B] text-white px-1.5 py-0.5 rounded-xs font-bold ml-auto shrink-0">
+                        B2B
+                      </span>
+                    </div>
+                    {currentProfile.company_name && (
+                      <p className="text-xs font-semibold text-[#183D2B] mt-1 pl-6">
+                        {currentProfile.company_name}
+                      </p>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/wholesale/account"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2 px-3 rounded-sm border border-[#EFEAE0] hover:border-[#183D2B] text-xs font-semibold text-[#14231B] hover:text-[#183D2B] flex items-center gap-2 transition-colors"
+                  >
+                    <Settings size={14} />
+                    <span>Account Settings</span>
+                  </Link>
+                  <Link
+                    href="/wholesale/account?section=orders"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2 px-3 rounded-sm border border-[#EFEAE0] hover:border-[#183D2B] text-xs font-semibold text-[#14231B] hover:text-[#183D2B] flex items-center gap-2 transition-colors"
+                  >
+                    <Package size={14} />
+                    <span>Orders</span>
+                  </Link>
+                  <Link
+                    href="/wholesale/account?section=addresses"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2 px-3 rounded-sm border border-[#EFEAE0] hover:border-[#183D2B] text-xs font-semibold text-[#14231B] hover:text-[#183D2B] flex items-center gap-2 transition-colors"
+                  >
+                    <MapPin size={14} />
+                    <span>Saved Addresses</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      await handleSignOut();
+                    }}
+                    className="w-full py-2 text-xs font-semibold text-red-600 hover:text-red-700 text-center block cursor-pointer"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-4 border-t border-[#EFEAE0] space-y-2">
+                  <Link
+                    href="/wholesale/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2.5 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider text-center block transition-colors"
+                  >
+                    Register B2B Account
+                  </Link>
+                  <Link
+                    href="/wholesale/contact"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2.5 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider text-center block shadow-xs transition-colors"
+                  >
+                    Enquiry
+                  </Link>
+                  <Link
+                    href="/login?redirect=/wholesale"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2 text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] text-center block"
+                  >
+                    Already a wholesale customer? Sign In
+                  </Link>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

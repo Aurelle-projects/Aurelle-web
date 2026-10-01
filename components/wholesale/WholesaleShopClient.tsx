@@ -185,7 +185,6 @@ export default function WholesaleShopClient({
     useState<string>(paramSubcategory);
   const [selectedBrand, setSelectedBrand] = useState<string>(paramBrand);
   const [sortBy, setSortBy] = useState<string>(paramSort);
-  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [productTypeFilters, setProductTypeFilters] = useState<{
     featured: boolean;
     newArrivals: boolean;
@@ -380,15 +379,6 @@ export default function WholesaleShopClient({
       result = result.filter((p) => p.is_best_seller === true);
     }
 
-    // In Stock filter
-    if (inStockOnly) {
-      result = result.filter((p) => {
-        const status =
-          p.inventory?.stock_status ?? p.stock_status ?? "in_stock";
-        return status !== "out_of_stock";
-      });
-    }
-
     // Sorting
     if (sortBy === "featured") {
       result.sort((a, b) => {
@@ -433,7 +423,6 @@ export default function WholesaleShopClient({
     selectedSubcategory,
     selectedBrand,
     productTypeFilters,
-    inStockOnly,
     sortBy,
   ]);
 
@@ -443,7 +432,6 @@ export default function WholesaleShopClient({
     if (selectedCategory !== "all") count++;
     if (selectedSubcategory !== "all") count++;
     if (selectedBrand !== "all") count++;
-    if (inStockOnly) count++;
     if (productTypeFilters.featured) count++;
     if (productTypeFilters.newArrivals) count++;
     if (productTypeFilters.bestSellers) count++;
@@ -452,7 +440,6 @@ export default function WholesaleShopClient({
     selectedCategory,
     selectedSubcategory,
     selectedBrand,
-    inStockOnly,
     productTypeFilters,
   ]);
 
@@ -460,7 +447,6 @@ export default function WholesaleShopClient({
     setSelectedCategory("all");
     setSelectedSubcategory("all");
     setSelectedBrand("all");
-    setInStockOnly(false);
     setProductTypeFilters({
       featured: false,
       newArrivals: false,
@@ -595,21 +581,6 @@ export default function WholesaleShopClient({
           options={brandOptions}
           onChange={setSelectedBrand}
         />
-      </div>
-
-      {/* ── In Stock Only ── */}
-      <div className="pt-2 border-t border-[#EFEAE0]">
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-[#14231B] font-medium select-none group">
-          <input
-            type="checkbox"
-            checked={inStockOnly}
-            onChange={(e) => setInStockOnly(e.target.checked)}
-            className="w-4 h-4 accent-[#183D2B] rounded-sm cursor-pointer"
-          />
-          <span className="group-hover:text-[#183D2B] transition-colors">
-            In Stock Only
-          </span>
-        </label>
       </div>
     </div>
   );

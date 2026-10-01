@@ -70,7 +70,7 @@ export default function AdminProductsPage() {
     <div className="flex flex-col">
       <AdminHeader
         title="Products Catalog"
-        subtitle="Manage retail and wholesale inventory across the 10 official Aurelle categories."
+        subtitle="Manage retail and wholesale products across the 10 official Aurelle categories."
         actionButton={{ label: "New Product", href: "/admin/products/new" }}
         secondaryButton={{ label: "Create Combo Offer", href: "/admin/combos/new" }}
       />
@@ -115,7 +115,6 @@ export default function AdminProductsPage() {
                   <th className="py-2.5 px-3.5">Category</th>
                   <th className="py-2.5 px-3.5">Retail Price</th>
                   <th className="py-2.5 px-3.5">Wholesale Price</th>
-                  <th className="py-2.5 px-3.5">Stock</th>
                   <th className="py-2.5 px-3.5">Status</th>
                   <th className="py-2.5 px-3.5 text-right">Actions</th>
                 </tr>
@@ -123,7 +122,7 @@ export default function AdminProductsPage() {
               <tbody className="divide-y divide-[#DCCFB9]/30 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-[#5C6460]">
+                    <td colSpan={6} className="py-10 text-center text-[#5C6460]">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <div className="w-5 h-5 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin" />
                         <p className="font-semibold text-xs text-[#5C6460]">Loading database products...</p>
@@ -132,7 +131,7 @@ export default function AdminProductsPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-[#5C6460]">
+                    <td colSpan={6} className="py-10 text-center text-[#5C6460]">
                       <Package size={30} className="mx-auto mb-2 text-[#8E9590]" />
                       <p className="font-semibold text-xs">No products found</p>
                       <p className="text-[11px] text-[#8E9590] mt-0.5">
@@ -174,8 +173,6 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-      
-
                       <td className="py-2.5 px-3.5 text-[11px] font-medium text-[#1D211F]">
                         {item.category_name}
                       </td>
@@ -186,20 +183,6 @@ export default function AdminProductsPage() {
 
                       <td className="py-2.5 px-3.5 text-[11px] font-semibold text-[#C9A84C]">
                         {item.wholesale_price ? `AED ${item.wholesale_price}` : "—"}
-                      </td>
-
-                      <td className="py-2.5 px-3.5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10.5px] font-semibold ${
-                            item.stock_quantity > 10
-                              ? "bg-emerald-50 text-emerald-800"
-                              : item.stock_quantity > 0
-                              ? "bg-amber-50 text-amber-800"
-                              : "bg-red-50 text-red-800"
-                          }`}
-                        >
-                          {item.stock_quantity} in stock
-                        </span>
                       </td>
 
                       <td className="py-2.5 px-3.5">
@@ -251,7 +234,7 @@ export default function AdminProductsPage() {
         onConfirm={handleConfirmDelete}
         itemName={deleteTarget?.name}
         itemType="product"
-        warningNote="This product will be permanently removed from inventory and the storefront."
+        warningNote="This product will be permanently removed from the storefront."
         isLoading={!!deletingId}
       />
     </div>

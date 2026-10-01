@@ -58,8 +58,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
             is_wholesale_available, is_published, is_featured, is_best_seller, is_new_arrival,
             brand:brands(name, slug),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status, stock_quantity)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .eq("slug", slug)
           .eq("status", "published")
@@ -96,8 +95,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
                 is_new_arrival, is_featured, is_best_seller,
                 brand:brands(name),
                 category:categories(name, slug),
-                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-                inventory(stock_status)
+                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
               `)
               .eq("status", "published")
               .eq("category_id", p.category_id)

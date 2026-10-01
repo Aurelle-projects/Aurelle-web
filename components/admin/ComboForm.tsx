@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ComboOffer, ComboOfferImage } from "@/types/combo";
-import { getProductStockQuantity, calculateComboAvailability } from "@/lib/products/inventory";
 
 interface ProductOption {
   id: string;
@@ -42,7 +41,6 @@ interface ProductOption {
   brand_id?: string;
   status?: string;
   is_published?: boolean;
-  stock_quantity?: number;
   image_url?: string;
 }
 
@@ -158,8 +156,7 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
               category_id, subcategory_id, brand_id,
               categories ( id, name ),
               brands ( id, name ),
-              product_images ( secure_url, is_primary ),
-              inventory ( stock_quantity )
+              product_images ( secure_url, is_primary )
             `)
             .order("name", { ascending: true }),
           supabase.from("categories").select("id, name").eq("is_active", true).order("name"),
@@ -183,7 +180,6 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
             brand_name: p.brands?.name || "Aurelle",
             status: p.status,
             is_published: p.is_published,
-            stock_quantity: getProductStockQuantity(p.inventory),
             image_url:
               p.product_images?.find((img: any) => img.is_primary)?.secure_url ||
               p.product_images?.[0]?.secure_url ||
@@ -203,7 +199,6 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
                 category_name: it.product?.category?.name,
                 brand_name: it.product?.brand?.name,
                 image_url: it.product?.product_images?.[0]?.secure_url,
-                stock_quantity: getProductStockQuantity(it.product?.inventory),
               };
               return {
                 product_id: it.product_id,
@@ -242,8 +237,7 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
 
       const matchesStatus =
         selectorStatus === "all" ||
-        (selectorStatus === "published" && p.is_published) ||
-        (selectorStatus === "instock" && (p.stock_quantity ?? 0) > 0);
+        (selectorStatus === "published" && p.is_published);
 
       return matchesSearch && matchesCat && matchesBrand && matchesStatus;
     });
@@ -328,28 +322,11 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
     }
   };
 
-  // Pricing & Stock Reference UX Computations
+  // Pricing UX Computations
   const individualTotalValue = useMemo(() => {
     return components.reduce((sum, c) => {
       return sum + (Number(c.product.retail_price) || 0) * c.quantity;
     }, 0);
-  }, [components]);
-
-  const comboStockCalc = useMemo(() => {
-    return calculateComboAvailability(
-      components.map((c) => ({
-        quantity: c.quantity,
-        product_id: c.product_id,
-        product: {
-          id: c.product.id,
-          name: c.product.name,
-          sku: c.product.sku,
-          status: c.product.status,
-          is_published: c.product.is_published,
-          inventory: { stock_quantity: c.product.stock_quantity ?? 0 },
-        },
-      }))
-    );
   }, [components]);
 
   const numComboPrice = Number(price) || 0;
@@ -643,16 +620,6 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
                             <span className="font-mono">{c.product.sku}</span>
                             <span>•</span>
                             <span>AED {c.product.retail_price.toFixed(2)} each</span>
-                            <span>•</span>
-                            <span
-                              className={`px-1.5 py-0.2 rounded-xs text-[10px] font-semibold ${
-                                (c.product.stock_quantity ?? 0) > 0
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-red-50 text-red-700"
-                              }`}
-                            >
-                              Stock: {c.product.stock_quantity ?? 0}
-                            </span>
                           </div>
                         </div>
                       </div>
@@ -712,79 +679,6 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Derived Inventory Stock Breakdown Banner */}
-            {components.length > 0 && (
-              <div className="p-4 bg-[#FAF8F5] border border-[#DCCFB9]/80 rounded-xl space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#DCCFB9]/50 pb-2.5">
-                  <div className="space-y-0.5">
-                    <span className="text-[10.5px] font-bold text-[#C9A84C] uppercase tracking-wider">
-                      Derived Live Inventory
-                    </span>
-                    <h3 className="text-sm font-extrabold text-[#183D2B] flex items-center gap-2">
-                      <span>Available Combos:</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-black ${
-                          comboStockCalc.in_stock
-                            ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                            : "bg-red-100 text-red-900 border border-red-300"
-                        }`}
-                      >
-                        {comboStockCalc.available_stock}{" "}
-                        {comboStockCalc.available_stock === 1 ? "set" : "sets"}
-                      </span>
-                    </h3>
-                  </div>
-                  <span className="text-[11px] text-[#5C6460]">
-                    Calculated server-side from {components.length} component stock levels
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold text-[#183D2B] uppercase tracking-wider">
-                    Component Availability:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {comboStockCalc.components.map((c) => (
-                      <div
-                        key={c.product_id}
-                        className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2 ${
-                          c.in_stock
-                            ? "bg-white border-[#DCCFB9]/70"
-                            : "bg-red-50 border-red-200 text-red-900"
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[#1D211F] truncate flex items-center gap-1">
-                            <span>✓</span>
-                            <span>{c.name}</span>
-                          </p>
-                          <p className="text-[10.5px] text-[#5C6460] mt-0.5">
-                            <strong>{c.available_quantity}</strong> available ({c.required_quantity}×
-                            required)
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold block ${
-                              c.max_combos > 0
-                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                : "bg-red-100 text-red-800 border border-red-200"
-                            }`}
-                          >
-                            {c.max_combos} max
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10.5px] text-[#5C6460] italic pt-1">
-                    Therefore: {comboStockCalc.available_stock} combos currently purchasable on
-                    the retail storefront.
-                  </p>
-                </div>
               </div>
             )}
           </div>
@@ -1144,7 +1038,7 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
                             {prod.name}
                           </p>
                           <p className="text-[11px] text-[#5C6460]">
-                            SKU: <span className="font-mono">{prod.sku}</span> | Category: {prod.category_name} | Stock: {prod.stock_quantity ?? 0}
+                            SKU: <span className="font-mono">{prod.sku}</span> | Category: {prod.category_name}
                           </p>
                         </div>
                       </div>

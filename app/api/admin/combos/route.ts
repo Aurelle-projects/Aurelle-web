@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateComboAvailability } from "@/lib/products/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +56,7 @@ export async function GET() {
             status,
             brands ( name ),
             categories ( name, slug ),
-            product_images ( secure_url, is_primary ),
-            inventory ( stock_quantity, stock_status )
+            product_images ( secure_url, is_primary )
           )
         )
       `)
@@ -100,8 +98,6 @@ export async function GET() {
       const savingsPercent =
         individualTotal > 0 ? Math.round((savings / individualTotal) * 100) : 0;
 
-      const stockCalc = calculateComboAvailability(items);
-
       return {
         ...combo,
         price: comboPrice,
@@ -110,9 +106,6 @@ export async function GET() {
         total_individual_price: individualTotal,
         savings_amount: savings,
         savings_percentage: savingsPercent,
-        in_stock: stockCalc.in_stock,
-        available_stock: stockCalc.available_stock,
-        component_stock_breakdown: stockCalc.components,
       };
     });
 

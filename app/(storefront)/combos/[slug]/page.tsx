@@ -33,7 +33,7 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
   const router = useRouter();
   const { addItem } = useCart();
 
-  const [combo, setCombo] = useState<(ComboOffer & { in_stock?: boolean; available_stock?: number }) | null>(null);
+  const [combo, setCombo] = useState<ComboOffer | null>(null);
   const [otherCombos, setOtherCombos] = useState<ComboOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
@@ -102,12 +102,8 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
   }
 
   const activeImage = allImages[selectedImageIdx] || allImages[0] || null;
-  const maxStock = typeof combo.available_stock === "number" ? combo.available_stock : 0;
-  const isOutOfStock = combo.in_stock === false || maxStock <= 0;
 
   const handleAddToCart = () => {
-    if (isOutOfStock) return;
-
     addItem(
       {
         id: combo.id,
@@ -128,8 +124,6 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
         is_best_seller: false,
         is_new_arrival: false,
         images: activeImage ? [{ url: activeImage, alt: combo.name, is_primary: true }] : [],
-        stock_quantity: maxStock,
-        stock_status: isOutOfStock ? "out_of_stock" : "in_stock",
         wholesale_moq: 1,
         wholesale_price: Number(combo.price),
         rating: 5,
@@ -306,28 +300,20 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
             <div className="space-y-4 pt-4 border-t border-[#DCCFB9]/60">
               {/* Availability Notice */}
               <div className="flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    !isOutOfStock ? "bg-emerald-600 animate-pulse" : "bg-red-500"
-                  }`}
-                />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
                 <span className="text-xs font-semibold text-[#1D211F]">
-                  {!isOutOfStock
-                    ? maxStock <= 5
-                      ? `In Stock — Only ${maxStock} left in stock`
-                      : `In Stock (${maxStock} available) — Ready for UAE Dispatch`
-                    : "Temporarily Out of Stock"}
+                  In Stock — Ready for UAE Dispatch
                 </span>
               </div>
 
               {/* Controls */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Quantity Selector capped at available stock */}
+                {/* Quantity Selector */}
                 <div className="flex items-center border border-[#DCCFB9] rounded-lg bg-[#F7F5EF] overflow-hidden self-start">
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1 || isOutOfStock}
+                    disabled={quantity <= 1}
                     className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white disabled:opacity-40 transition-colors cursor-pointer"
                     aria-label="Decrease quantity"
                   >
@@ -338,9 +324,8 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.min(maxStock, q + 1))}
-                    disabled={isOutOfStock || quantity >= maxStock}
-                    className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white disabled:opacity-40 transition-colors cursor-pointer"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white transition-colors cursor-pointer"
                     aria-label="Increase quantity"
                   >
                     <Plus size={14} />
@@ -351,12 +336,9 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={isOutOfStock}
                   className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-lg text-xs font-bold tracking-wider uppercase transition-all shadow-md cursor-pointer ${
                     isAdded
                       ? "bg-emerald-700 text-white"
-                      : isOutOfStock
-                      ? "bg-[#DCCFB9] text-[#8E9590] cursor-not-allowed"
                       : "bg-[#183D2B] hover:bg-[#102D20] text-white hover:shadow-lg"
                   }`}
                 >
@@ -365,8 +347,6 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
                       <Check size={16} />
                       <span>Added to Bag!</span>
                     </>
-                  ) : isOutOfStock ? (
-                    <span>Sold Out</span>
                   ) : (
                     <>
                       <ShoppingBag size={16} />

@@ -60,8 +60,6 @@ export default function EditProductPage() {
     wholesale_box_price: "",
     wholesale_custom_quantity_enabled: true,
     wholesale_moq: "12",
-    stock_quantity: "0",
-    low_stock_threshold: "5",
     is_published: true,
     is_featured: false,
     is_best_seller: false,
@@ -104,8 +102,7 @@ export default function EditProductPage() {
             brand_id,
             category_id,
             specifications,
-            product_images(cloudinary_public_id, secure_url, is_primary),
-            inventory(stock_quantity, low_stock_threshold)
+            product_images(cloudinary_public_id, secure_url, is_primary)
           `)
           .eq("id", id)
           .single();
@@ -145,8 +142,6 @@ export default function EditProductPage() {
             wholesale_box_price: p.wholesale_box_price?.toString() ?? "",
             wholesale_custom_quantity_enabled: p.wholesale_custom_quantity_enabled ?? true,
             wholesale_moq: p.wholesale_moq?.toString() ?? "12",
-            stock_quantity: p.inventory?.[0]?.stock_quantity?.toString() ?? "0",
-            low_stock_threshold: p.inventory?.[0]?.low_stock_threshold?.toString() ?? "5",
             is_published: p.is_published ?? true,
             is_featured: p.is_featured ?? false,
             is_best_seller: p.is_best_seller ?? false,
@@ -804,25 +799,6 @@ export default function EditProductPage() {
               ) : (
                 <p className="text-xs text-[#8E9590] italic">Wholesale ordering is disabled for this product.</p>
               )}
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">
-                Inventory
-              </h2>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Stock Units
-                </label>
-                <input
-                  type="number"
-                  name="stock_quantity"
-                  value={formData.stock_quantity}
-                  onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none"
-                />
-              </div>
             </div>
 
             <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-3">

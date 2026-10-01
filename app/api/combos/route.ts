@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateComboAvailability } from "@/lib/products/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -49,8 +48,7 @@ export async function GET(req: NextRequest) {
             status,
             brands ( name ),
             categories ( name, slug ),
-            product_images ( secure_url, is_primary ),
-            inventory ( stock_quantity, stock_status )
+            product_images ( secure_url, is_primary )
           )
         )
       `)
@@ -70,7 +68,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Format combos with calculated savings and stock availability
+    // Format combos with calculated savings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formatted = (combos || []).map((combo: any) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,8 +92,6 @@ export async function GET(req: NextRequest) {
         individualTotal += prodPrice * item.quantity;
       }
 
-      const stockCalc = calculateComboAvailability(items);
-
       individualTotal = Math.round(individualTotal * 100) / 100;
       const comboPrice = Number(combo.price) || 0;
       const savings = Math.max(0, Math.round((individualTotal - comboPrice) * 100) / 100);
@@ -110,9 +106,6 @@ export async function GET(req: NextRequest) {
         total_individual_price: individualTotal,
         savings_amount: savings,
         savings_percentage: savingsPercent,
-        in_stock: stockCalc.in_stock,
-        available_stock: stockCalc.available_stock,
-        component_stock_breakdown: stockCalc.components,
       };
     });
 

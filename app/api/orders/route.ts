@@ -6,7 +6,6 @@ import {
   sendAdminOrderNotificationEmail,
 } from "@/lib/email/brevo";
 import { calculateRetailOrderTotals, RETAIL_TAX_RATE } from "@/lib/pricing/retail";
-import { getProductStockQuantity } from "@/lib/products/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -39,52 +38,6 @@ async function ensureProfile(
         phone: phone ?? null,
         role: "customer",
       });
-  }
-}
-
-// ── Atomic stock reduction ──────────────────────────────────────────
-async function reduceStockForOrder(
-  orderId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any
-): Promise<void> {
-  const { data: orderItems, error } = await supabase
-    .from("order_items")
-    .select("product_id, combo_id, quantity, sku_snapshot, product_snapshot")
-    .eq("order_id", orderId);
-
-  if (error || !orderItems?.length) return;
-
-  for (const item of orderItems) {
-    const snap = item.product_snapshot || {};
-    // If item is a combo offer, atomically decrement each component's stock
-    if ((snap.is_combo || item.combo_id) && Array.isArray(snap.components) && snap.components.length > 0) {
-      for (const comp of snap.components) {
-        if (!comp.product_id) continue;
-        const totalUnits = Math.max(1, (comp.quantity || 1) * (item.quantity || 1));
-        try {
-          await supabase.rpc("decrement_stock", {
-            p_product_id: comp.product_id,
-            p_quantity: totalUnits,
-          });
-        } catch (stockErr) {
-          console.warn(
-            "[Orders API] decrement_stock warning for combo component",
-            comp.product_id,
-            stockErr
-          );
-        }
-      }
-    } else if (item.product_id) {
-      try {
-        await supabase.rpc("decrement_stock", {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-        });
-      } catch (stockErr) {
-        console.warn("[Orders API] decrement_stock warning for product", item.product_id, stockErr);
-      }
-    }
   }
 }
 
@@ -268,8 +221,7 @@ export async function POST(request: NextRequest) {
       const { data, error: prodErr } = await (admin as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, tax_enabled, is_published, status,
-          inventory ( stock_quantity, stock_status )
+          id, name, slug, sku, retail_price, tax_enabled, is_published, status
         `)
         .in("id", regularProductIds);
 
@@ -280,7 +232,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const productMap = new Map<string, any>(dbProducts.map((p) => [p.id, p]));
 
-    // Fetch matching combos with components and inventory
+    // Fetch matching combos with components
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dbCombos: any[] = [];
     if (comboIds.length > 0) {
@@ -293,8 +245,7 @@ export async function POST(request: NextRequest) {
             id, product_id, quantity, sort_order,
             products (
               id, name, slug, sku, retail_price, is_published, status,
-              product_images ( secure_url, is_primary ),
-              inventory ( stock_quantity, stock_status )
+              product_images ( secure_url, is_primary )
             )
           )
         `)
@@ -360,7 +311,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Verify stock availability for every component product
+        // Verify that component products are listed/published
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const componentsSnapshot: any[] = [];
         for (const ci of comboItems) {
@@ -374,18 +325,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
               {
                 error: `The combo offer "${dbCombo.name}" is unavailable because component "${compProd?.name || "product"}" is currently unlisted.`,
-              },
-              { status: 400 }
-            );
-          }
-
-          const compStock = getProductStockQuantity(compProd.inventory);
-          const neededUnits = (ci.quantity || 1) * qty;
-          if (compStock < neededUnits) {
-            const maxCombosPossible = Math.floor(compStock / (ci.quantity || 1));
-            return NextResponse.json(
-              {
-                error: `Insufficient stock for "${dbCombo.name}". Component "${compProd.name}" only has ${compStock} units available (${neededUnits} required for ${qty} combos). Maximum sets available: ${maxCombosPossible}.`,
               },
               { status: 400 }
             );
@@ -437,16 +376,6 @@ export async function POST(request: NextRequest) {
         if (!isListed) {
           return NextResponse.json(
             { error: `Product "${rawItem.name || "Selected item"}" is no longer available.` },
-            { status: 400 }
-          );
-        }
-
-        const prodStock = getProductStockQuantity(dbProd.inventory);
-        if (prodStock < qty) {
-          return NextResponse.json(
-            {
-              error: `Insufficient stock for "${dbProd.name}". Only ${prodStock} units available (${qty} requested).`,
-            },
             { status: 400 }
           );
         }
@@ -692,9 +621,6 @@ export async function POST(request: NextRequest) {
         console.error("[Order items insert error]:", itemsError);
       }
     }
-
-    // Atomic Stock Reduction for COD
-    await reduceStockForOrder(order.id, admin);
 
     // Save address if requested
     if (saveAddress && verifiedUserId) {

@@ -39,52 +39,6 @@ async function ensureProfile(
   }
 }
 
-// ── Atomic stock reduction ──────────────────────────────────────────
-async function reduceStockForOrder(
-  orderId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any
-): Promise<void> {
-  const { data: orderItems, error } = await supabase
-    .from("order_items")
-    .select("product_id, combo_id, quantity, sku_snapshot, product_snapshot")
-    .eq("order_id", orderId);
-
-  if (error || !orderItems?.length) return;
-
-  for (const item of orderItems) {
-    const snap = item.product_snapshot || {};
-    // If item is a combo offer, atomically decrement each component's stock
-    if ((snap.is_combo || item.combo_id) && Array.isArray(snap.components) && snap.components.length > 0) {
-      for (const comp of snap.components) {
-        if (!comp.product_id) continue;
-        const totalUnits = Math.max(1, (comp.quantity || 1) * (item.quantity || 1));
-        try {
-          await supabase.rpc("decrement_stock", {
-            p_product_id: comp.product_id,
-            p_quantity: totalUnits,
-          });
-        } catch (stockErr) {
-          console.warn(
-            "[Stripe Fulfillment] decrement_stock warning for combo component",
-            comp.product_id,
-            stockErr
-          );
-        }
-      }
-    } else if (item.product_id) {
-      try {
-        await supabase.rpc("decrement_stock", {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-        });
-      } catch (stockErr) {
-        console.warn("[Stripe Fulfillment] decrement_stock warning for product", item.product_id, stockErr);
-      }
-    }
-  }
-}
-
 /**
  * Server-side authoritative finalization of a Stripe Checkout Session.
  * Idempotently creates or confirms an order in the database upon verified payment.
@@ -357,9 +311,6 @@ export async function finalizeStripeOrder(
   } catch (payInsertErr) {
     console.warn("[Stripe Fulfillment] payment insert error:", payInsertErr);
   }
-
-  // Atomic Stock Reduction
-  await reduceStockForOrder(newOrder.id, admin);
 
   // If user requested saving this address to their account
   if (meta.save_address === "true" && userId) {

@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
-      stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
     } = body;
 
@@ -162,24 +161,8 @@ export async function POST(req: NextRequest) {
       }));
       const { error: imgErr } = await supabase.from("product_images").insert(imageRows);
       if (imgErr) {
-        console.error("[API] Image insert error, rolling back product:", imgErr);
-        await supabase.from("products").delete().eq("id", productId);
         return NextResponse.json({ error: `Failed to save product images: ${imgErr.message}` }, { status: 500 });
       }
-    }
-
-    // Insert inventory row
-    const { error: invErr } = await supabase.from("inventory").insert({
-      product_id: productId,
-      stock_quantity: parseInt(stock_quantity) || 0,
-      low_stock_threshold: parseInt(low_stock_threshold) || 5,
-      stock_status: (parseInt(stock_quantity) || 0) > 0 ? "in_stock" : "out_of_stock",
-    });
-    if (invErr) {
-      console.error("[API] Inventory insert error, rolling back product:", invErr);
-      await supabase.from("product_images").delete().eq("product_id", productId);
-      await supabase.from("products").delete().eq("id", productId);
-      return NextResponse.json({ error: `Failed to create inventory record: ${invErr.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, id: productId });
@@ -212,7 +195,6 @@ export async function PATCH(req: NextRequest) {
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
-      stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
     } = body;
 
@@ -317,31 +299,6 @@ export async function PATCH(req: NextRequest) {
     if (prodErr) {
       console.error("[API] Product update error:", prodErr);
       return NextResponse.json({ error: prodErr.message }, { status: 500 });
-    }
-
-    // Update inventory if values provided
-    if (stock_quantity !== undefined) {
-      const qty = parseInt(stock_quantity) || 0;
-      const { data: existingInv } = await supabase
-        .from("inventory")
-        .select("id")
-        .eq("product_id", id)
-        .single();
-
-      if (existingInv?.id) {
-        await supabase.from("inventory").update({
-          stock_quantity: qty,
-          low_stock_threshold: parseInt(low_stock_threshold) || 5,
-          stock_status: qty > 0 ? "in_stock" : "out_of_stock",
-        }).eq("product_id", id);
-      } else {
-        await supabase.from("inventory").insert({
-          product_id: id,
-          stock_quantity: qty,
-          low_stock_threshold: parseInt(low_stock_threshold) || 5,
-          stock_status: qty > 0 ? "in_stock" : "out_of_stock",
-        });
-      }
     }
 
     // Update images if provided

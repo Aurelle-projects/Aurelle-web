@@ -176,7 +176,6 @@ export default function AdminCombosPage() {
                   <tr>
                     <th className="px-4 py-3">Combo Offer</th>
                     <th className="px-4 py-3">Included Products</th>
-                    <th className="px-4 py-3 text-center">Available Sets</th>
                     <th className="px-4 py-3">Pricing & Savings</th>
                     <th className="px-4 py-3 text-center">Tax (5%)</th>
                     <th className="px-4 py-3 text-center">Status</th>
@@ -191,12 +190,9 @@ export default function AdminCombosPage() {
                       combo.items?.[0]?.product?.product_images?.[0]?.secure_url ||
                       null;
 
-                    const availSets = combo.available_stock ?? 0;
-                    const isInStock = combo.in_stock !== false && availSets > 0;
-
                     return (
                       <tr key={combo.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
-                        {/* Combo Basic Info */}
+                        {/* Combo main info */}
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
                             {firstImage ? (
@@ -252,24 +248,6 @@ export default function AdminCombosPage() {
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        </td>
-
-                        {/* Available Sets */}
-                        <td className="px-4 py-3.5 text-center">
-                          <div className="inline-flex flex-col items-center">
-                            <span
-                              className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                                isInStock
-                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                  : "bg-red-50 text-red-700 border border-red-200"
-                              }`}
-                            >
-                              {isInStock ? `${availSets} in stock` : "0 (Out of stock)"}
-                            </span>
-                            <span className="text-[9.5px] text-[#8E9590] mt-0.5">
-                              from live components
-                            </span>
                           </div>
                         </td>
 

@@ -13,7 +13,6 @@ export interface ProductRow {
   category_name: string;
   status: string;
   image_url?: string;
-  stock_quantity: number;
 }
 
 export interface AdminCategory {
@@ -236,8 +235,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
         .select(`
           id, name, slug, sku, retail_price, wholesale_price, status,
           category:categories(name),
-          product_images(secure_url, is_primary),
-          inventory(stock_quantity)
+          product_images(secure_url, is_primary)
         `)
         .order("created_at", { ascending: false });
 
@@ -257,7 +255,6 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             category_name: p.category?.name || "Unassigned",
             status: p.status || "published",
             image_url: primaryImg,
-            stock_quantity: p.inventory?.[0]?.stock_quantity ?? 10,
           };
         });
         setProducts(mapped);

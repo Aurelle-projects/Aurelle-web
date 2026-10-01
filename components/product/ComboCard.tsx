@@ -8,10 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { ComboOffer } from "@/types/combo";
 
 interface ComboCardProps {
-  combo: ComboOffer & {
-    in_stock?: boolean;
-    available_stock?: number;
-  };
+  combo: ComboOffer;
 }
 
 export default function ComboCard({ combo }: ComboCardProps) {
@@ -24,13 +21,9 @@ export default function ComboCard({ combo }: ComboCardProps) {
     combo.items?.[0]?.product?.product_images?.[0]?.secure_url ||
     null;
 
-  const maxStock = typeof combo.available_stock === "number" ? combo.available_stock : 0;
-  const isOutOfStock = combo.in_stock === false || (combo.available_stock !== undefined && maxStock <= 0);
-
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOutOfStock) return;
 
     // Convert Combo to cart item format
     addItem({
@@ -52,8 +45,6 @@ export default function ComboCard({ combo }: ComboCardProps) {
       is_best_seller: false,
       is_new_arrival: false,
       images: primaryImage ? [{ url: primaryImage, alt: combo.name, is_primary: true }] : [],
-      stock_quantity: maxStock,
-      stock_status: isOutOfStock ? "out_of_stock" : "in_stock",
       wholesale_moq: 1,
       wholesale_price: Number(combo.price),
       rating: 5,
@@ -160,12 +151,10 @@ export default function ComboCard({ combo }: ComboCardProps) {
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={isOutOfStock || isAdded}
+            disabled={isAdded}
             className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer shadow-xs ${
               isAdded
                 ? "bg-emerald-700 text-white"
-                : isOutOfStock
-                ? "bg-[#F7F5EF] text-[#8E9590] cursor-not-allowed"
                 : "bg-[#183D2B] hover:bg-[#102D20] text-white"
             }`}
           >
@@ -174,8 +163,6 @@ export default function ComboCard({ combo }: ComboCardProps) {
                 <Check size={14} />
                 <span>Added</span>
               </>
-            ) : isOutOfStock ? (
-              <span>Out of Stock</span>
             ) : (
               <>
                 <ShoppingBag size={14} />

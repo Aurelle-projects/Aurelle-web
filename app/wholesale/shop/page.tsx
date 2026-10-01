@@ -67,7 +67,6 @@ export default async function WholesaleShopPage() {
           category:categories(id, name, slug),
           subcategory:subcategories(id, name, slug),
           product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-          inventory(stock_status, stock_quantity),
           created_at
         `)
         .eq("status", "published")

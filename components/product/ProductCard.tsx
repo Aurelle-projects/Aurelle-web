@@ -35,8 +35,6 @@ interface ProductCardProps {
       alt?: string;
       is_primary?: boolean;
     }>;
-    inventory?: { stock_status: string } | null;
-    stock_status?: string;
     wholesale_price?: number | null;
     wholesale_moq?: number | null;
   };
@@ -56,7 +54,6 @@ export default function ProductCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOutOfStock) return;
 
     addItem({
       id: product.id,
@@ -77,8 +74,6 @@ export default function ProductCard({
       is_best_seller: Boolean(product.is_best_seller),
       is_new_arrival: Boolean(product.is_new_arrival),
       images: imageUrl ? [{ url: imageUrl, alt: imageAlt, is_primary: true }] : [],
-      stock_quantity: 1,
-      stock_status: isOutOfStock ? "out_of_stock" : "in_stock",
       wholesale_moq: product.wholesale_moq || 1,
       wholesale_price: product.wholesale_price || product.retail_price,
       rating: 0,
@@ -120,8 +115,6 @@ export default function ProductCard({
   const imageAlt =
     primaryImage?.alt_text ?? primaryLegacyImage?.alt ?? `${product.name} product image`;
 
-  const stockStatus = product.inventory?.stock_status ?? product.stock_status ?? "in_stock";
-  const isOutOfStock = stockStatus === "out_of_stock";
   const isOnSale =
     Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
 
@@ -157,12 +150,8 @@ export default function ProductCard({
           )}
         </Link>
 
-        {/* Top-Left Badge: Sold Out, or MOQ Badge for Wholesale, or Custom/Sale Badge for Retail */}
-        {isOutOfStock ? (
-          <span className="absolute top-3 left-3 bg-[#8E9590] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
-            Sold out
-          </span>
-        ) : isWholesaleUser ? (
+        {/* Top-Left Badge: MOQ Badge for Wholesale, or Custom/Sale Badge for Retail */}
+        {isWholesaleUser ? (
           <span className="absolute top-3 left-3 bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
             MOQ: {product.wholesale_moq || 1}
           </span>
@@ -197,7 +186,7 @@ export default function ProductCard({
         </button>
 
         {/* Desktop View: Slide-up Hover Add to Cart Button (retail only) */}
-        {!isOutOfStock && !isWholesaleUser && (
+        {!isWholesaleUser && (
           <button
             type="button"
             onClick={handleAddToCart}
@@ -219,7 +208,7 @@ export default function ProductCard({
         )}
 
         {/* Mobile View: Bottom-Right Round Add to Cart Button (Icon Only - retail only) */}
-        {!isOutOfStock && !isWholesaleUser && (
+        {!isWholesaleUser && (
           <button
             type="button"
             onClick={handleAddToCart}

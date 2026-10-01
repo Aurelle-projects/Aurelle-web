@@ -27,7 +27,6 @@ type CatalogProduct = {
     alt_text?: string | null;
     is_primary?: boolean;
   }>;
-  inventory?: { stock_status: string } | null;
 };
 
 interface AllProductsSectionProps {
@@ -53,8 +52,6 @@ function toCartProduct(product: CatalogProduct, imageUrl: string | null): Produc
     is_best_seller: false,
     is_new_arrival: false,
     images: imageUrl ? [{ url: imageUrl, alt: product.name, is_primary: true }] : [],
-    stock_quantity: 1,
-    stock_status: product.inventory?.stock_status === "out_of_stock" ? "out_of_stock" : "in_stock",
     wholesale_moq: 1,
     wholesale_price: product.retail_price,
     rating: 0,
@@ -145,7 +142,6 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
           {products.slice(0, visibleCount).map((product, index) => {
             const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
             const imageUrl = image?.secure_url ?? (image?.cloudinary_public_id ? getProductImageUrl(image.cloudinary_public_id, "medium") : null);
-            const isOutOfStock = product.inventory?.stock_status === "out_of_stock";
             const onSale = Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
 
             return (
@@ -178,23 +174,20 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                   <button
                     type="button"
                     onClick={() => handleAdd(product)}
-                    disabled={product.inventory?.stock_status === "out_of_stock"}
-                    className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 disabled:cursor-not-allowed disabled:bg-gray-500 shadow-md"
+                    className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md cursor-pointer"
                   >
                     <span className="inline-flex items-center justify-center gap-1.5">{addedId === product.id ? <><Check size={14} className="stroke-[2.5]" />Added</> : <><ShoppingBag size={14} />Add to Cart</>}</span>
                   </button>
 
                   {/* Mobile Bottom-Right Round Icon Button */}
-                  {product.inventory?.stock_status !== "out_of_stock" && (
-                    <button
-                      type="button"
-                      onClick={() => handleAdd(product)}
-                      className="sm:hidden absolute bottom-2 right-2 z-10 w-8.5 h-8.5 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all active:scale-90"
-                      aria-label={`Add ${product.name} to cart`}
-                    >
-                      {addedId === product.id ? <Check size={16} className="text-white stroke-[2.5]" /> : <ShoppingBag size={16} className="text-white" />}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleAdd(product)}
+                    className="sm:hidden absolute bottom-2 right-2 z-10 w-8.5 h-8.5 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all active:scale-90"
+                    aria-label={`Add ${product.name} to cart`}
+                  >
+                    {addedId === product.id ? <Check size={16} className="text-white stroke-[2.5]" /> : <ShoppingBag size={16} className="text-white" />}
+                  </button>
                 </div>
                 <Link href={`/products/${product.slug}`} className="block truncate px-1 pt-2 text-sm text-[#1D211F]">{product.name}</Link>
                 <div className="flex items-baseline gap-2 px-1 pb-4 pt-1">

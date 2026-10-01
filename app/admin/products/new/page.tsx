@@ -78,8 +78,6 @@ export default function NewProductPage() {
     wholesale_box_price: "",
     wholesale_custom_quantity_enabled: true,
     wholesale_moq: "12",
-    stock_quantity: "50",
-    low_stock_threshold: "5",
     is_published: true,
     is_featured: false,
     is_best_seller: false,
@@ -590,21 +588,6 @@ export default function NewProductPage() {
               ) : (
                 <p className="text-xs text-[#8E9590] italic">Wholesale ordering is disabled for this product.</p>
               )}
-            </div>
-
-            {/* Inventory */}
-            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">Inventory</h2>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Stock Units</label>
-                <input type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Low Stock Alert Level</label>
-                <input type="number" name="low_stock_threshold" value={formData.low_stock_threshold} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
-              </div>
             </div>
 
             {/* Badges & Status */}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateComboAvailability } from "@/lib/products/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +55,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             status,
             brands ( name ),
             categories ( name, slug ),
-            product_images ( secure_url, is_primary, alt_text ),
-            inventory ( stock_quantity, stock_status )
+            product_images ( secure_url, is_primary, alt_text )
           )
         )
       `)
@@ -90,8 +88,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       individualTotal += prodPrice * item.quantity;
     }
 
-    const stockCalc = calculateComboAvailability(items);
-
     individualTotal = Math.round(individualTotal * 100) / 100;
     const comboPrice = Number(combo.price) || 0;
     const savings = Math.max(0, Math.round((individualTotal - comboPrice) * 100) / 100);
@@ -108,9 +104,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         total_individual_price: individualTotal,
         savings_amount: savings,
         savings_percentage: savingsPercent,
-        in_stock: stockCalc.in_stock,
-        available_stock: stockCalc.available_stock,
-        component_stock_breakdown: stockCalc.components,
       },
     });
   } catch (err) {

@@ -33,10 +33,6 @@ export interface ComboOfferItemProduct {
     is_primary?: boolean;
     cloudinary_public_id?: string;
   }>;
-  inventory?: {
-    stock_quantity: number;
-    stock_status: string;
-  } | null;
 }
 
 export interface ComboOfferItem {
@@ -71,17 +67,6 @@ export interface ComboOffer {
   total_individual_price?: number;
   savings_amount?: number;
   savings_percentage?: number;
-  in_stock?: boolean;
-  available_stock?: number;
-  component_stock_breakdown?: Array<{
-    product_id: string;
-    name: string;
-    sku?: string;
-    required_quantity: number;
-    available_quantity: number;
-    max_combos: number;
-    in_stock: boolean;
-  }>;
 }
 
 export interface ComboOfferInput {
@@ -135,11 +120,10 @@ export interface ComboCartItemProduct {
   is_featured?: boolean;
   is_best_seller?: boolean;
   is_new_arrival?: boolean;
-  stock_quantity?: number;
-  stock_status?: string;
   wholesale_moq?: number;
   wholesale_price?: number;
   rating?: number;
   reviews_count?: number;
   tags?: string[];
 }
+

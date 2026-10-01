@@ -21,8 +21,8 @@ export interface ProductItem {
     alt: string;
     is_primary: boolean;
   }[];
-  stock_quantity: number;
-  stock_status: "in_stock" | "low_stock" | "out_of_stock";
+  stock_quantity?: number;
+  stock_status?: "in_stock" | "low_stock" | "out_of_stock" | string;
   wholesale_moq: number;
   wholesale_price: number;
   rating: number;

@@ -62,6 +62,7 @@ export interface AdminOrderItemDetail {
   price?: number;
   sku?: string;
   slug?: string;
+  product_snapshot?: any;
 }
 
 export interface AdminOrderShippingAddress {

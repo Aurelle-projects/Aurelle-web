@@ -141,6 +141,12 @@ export type Database = {
           compare_at_price: number | null;
           wholesale_price: number | null;
           wholesale_moq: number | null;
+          wholesale_unit_enabled: boolean;
+          wholesale_unit_price: number | null;
+          wholesale_box_enabled: boolean;
+          wholesale_units_per_box: number | null;
+          wholesale_box_price: number | null;
+          wholesale_custom_quantity_enabled: boolean;
           is_retail_available: boolean;
           is_wholesale_available: boolean;
           is_published: boolean;
@@ -169,6 +175,12 @@ export type Database = {
           compare_at_price?: number | null;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
+          wholesale_unit_enabled?: boolean;
+          wholesale_unit_price?: number | null;
+          wholesale_box_enabled?: boolean;
+          wholesale_units_per_box?: number | null;
+          wholesale_box_price?: number | null;
+          wholesale_custom_quantity_enabled?: boolean;
           is_retail_available?: boolean;
           is_wholesale_available?: boolean;
           is_published?: boolean;
@@ -196,6 +208,12 @@ export type Database = {
           compare_at_price?: number | null;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
+          wholesale_unit_enabled?: boolean;
+          wholesale_unit_price?: number | null;
+          wholesale_box_enabled?: boolean;
+          wholesale_units_per_box?: number | null;
+          wholesale_box_price?: number | null;
+          wholesale_custom_quantity_enabled?: boolean;
           is_retail_available?: boolean;
           is_wholesale_available?: boolean;
           is_published?: boolean;
@@ -309,6 +327,7 @@ export type Database = {
           id: string;
           user_id: string | null;
           session_id: string | null;
+          cart_type: CustomerType;
           created_at: string;
           updated_at: string;
         };
@@ -316,12 +335,14 @@ export type Database = {
           id?: string;
           user_id?: string | null;
           session_id?: string | null;
+          cart_type?: CustomerType;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           user_id?: string | null;
           session_id?: string | null;
+          cart_type?: CustomerType;
           updated_at?: string;
         };
       };
@@ -331,6 +352,8 @@ export type Database = {
           cart_id: string;
           product_id: string;
           quantity: number;
+          purchase_mode: "unit" | "box" | "custom";
+          units_per_box: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -339,11 +362,15 @@ export type Database = {
           cart_id: string;
           product_id: string;
           quantity: number;
+          purchase_mode?: "unit" | "box" | "custom";
+          units_per_box?: number | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           quantity?: number;
+          purchase_mode?: "unit" | "box" | "custom";
+          units_per_box?: number | null;
           updated_at?: string;
         };
       };

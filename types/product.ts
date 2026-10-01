@@ -4,7 +4,6 @@
 
 import type {
   Database,
-  StockStatus,
   CustomerType,
 } from "./database";
 
@@ -18,8 +17,6 @@ export type ProductImage =
 export type WholesalePriceTier =
   Database["public"]["Tables"]["wholesale_price_tiers"]["Row"];
 
-export type Inventory = Database["public"]["Tables"]["inventory"]["Row"];
-
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Brand = Database["public"]["Tables"]["brands"]["Row"];
 
@@ -28,10 +25,6 @@ export interface ProductWithRelations extends Product {
   brand: Pick<Brand, "id" | "name" | "slug"> | null;
   category: Pick<Category, "id" | "name" | "slug"> | null;
   product_images: ProductImage[];
-  inventory: Pick<
-    Inventory,
-    "stock_quantity" | "reserved_quantity" | "low_stock_threshold" | "stock_status"
-  > | null;
 }
 
 // ─── Product card (minimal — for listings) ───────────────────────────────────
@@ -50,10 +43,10 @@ export interface ProductCard {
   wholesale_moq?: number | null;
   primary_image_url: string | null;
   primary_image_alt: string | null;
-  stock_status: StockStatus;
   is_featured: boolean;
   is_best_seller: boolean;
   is_new_arrival: boolean;
+  is_out_of_stock?: boolean;
 }
 
 // ─── Product detail (full — for product page) ────────────────────────────────
@@ -70,7 +63,6 @@ export interface ProductFilters {
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
-  inStock?: boolean;
   isWholesale?: boolean;
   sort?: ProductSort;
   search?: string;

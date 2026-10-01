@@ -12,6 +12,7 @@ import HomeBanners from "@/components/storefront/HomeBanners";
 import TopRatedProducts from "@/components/storefront/TopRatedProducts";
 import AllProductsSection from "@/components/storefront/AllProductsSection";
 import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
+import ComboOffersSection from "@/components/storefront/ComboOffersSection";
 
 export const metadata: Metadata = {
   title: "Aurelle — Everyday Essentials. Elevated.",
@@ -85,12 +86,11 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
           .eq("status", "published")
@@ -101,24 +101,22 @@ export default async function HomePage() {
         supabase
           .from("products")
           .select(`
-            id, name, slug, retail_price,
+            id, name, slug, retail_price, tax_enabled, is_out_of_stock,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
             reviews(rating)
           `)
           .eq("status", "published")
-          .eq("reviews.is_published", true)
           .limit(100),
 
         supabase
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
           .eq("status", "published")
@@ -130,13 +128,11 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
-          .eq("is_published", true)
           .eq("status", "published")
           .order("created_at", { ascending: false })
           .limit(12),
@@ -241,6 +237,9 @@ export default async function HomePage() {
 
       {/* ─── 4. Shop By Category ─────────────────────────────────── */}
       <CategorySection categories={displayCategories} />
+
+      {/* ─── 4b. Exclusive Combo Offers ───────────────────────────── */}
+      <ComboOffersSection />
 
       {/* ─── 5. New Arrivals Section — database products only ── */}
       <ProductSection

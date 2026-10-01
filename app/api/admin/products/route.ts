@@ -41,12 +41,11 @@ export async function POST(req: NextRequest) {
     const {
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
-      retail_price, compare_at_price, wholesale_price, wholesale_moq,
+      retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
       wholesale_unit_enabled, wholesale_unit_price,
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
-      stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
     } = body;
 
@@ -125,6 +124,8 @@ export async function POST(req: NextRequest) {
         usage_instructions: usage_instructions || null,
         retail_price: parseFloat(retail_price),
         compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
+        tax_enabled: tax_enabled !== undefined ? !!tax_enabled : true,
+        is_out_of_stock: !!is_out_of_stock,
         wholesale_price: wsUnitPriceVal ?? (wsBoxPriceVal && wsUnitsPerBoxVal ? wsBoxPriceVal / wsUnitsPerBoxVal : null),
         wholesale_moq: parseInt(wholesale_moq) || 1,
         wholesale_unit_enabled: wsUnitEnabled,
@@ -161,24 +162,8 @@ export async function POST(req: NextRequest) {
       }));
       const { error: imgErr } = await supabase.from("product_images").insert(imageRows);
       if (imgErr) {
-        console.error("[API] Image insert error, rolling back product:", imgErr);
-        await supabase.from("products").delete().eq("id", productId);
         return NextResponse.json({ error: `Failed to save product images: ${imgErr.message}` }, { status: 500 });
       }
-    }
-
-    // Insert inventory row
-    const { error: invErr } = await supabase.from("inventory").insert({
-      product_id: productId,
-      stock_quantity: parseInt(stock_quantity) || 0,
-      low_stock_threshold: parseInt(low_stock_threshold) || 5,
-      stock_status: (parseInt(stock_quantity) || 0) > 0 ? "in_stock" : "out_of_stock",
-    });
-    if (invErr) {
-      console.error("[API] Inventory insert error, rolling back product:", invErr);
-      await supabase.from("product_images").delete().eq("product_id", productId);
-      await supabase.from("products").delete().eq("id", productId);
-      return NextResponse.json({ error: `Failed to create inventory record: ${invErr.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, id: productId });
@@ -206,12 +191,11 @@ export async function PATCH(req: NextRequest) {
       id,
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
-      retail_price, compare_at_price, wholesale_price, wholesale_moq,
+      retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
       wholesale_unit_enabled, wholesale_unit_price,
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
       is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
-      stock_quantity, low_stock_threshold,
       images, specifications: incomingSpecs,
     } = body;
 
@@ -299,6 +283,12 @@ export async function PATCH(req: NextRequest) {
     if (brand_id !== undefined) {
       updatePayload.brand_id = brand_id || null;
     }
+    if (tax_enabled !== undefined) {
+      updatePayload.tax_enabled = !!tax_enabled;
+    }
+    if (is_out_of_stock !== undefined) {
+      updatePayload.is_out_of_stock = !!is_out_of_stock;
+    }
     if (subcategory_id !== undefined) {
       updatePayload.specifications = subcategory_id
         ? { ...(incomingSpecs || {}), subcategory_id }
@@ -313,31 +303,6 @@ export async function PATCH(req: NextRequest) {
     if (prodErr) {
       console.error("[API] Product update error:", prodErr);
       return NextResponse.json({ error: prodErr.message }, { status: 500 });
-    }
-
-    // Update inventory if values provided
-    if (stock_quantity !== undefined) {
-      const qty = parseInt(stock_quantity) || 0;
-      const { data: existingInv } = await supabase
-        .from("inventory")
-        .select("id")
-        .eq("product_id", id)
-        .single();
-
-      if (existingInv?.id) {
-        await supabase.from("inventory").update({
-          stock_quantity: qty,
-          low_stock_threshold: parseInt(low_stock_threshold) || 5,
-          stock_status: qty > 0 ? "in_stock" : "out_of_stock",
-        }).eq("product_id", id);
-      } else {
-        await supabase.from("inventory").insert({
-          product_id: id,
-          stock_quantity: qty,
-          low_stock_threshold: parseInt(low_stock_threshold) || 5,
-          stock_status: qty > 0 ? "in_stock" : "out_of_stock",
-        });
-      }
     }
 
     // Update images if provided
@@ -422,7 +387,6 @@ export async function DELETE(req: NextRequest) {
 
     // Delete related rows first (cascade may handle some, but be explicit)
     await supabase.from("product_images").delete().eq("product_id", id);
-    await supabase.from("inventory").delete().eq("product_id", id);
 
     const { error } = await supabase.from("products").delete().eq("id", id);
 

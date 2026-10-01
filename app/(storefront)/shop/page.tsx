@@ -15,6 +15,8 @@ interface SupabaseProduct {
   sku: string;
   retail_price: number;
   compare_at_price?: number | null;
+  tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   is_new_arrival?: boolean;
   is_best_seller?: boolean;
   is_featured?: boolean;
@@ -29,7 +31,6 @@ interface SupabaseProduct {
     is_primary?: boolean;
     sort_order?: number;
   }>;
-  inventory?: { stock_status: string } | Array<{ stock_status: string }> | null;
   reviews?: Array<{ rating: number; is_published?: boolean }>;
 }
 
@@ -139,7 +140,6 @@ function ShopContent() {
   const [selectedBrand, setSelectedBrand] = useState(initialBrand);
   const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory);
   const [sortBy, setSortBy] = useState(initialSort);
-  const [inStockOnly, setInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [maxPrice, setMaxPrice] = useState(0);
   const [productTypeFilters, setProductTypeFilters] = useState<ProductTypeFilters>({
@@ -198,13 +198,12 @@ function ShopContent() {
         const { data, error } = await (supabase as any)
           .from("products")
           .select(`
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name, slug),
             category:categories(name, slug),
             subcategory:subcategories(name, slug),
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status),
             reviews(rating, is_published)
           `)
           .eq("is_published", true)
@@ -265,7 +264,6 @@ function ShopContent() {
         const cat = norm(product.category);
         const brand = norm(product.brand);
         const sub = norm(product.subcategory);
-        const inv = norm(product.inventory);
 
         // Search query filter (checks product name, brand, category, subcategory, sku)
         if (searchQuery.trim()) {
@@ -284,7 +282,6 @@ function ShopContent() {
         if (selectedBrand !== "all" && brand?.slug !== selectedBrand) return false;
         if (selectedSubcategory !== "all" && sub?.slug !== selectedSubcategory) return false;
         if (maxPrice > 0 && product.retail_price > maxPrice) return false;
-        if (inStockOnly && inv?.stock_status === "out_of_stock") return false;
 
         // Product type filters — product must match at least one active type
         const anyTypeActive =
@@ -324,9 +321,8 @@ function ShopContent() {
         brand: norm(product.brand),
         category: norm(product.category),
         subcategory: norm(product.subcategory),
-        inventory: norm(product.inventory),
       }));
-  }, [allProducts, selectedCategory, selectedBrand, selectedSubcategory, sortBy, inStockOnly, maxPrice, productTypeFilters, searchQuery]);
+  }, [allProducts, selectedCategory, selectedBrand, selectedSubcategory, sortBy, maxPrice, productTypeFilters, searchQuery]);
 
   const priceLimit = useMemo(
     () => Math.max(0, ...allProducts.map((product) => product.retail_price)),
@@ -356,7 +352,6 @@ function ShopContent() {
     setSelectedBrand("all");
     setSelectedCategory("all");
     setSelectedSubcategory("all");
-    setInStockOnly(false);
     setMaxPrice(0);
     setSortBy("price-low");
     setSearchQuery("");
@@ -376,7 +371,6 @@ function ShopContent() {
     selectedBrand !== "all" ||
     selectedCategory !== "all" ||
     selectedSubcategory !== "all" ||
-    inStockOnly ||
     maxPrice > 0 ||
     productTypeFilters.featured ||
     productTypeFilters.newArrivals ||
@@ -388,14 +382,13 @@ function ShopContent() {
     if (selectedBrand !== "all") count++;
     if (selectedCategory !== "all") count++;
     if (selectedSubcategory !== "all") count++;
-    if (inStockOnly) count++;
     if (maxPrice > 0) count++;
     if (productTypeFilters.featured) count++;
     if (productTypeFilters.newArrivals) count++;
     if (productTypeFilters.bestSellers) count++;
     if (productTypeFilters.topRated) count++;
     return count;
-  }, [selectedBrand, selectedCategory, selectedSubcategory, inStockOnly, maxPrice, productTypeFilters]);
+  }, [selectedBrand, selectedCategory, selectedSubcategory, maxPrice, productTypeFilters]);
 
   const renderFilterControls = () => (
     <div className="space-y-4">
@@ -508,21 +501,6 @@ function ShopContent() {
           onChange={setSortBy}
         />
       </div>
-
-      <div className="border-t border-[#DCCFB9]/40" />
-
-      {/* ── In Stock ─── */}
-      <label className="flex items-center gap-2 cursor-pointer group">
-        <input
-          type="checkbox"
-          checked={inStockOnly}
-          onChange={(e) => setInStockOnly(e.target.checked)}
-          className="h-3.5 w-3.5 accent-[#183D2B] cursor-pointer"
-        />
-        <span className="text-xs font-semibold text-[#1D211F] group-hover:text-[#183D2B] transition-colors">
-          In Stock Only
-        </span>
-      </label>
     </div>
   );
 

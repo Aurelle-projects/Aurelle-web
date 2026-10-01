@@ -18,6 +18,8 @@ import {
   Check,
   CreditCard,
   Banknote,
+  ShoppingBag,
+  AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import AccountAuthModal from "@/components/auth/AccountAuthModal";
@@ -47,8 +49,10 @@ const UAE_EMIRATES = [
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const wasCancelled = searchParams?.get("cancelled") === "true";
-  const { items, subtotal, shippingFee, total, clearCart } = useCart();
+  const wasCancelled =
+    searchParams?.get("cancelled") === "true" ||
+    searchParams?.get("payment") === "cancelled";
+  const { items, subtotal, taxAmount, hasTaxableItems, shippingFee, total, isHydrated, clearCart } = useCart();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -219,6 +223,8 @@ function CheckoutContent() {
           sku: item.product?.sku || "AUR-ITEM",
           price: item.product?.retail_price || 0,
           quantity: item.quantity,
+          isCombo: Boolean(item.product?.is_combo),
+          comboId: item.product?.combo_id || (item.product?.is_combo ? (item.product?.id || item.id) : undefined),
           image:
             item.product?.images?.[0]?.url ||
             (item.product as any)?.product_images?.find((img: any) => img.is_primary)?.secure_url ||
@@ -228,6 +234,7 @@ function CheckoutContent() {
           slug: item.product?.slug || "",
         })),
         subtotal,
+        taxAmount,
         shippingAmount: shippingFee,
         total: finalTotal,
         paymentMethod: formData.paymentMethod,
@@ -344,6 +351,43 @@ function CheckoutContent() {
     );
   }
 
+  // ── HYDRATION LOADING STATE ──────────────────────────────
+  if (!isHydrated) {
+    return (
+      <div className="bg-[#FAF8F5] min-h-screen py-20 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[#5C6460]">Loading your checkout details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── EMPTY CART STATE ─────────────────────────────────────
+  if (items.length === 0 && !orderComplete) {
+    return (
+      <div className="bg-[#FAF8F5] min-h-screen py-20 px-4">
+        <div className="max-w-md mx-auto bg-white rounded-2xl border border-[#EDE9DF] p-8 text-center shadow-xs space-y-5">
+          <div className="w-16 h-16 rounded-full bg-[#183D2B]/10 text-[#183D2B] flex items-center justify-center mx-auto">
+            <ShoppingBag size={28} strokeWidth={1.5} />
+          </div>
+          <div>
+            <h1 className="font-serif text-2xl font-bold text-[#1D211F]">Your Shopping Bag is Empty</h1>
+            <p className="mt-1.5 text-xs text-[#5C6460] leading-relaxed">
+              You do not have any items in your shopping bag. Explore our collection of luxury cosmetics and beauty essentials.
+            </p>
+          </div>
+          <Link
+            href="/shop"
+            className="inline-block w-full py-3 px-6 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors text-center"
+          >
+            Explore Collection
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // ── MAIN CHECKOUT PAGE ───────────────────────────────────
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12 pb-28 md:pb-12">
@@ -404,8 +448,14 @@ function CheckoutContent() {
         )}
 
         {wasCancelled && (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-            Online payment checkout was cancelled. Your bag items have been retained. You can try again or choose Normal Payment (Cash on Delivery).
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-4 text-xs text-amber-800 flex items-start gap-3">
+            <AlertCircle size={18} className="shrink-0 text-amber-700 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-900">Payment was cancelled</p>
+              <p className="mt-0.5 text-amber-800">
+                Your shopping bag items have been retained. You can review your delivery details and try paying again or choose Normal Payment (Cash on Delivery).
+              </p>
+            </div>
           </div>
         )}
 
@@ -747,6 +797,10 @@ function CheckoutContent() {
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span className="font-medium text-[#1D211F]">AED {subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{hasTaxableItems && taxAmount > 0 ? "Tax (5%)" : "Tax"}</span>
+                  <span className="font-medium text-[#1D211F]">AED {taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>

@@ -23,6 +23,7 @@ export interface WholesaleCartProduct {
   wholesale_price?: number | null;
   wholesale_moq?: number | null;
   is_wholesale_available?: boolean;
+  is_out_of_stock?: boolean;
 }
 
 export interface WholesaleCartItem {

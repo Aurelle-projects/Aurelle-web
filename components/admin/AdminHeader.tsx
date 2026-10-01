@@ -11,12 +11,17 @@ interface AdminHeaderProps {
     label: string;
     href: string;
   };
+  secondaryButton?: {
+    label: string;
+    href: string;
+  };
 }
 
 export default function AdminHeader({
   title,
   subtitle,
   actionButton,
+  secondaryButton,
 }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-40 h-16 flex items-center justify-between px-5 bg-white border-b border-[#DCCFB9]/40 shadow-xs">
@@ -36,6 +41,17 @@ export default function AdminHeader({
           <ExternalLink size={13} />
           <span className="hidden sm:inline">View Store</span>
         </Link>
+
+        {/* Secondary action button */}
+        {secondaryButton && (
+          <Link
+            href={secondaryButton.href}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FAF8F5] hover:bg-[#F2EDE2] text-[#183D2B] border border-[#DCCFB9] text-[11px] font-semibold rounded-md shadow-xs transition-colors"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            <span>{secondaryButton.label}</span>
+          </Link>
+        )}
 
         {/* Quick action button */}
         {actionButton ? (

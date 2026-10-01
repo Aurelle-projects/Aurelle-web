@@ -22,6 +22,7 @@ export interface OrderEmailData {
   customerEmail: string;
   items: OrderItem[];
   subtotal: number;
+  taxAmount?: number;
   shippingAmount: number;
   total: number;
   shippingAddress: {
@@ -163,12 +164,13 @@ export async function sendWelcomeEmail(
 export async function sendOrderConfirmationEmail(
   data: OrderEmailData
 ): Promise<{ success: boolean; error?: string }> {
-  const {
+    const {
     orderNumber,
     customerName,
     customerEmail,
     items,
     subtotal,
+    taxAmount = 0,
     shippingAmount,
     total,
     shippingAddress,
@@ -229,6 +231,14 @@ export async function sendOrderConfirmationEmail(
         <td style="font-size:13px; color:#5C6460; padding:4px 0;">Subtotal</td>
         <td style="font-size:13px; color:#1D211F; text-align:right; padding:4px 0;">AED ${subtotal.toFixed(2)}</td>
       </tr>
+      ${
+        taxAmount > 0
+          ? `<tr>
+        <td style="font-size:13px; color:#5C6460; padding:4px 0;">Tax (5% VAT)</td>
+        <td style="font-size:13px; color:#1D211F; text-align:right; padding:4px 0;">AED ${taxAmount.toFixed(2)}</td>
+      </tr>`
+          : ""
+      }
       <tr>
         <td style="font-size:13px; color:#5C6460; padding:4px 0;">Shipping</td>
         <td style="font-size:13px; color:#1D211F; text-align:right; padding:4px 0;">${shippingAmount === 0 ? "Free" : `AED ${shippingAmount.toFixed(2)}`}</td>
@@ -287,6 +297,7 @@ export async function sendAdminOrderNotificationEmail(
     customerEmail,
     items,
     subtotal,
+    taxAmount = 0,
     shippingAmount,
     total,
     shippingAddress,
@@ -356,6 +367,14 @@ export async function sendAdminOrderNotificationEmail(
         <td style="font-size:13px; color:#5C6460; padding:4px 0;">Subtotal</td>
         <td style="font-size:13px; color:#1D211F; text-align:right;">AED ${subtotal.toFixed(2)}</td>
       </tr>
+      ${
+        taxAmount > 0
+          ? `<tr>
+        <td style="font-size:13px; color:#5C6460; padding:4px 0;">Tax (5% VAT)</td>
+        <td style="font-size:13px; color:#1D211F; text-align:right;">AED ${taxAmount.toFixed(2)}</td>
+      </tr>`
+          : ""
+      }
       <tr>
         <td style="font-size:13px; color:#5C6460; padding:4px 0;">Shipping</td>
         <td style="font-size:13px; color:#1D211F; text-align:right;">${shippingAmount === 0 ? "Free" : `AED ${shippingAmount.toFixed(2)}`}</td>

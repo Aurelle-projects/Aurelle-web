@@ -26,6 +26,7 @@ export async function GET() {
         total,
         subtotal,
         discount_amount,
+        tax_amount,
         shipping_amount,
         status,
         payment_status,

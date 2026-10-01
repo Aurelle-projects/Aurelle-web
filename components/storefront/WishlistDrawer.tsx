@@ -96,7 +96,7 @@ export default function WishlistDrawer({
         const { data, error } = await (supabase as any)
           .from("products")
           .select(`
-            id, name, slug, sku, retail_price, description,
+            id, name, slug, sku, retail_price, tax_enabled, description,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .in("id", ids);
@@ -114,6 +114,7 @@ export default function WishlistDrawer({
             description: p.description || "",
             short_description: "",
             retail_price: Number(p.retail_price) || 0,
+            tax_enabled: p.tax_enabled !== false,
             category_id: "",
             category_slug: "",
             category_name: "",

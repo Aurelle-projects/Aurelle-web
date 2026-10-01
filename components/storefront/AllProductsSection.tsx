@@ -17,6 +17,7 @@ type CatalogProduct = {
   sku?: string;
   retail_price: number;
   compare_at_price?: number | null;
+  tax_enabled?: boolean;
   is_new_arrival?: boolean;
   is_featured?: boolean;
   is_best_seller?: boolean;
@@ -42,6 +43,7 @@ function toCartProduct(product: CatalogProduct, imageUrl: string | null): Produc
     description: "",
     short_description: "",
     retail_price: product.retail_price,
+    tax_enabled: product.tax_enabled !== false,
     category_id: "",
     category_slug: "",
     category_name: "",

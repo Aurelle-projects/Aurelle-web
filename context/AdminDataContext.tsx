@@ -94,6 +94,7 @@ export interface AdminOrderItem {
   total_amount: number;
   subtotal?: number;
   discount_amount?: number;
+  tax_amount?: number;
   shipping_amount?: number;
   payment_status: "paid" | "pending" | "failed" | string;
   order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
@@ -391,6 +392,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             total_amount: Number(o.total) || 0,
             subtotal: Number(o.subtotal) || Number(o.total) || 0,
             discount_amount: Number(o.discount_amount) || 0,
+            tax_amount: Number(o.tax_amount) || 0,
             shipping_amount: Number(o.shipping_amount) || 0,
             payment_status: o.payment_status || "pending",
             order_status: (o.status || "pending") as AdminOrderItem["order_status"],

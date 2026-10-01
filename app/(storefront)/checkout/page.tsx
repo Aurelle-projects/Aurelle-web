@@ -48,7 +48,7 @@ const UAE_EMIRATES = [
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const wasCancelled = searchParams?.get("cancelled") === "true";
-  const { items, subtotal, shippingFee, total, clearCart } = useCart();
+  const { items, subtotal, taxAmount, hasTaxableItems, shippingFee, total, clearCart } = useCart();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -228,6 +228,7 @@ function CheckoutContent() {
           slug: item.product?.slug || "",
         })),
         subtotal,
+        taxAmount,
         shippingAmount: shippingFee,
         total: finalTotal,
         paymentMethod: formData.paymentMethod,
@@ -747,6 +748,10 @@ function CheckoutContent() {
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span className="font-medium text-[#1D211F]">AED {subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{hasTaxableItems && taxAmount > 0 ? "Tax (5%)" : "Tax"}</span>
+                  <span className="font-medium text-[#1D211F]">AED {taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>

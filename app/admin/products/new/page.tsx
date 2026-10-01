@@ -69,6 +69,7 @@ export default function NewProductPage() {
     usage_instructions: "",
     retail_price: "",
     compare_at_price: "",
+    tax_enabled: true,
     wholesale_price: "",
     wholesale_unit_price: "",
     wholesale_unit_enabled: true,
@@ -398,6 +399,34 @@ export default function NewProductPage() {
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6460]">AED</span>
                   <input type="number" step="0.01" name="compare_at_price" value={formData.compare_at_price} onChange={handleChange} placeholder="150.00"
                     className="w-full h-10 pl-14 pr-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#5C6460] outline-none" />
+                </div>
+              </div>
+
+              {/* Retail Tax Toggle */}
+              <div className="pt-2 border-t border-[#DCCFB9]/40">
+                <div className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0]">
+                  <div>
+                    <label htmlFor="tax_enabled_toggle" className="text-xs font-bold text-[#1D211F] block cursor-pointer">Retail Tax (5% VAT)</label>
+                    <p className="text-[11px] text-[#5C6460] mt-0.5">
+                      {formData.tax_enabled
+                        ? "5% retail tax applies to this product."
+                        : "This product is tax-exempt for retail."}
+                    </p>
+                    <p className="text-[10px] text-[#8E9590] mt-0.5 italic">
+                      Applies to RETAIL only. Does not affect wholesale pricing.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                    <input
+                      id="tax_enabled_toggle"
+                      type="checkbox"
+                      name="tax_enabled"
+                      checked={formData.tax_enabled}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#DCCFB9] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#183D2B]"></div>
+                  </label>
                 </div>
               </div>
             </div>

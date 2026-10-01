@@ -5,8 +5,12 @@ import {
   sendOrderConfirmationEmail,
   sendAdminOrderNotificationEmail,
 } from "@/lib/email/brevo";
+import { calculateRetailOrderTotals, RETAIL_TAX_RATE } from "@/lib/pricing/retail";
 
 export const dynamic = "force-dynamic";
+
+const FREE_SHIPPING_THRESHOLD = 199; // AED
+const STANDARD_SHIPPING_FEE = 20; // AED
 
 // ── Ensure a profile row exists for the auth user (FK guard) ──────
 async function ensureProfile(
@@ -73,6 +77,8 @@ export async function GET() {
         status,
         payment_status,
         subtotal,
+        discount_amount,
+        tax_amount,
         shipping_amount,
         total,
         shipping_address,
@@ -143,10 +149,6 @@ export async function POST(request: NextRequest) {
       customerPhone,
       shippingAddress,
       items,
-      subtotal,
-      shippingAmount,
-      total,
-      taxAmount = 0,
       customerType = "retail",
       paymentMethod = "stripe",
       notes,
@@ -195,10 +197,87 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Server-Side Authoritative Pricing & Tax Verification ──────
+    // 1. Fetch current product records from DB for verification
+    const productIds = items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((item: any) => item.productId)
+      .filter((id: any) => typeof id === "string" && id.length > 0);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dbProducts: any[] = [];
+    if (productIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: prodErr } = await (admin as any)
+        .from("products")
+        .select("id, name, slug, sku, retail_price, tax_enabled, is_published, status")
+        .in("id", productIds);
+
+      if (!prodErr && data) {
+        dbProducts = data;
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const productMap = new Map<string, any>(dbProducts.map((p) => [p.id, p]));
+
+    interface VerifiedOrderItem {
+      productId: string | null;
+      name: string;
+      sku: string;
+      slug: string;
+      image: string | null;
+      price: number;
+      quantity: number;
+      taxEnabled: boolean;
+      lineSubtotal: number;
+      lineTax: number;
+      lineTotal: number;
+    }
+
+    // 2. Build verified item details and authoritative pricing input
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const verifiedItems: VerifiedOrderItem[] = items.map((rawItem: any) => {
+      const dbProd = productMap.get(rawItem.productId);
+      const verifiedPrice = dbProd ? Number(dbProd.retail_price) : (Number(rawItem.price) || 0);
+      const isTaxable = dbProd ? dbProd.tax_enabled !== false : true;
+      const qty = Math.max(1, parseInt(rawItem.quantity, 10) || 1);
+      const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
+      const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+
+      return {
+        productId: rawItem.productId || null,
+        name: dbProd?.name || rawItem.name || "Product",
+        sku: dbProd?.sku || rawItem.sku || "AUR-PROD",
+        slug: dbProd?.slug || rawItem.slug || "",
+        image: rawItem.image || null,
+        price: verifiedPrice,
+        quantity: qty,
+        taxEnabled: isTaxable,
+        lineSubtotal,
+        lineTax,
+        lineTotal: lineSubtotal,
+      };
+    });
+
+    // 3. Compute authoritative order totals
+    const rawSubtotal = verifiedItems.reduce((sum: number, item: VerifiedOrderItem) => sum + item.lineSubtotal, 0);
+    const authoritativeShipping = rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
+
+    const authoritativeTotals = calculateRetailOrderTotals(
+      verifiedItems.map((it: VerifiedOrderItem) => ({
+        price: it.price,
+        quantity: it.quantity,
+        tax_enabled: it.taxEnabled,
+      })),
+      authoritativeShipping,
+      0 // No discount code applied by default
+    );
+
     // Generate unique order number with timestamp + random entropy to eliminate collision
     const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 1. Insert order
+    // 4. Insert order with authoritative amounts
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: order, error: orderError } = await (admin as any)
       .from("orders")
@@ -209,11 +288,11 @@ export async function POST(request: NextRequest) {
         customer_type: customerType || "retail",
         status: paymentMethod === "stripe" ? "pending" : "processing",
         payment_status: "pending", // Never hardcode as paid; verified only upon Stripe payment
-        subtotal: subtotal || 0,
-        discount_amount: 0,
-        tax_amount: taxAmount || 0,
-        shipping_amount: shippingAmount || 0,
-        total: total || 0,
+        subtotal: authoritativeTotals.subtotal,
+        discount_amount: authoritativeTotals.discountAmount,
+        tax_amount: authoritativeTotals.taxAmount,
+        shipping_amount: authoritativeTotals.shippingAmount,
+        total: authoritativeTotals.total,
         shipping_address: {
           ...shippingAddress,
           payment_method: paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment",
@@ -233,21 +312,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Insert order items
-    if (items && items.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const orderItemsToInsert = items.map((item: any) => ({
+    // 5. Insert order items with authoritative snapshots
+    if (verifiedItems.length > 0) {
+      const orderItemsToInsert = verifiedItems.map((item: VerifiedOrderItem) => ({
         order_id: order.id,
-        product_id: item.productId || null,
+        product_id: item.productId,
         product_snapshot: {
-          name: item.name || "Product",
-          image: item.image || null,
-          slug: item.slug || "",
+          name: item.name,
+          image: item.image,
+          slug: item.slug,
+          tax_enabled: item.taxEnabled,
         },
-        sku_snapshot: item.sku || "AUR-PROD",
-        price_snapshot: item.price || 0,
-        quantity: item.quantity || 1,
-        line_total: (item.price || 0) * (item.quantity || 1),
+        sku_snapshot: item.sku,
+        price_snapshot: item.price,
+        quantity: item.quantity,
+        line_total: item.lineSubtotal,
       }));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -260,7 +339,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. If user requested saving this address to their account
+    // 6. If user requested saving this address to their account
     if (saveAddress && verifiedUserId) {
       try {
         if (isDefaultAddress) {
@@ -289,7 +368,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Handle Online Payment (Stripe Checkout Session)
+    // 7. Handle Online Payment (Stripe Checkout Session)
     if (paymentMethod === "stripe") {
       const secretKey = process.env.STRIPE_SECRET_KEY;
       if (!secretKey) {
@@ -306,29 +385,44 @@ export async function POST(request: NextRequest) {
       const stripe = getStripe();
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-      // Build Stripe line items
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lineItems = (items || []).map((item: any) => ({
+      // Build Stripe line items from authoritative verified items
+      const stripeLineItems = verifiedItems.map((item: VerifiedOrderItem) => ({
         price_data: {
           currency: "aed",
           product_data: {
-            name: item.name || "Aurelle Product",
+            name: item.name,
             images: item.image ? [item.image] : [],
           },
-          unit_amount: Math.round(Number(item.price || 0) * 100),
+          unit_amount: Math.round(Number(item.price) * 100),
         },
-        quantity: item.quantity || 1,
+        quantity: item.quantity,
       }));
 
+      // Add tax line item if applicable
+      if (authoritativeTotals.taxAmount > 0) {
+        stripeLineItems.push({
+          price_data: {
+            currency: "aed",
+            product_data: {
+              name: "VAT (5%)",
+              images: [],
+            },
+            unit_amount: Math.round(Number(authoritativeTotals.taxAmount) * 100),
+          },
+          quantity: 1,
+        });
+      }
+
       // Add shipping fee if applicable
-      if (shippingAmount && shippingAmount > 0) {
-        lineItems.push({
+      if (authoritativeTotals.shippingAmount > 0) {
+        stripeLineItems.push({
           price_data: {
             currency: "aed",
             product_data: {
               name: "UAE Delivery Fee",
+              images: [],
             },
-            unit_amount: Math.round(Number(shippingAmount) * 100),
+            unit_amount: Math.round(Number(authoritativeTotals.shippingAmount) * 100),
           },
           quantity: 1,
         });
@@ -339,7 +433,7 @@ export async function POST(request: NextRequest) {
         mode: "payment",
         customer_email: customerEmail.trim().toLowerCase(),
         client_reference_id: order.id,
-        line_items: lineItems,
+        line_items: stripeLineItems,
         metadata: {
           order_id: order.id,
           order_number: order.order_number,
@@ -365,21 +459,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. For Normal Payment (Cash on Delivery): dispatch confirmation emails immediately
+    // 8. For Normal Payment (Cash on Delivery): dispatch confirmation emails immediately
     const emailData = {
       orderNumber: order.order_number,
       customerName: customerName || "",
       customerEmail: customerEmail.trim().toLowerCase(),
-      items: (items ?? []).map((item: { name?: string; price?: number; quantity?: number; sku?: string; image?: string }) => ({
-        name: item.name || "Product",
-        price: item.price || 0,
-        quantity: item.quantity || 1,
+      items: verifiedItems.map((item: VerifiedOrderItem) => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
         sku: item.sku,
         image: item.image,
       })),
-      subtotal: subtotal || 0,
-      shippingAmount: shippingAmount || 0,
-      total: total || 0,
+      subtotal: authoritativeTotals.subtotal,
+      taxAmount: authoritativeTotals.taxAmount,
+      shippingAmount: authoritativeTotals.shippingAmount,
+      total: authoritativeTotals.total,
       shippingAddress: shippingAddress || {},
       paymentMethod,
     };

@@ -51,6 +51,7 @@ export default function EditProductPage() {
     usage_instructions: "",
     retail_price: "",
     compare_at_price: "",
+    tax_enabled: true,
     wholesale_price: "",
     wholesale_unit_price: "",
     wholesale_unit_enabled: true,
@@ -96,7 +97,7 @@ export default function EditProductPage() {
           .from("products")
           .select(`
             id, name, slug, sku, description, benefits, ingredients, usage_instructions,
-            retail_price, compare_at_price, wholesale_price, wholesale_moq,
+            retail_price, compare_at_price, tax_enabled, wholesale_price, wholesale_moq,
             wholesale_unit_enabled, wholesale_unit_price, wholesale_box_enabled,
             wholesale_units_per_box, wholesale_box_price, wholesale_custom_quantity_enabled,
             is_published, is_featured, is_best_seller, is_new_arrival, is_wholesale_available,
@@ -135,6 +136,7 @@ export default function EditProductPage() {
             usage_instructions: p.usage_instructions ?? "",
             retail_price: p.retail_price?.toString() ?? "",
             compare_at_price: p.compare_at_price?.toString() ?? "",
+            tax_enabled: p.tax_enabled !== false,
             wholesale_price: p.wholesale_price?.toString() ?? "",
             wholesale_unit_price: p.wholesale_unit_price?.toString() ?? p.wholesale_price?.toString() ?? "",
             wholesale_unit_enabled: p.wholesale_unit_enabled ?? true,
@@ -611,6 +613,34 @@ export default function EditProductPage() {
                     onChange={handleChange}
                     className="w-full h-10 pl-14 pr-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#5C6460] outline-none"
                   />
+                </div>
+              </div>
+
+              {/* Retail Tax Toggle */}
+              <div className="pt-2 border-t border-[#DCCFB9]/40">
+                <div className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0]">
+                  <div>
+                    <label htmlFor="tax_enabled_toggle_edit" className="text-xs font-bold text-[#1D211F] block cursor-pointer">Retail Tax (5% VAT)</label>
+                    <p className="text-[11px] text-[#5C6460] mt-0.5">
+                      {formData.tax_enabled
+                        ? "5% retail tax applies to this product."
+                        : "This product is tax-exempt for retail."}
+                    </p>
+                    <p className="text-[10px] text-[#8E9590] mt-0.5 italic">
+                      Applies to RETAIL only. Does not affect wholesale pricing.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                    <input
+                      id="tax_enabled_toggle_edit"
+                      type="checkbox"
+                      name="tax_enabled"
+                      checked={formData.tax_enabled}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#DCCFB9] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#183D2B]"></div>
+                  </label>
                 </div>
               </div>
             </div>

@@ -317,6 +317,12 @@ export default function OrderDetailsModal({
               </div>
             ) : null}
             <div className="flex justify-between text-xs text-[#5C6460]">
+              <span>Tax (5% VAT):</span>
+              <span className="font-medium text-[#1D211F]">
+                AED {(order.tax_amount ?? 0).toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs text-[#5C6460]">
               <span>Shipping:</span>
               <span className="font-medium text-[#1D211F]">
                 {order.shipping_amount && order.shipping_amount > 0

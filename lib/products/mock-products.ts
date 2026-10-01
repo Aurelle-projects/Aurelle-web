@@ -7,6 +7,7 @@ export interface ProductItem {
   short_description: string;
   retail_price: number;
   compare_at_price?: number;
+  tax_enabled?: boolean;
   category_id: string;
   category_slug: string;
   category_name: string;

@@ -15,6 +15,7 @@ interface SupabaseProduct {
   sku: string;
   retail_price: number;
   compare_at_price?: number | null;
+  tax_enabled?: boolean;
   is_new_arrival?: boolean;
   is_best_seller?: boolean;
   is_featured?: boolean;
@@ -198,7 +199,7 @@ function ShopContent() {
         const { data, error } = await (supabase as any)
           .from("products")
           .select(`
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name, slug),
             category:categories(name, slug),

@@ -85,7 +85,7 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
@@ -101,7 +101,7 @@ export default async function HomePage() {
         supabase
           .from("products")
           .select(`
-            id, name, slug, retail_price,
+            id, name, slug, retail_price, tax_enabled,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
             reviews(rating)
           `)
@@ -113,7 +113,7 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
@@ -130,7 +130,7 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
             is_new_arrival, is_featured, is_best_seller,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
             inventory(stock_status)

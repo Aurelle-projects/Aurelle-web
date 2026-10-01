@@ -13,8 +13,18 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const { items, itemCount, subtotal, shippingFee, total, amountUntilFreeShipping, updateQuantity, removeItem } =
-    useCart();
+  const {
+    items,
+    itemCount,
+    subtotal,
+    taxAmount,
+    hasTaxableItems,
+    shippingFee,
+    total,
+    amountUntilFreeShipping,
+    updateQuantity,
+    removeItem,
+  } = useCart();
 
   // Lock body scroll when open
   useEffect(() => {
@@ -197,6 +207,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <div className="flex justify-between text-[#5C6460]">
                     <span>Subtotal</span>
                     <span className="font-medium text-[#1D211F]">AED {subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-[#5C6460]">
+                    <span>{hasTaxableItems && taxAmount > 0 ? "Tax (5%)" : "Tax"}</span>
+                    <span className="font-medium text-[#1D211F]">AED {taxAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-[#5C6460]">
                     <span>Shipping</span>

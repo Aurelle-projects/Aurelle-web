@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import type { ProductItem } from "@/lib/products/mock-products";
+import { calculateRetailOrderTotals, RETAIL_TAX_RATE } from "@/lib/pricing/retail";
 
 export interface CartItem {
   id: string;
@@ -15,7 +16,10 @@ interface CartContextType {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
-  vatAmount: number;
+  taxAmount: number;
+  vatAmount: number; // backward compatibility alias for taxAmount
+  taxRate: number;
+  hasTaxableItems: boolean;
   shippingFee: number;
   total: number;
   freeShippingThreshold: number;
@@ -31,7 +35,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const STORAGE_KEY = "aurelle_cart_items";
 const FREE_SHIPPING_THRESHOLD = 199; // AED
 const STANDARD_SHIPPING_FEE = 20; // AED
-const UAE_VAT_RATE = 0.05; // 5%
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -67,22 +70,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
 
-  const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.product.retail_price * item.quantity, 0),
+  const rawSubtotal = useMemo(
+    () => items.reduce((sum, item) => sum + (Number(item.product.retail_price) || 0) * item.quantity, 0),
     [items]
   );
 
   const shippingFee = useMemo(
-    () => (subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0 ? 0 : STANDARD_SHIPPING_FEE),
-    [subtotal]
+    () => (rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE),
+    [rawSubtotal]
   );
 
-  const vatAmount = useMemo(
-    () => Math.round(subtotal * UAE_VAT_RATE * 100) / 100,
-    [subtotal]
+  const lineInputs = useMemo(
+    () =>
+      items.map((it) => ({
+        price: it.product.retail_price,
+        quantity: it.quantity,
+        tax_enabled: it.product.tax_enabled,
+      })),
+    [items]
   );
 
-  const total = useMemo(() => subtotal + shippingFee, [subtotal, shippingFee]);
+  const pricingSummary = useMemo(
+    () => calculateRetailOrderTotals(lineInputs, shippingFee, 0),
+    [lineInputs, shippingFee]
+  );
+
+  const subtotal = pricingSummary.subtotal;
+  const taxAmount = pricingSummary.taxAmount;
+  const vatAmount = pricingSummary.taxAmount;
+  const hasTaxableItems = pricingSummary.hasTaxableItems;
+  const total = pricingSummary.total;
 
   const amountUntilFreeShipping = useMemo(
     () => Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal),
@@ -130,7 +147,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items,
       itemCount,
       subtotal,
+      taxAmount,
       vatAmount,
+      taxRate: RETAIL_TAX_RATE,
+      hasTaxableItems,
       shippingFee,
       total,
       freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
@@ -144,7 +164,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items,
       itemCount,
       subtotal,
+      taxAmount,
       vatAmount,
+      hasTaxableItems,
       shippingFee,
       total,
       amountUntilFreeShipping,

@@ -13,6 +13,7 @@ interface TopRatedProduct {
   name: string;
   slug: string;
   retail_price: number;
+  tax_enabled?: boolean;
   rating: number;
   reviews_count: number;
   product_images?: Array<{
@@ -68,6 +69,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
       description: "",
       short_description: "",
       retail_price: product.retail_price,
+      tax_enabled: product.tax_enabled !== false,
       category_id: "",
       category_slug: "",
       category_name: "",

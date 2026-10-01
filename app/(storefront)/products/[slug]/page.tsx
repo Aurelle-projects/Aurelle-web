@@ -79,7 +79,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           .from("products")
           .select(`
             id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
-            retail_price, compare_at_price, wholesale_price, wholesale_moq,
+            retail_price, compare_at_price, tax_enabled, wholesale_price, wholesale_moq,
             is_published, is_featured, is_best_seller, is_new_arrival,
             brand:brands(name),
             category:categories(name, slug),
@@ -112,7 +112,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             const { data: related } = await supabase
               .from("products")
               .select(`
-                id, name, slug, sku, retail_price, compare_at_price,
+                id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
                 is_new_arrival, is_featured, is_best_seller,
                 brand:brands(name),
                 category:categories(name, slug),
@@ -242,6 +242,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       (product as any).product_images?.[0]?.secure_url;
     return {
       ...product,
+      tax_enabled: (product as any).tax_enabled !== false,
       images:
         (product as any).images?.length > 0
           ? (product as any).images

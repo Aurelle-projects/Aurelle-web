@@ -17,6 +17,7 @@ interface ProductCardProps {
     sku?: string;
     retail_price: number;
     compare_at_price?: number | null;
+    tax_enabled?: boolean;
     is_new_arrival?: boolean;
     is_best_seller?: boolean;
     is_featured?: boolean;
@@ -66,6 +67,7 @@ export default function ProductCard({
       short_description: "",
       retail_price: product.retail_price,
       compare_at_price: product.compare_at_price || undefined,
+      tax_enabled: product.tax_enabled !== false,
       category_id: "",
       category_slug: product.category?.slug || "",
       category_name: product.category?.name || "",

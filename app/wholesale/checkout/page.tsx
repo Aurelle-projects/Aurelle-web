@@ -31,14 +31,24 @@ export default function WholesaleCheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Form State
+  // Saved Addresses State
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | "new">("");
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+
+  // Customer Details State
   const [companyName, setCompanyName] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+
+  // New Address Form State
+  const [addressLabel, setAddressLabel] = useState("Warehouse");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("Dubai");
+  const [savingNewAddress, setSavingNewAddress] = useState(false);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -50,6 +60,7 @@ export default function WholesaleCheckoutPage() {
         if (!user) {
           setUserRole("unauthenticated");
           setAuthLoading(false);
+          setLoadingAddresses(false);
           return;
         }
 
@@ -79,15 +90,80 @@ export default function WholesaleCheckoutPage() {
           if (appData.contact_person && !profile?.full_name) setContactPerson(appData.contact_person);
           if (appData.phone && !profile?.phone) setPhone(appData.phone);
         }
+
+        // Fetch user's saved addresses
+        const addrsRes = await fetch("/api/addresses");
+        if (addrsRes.ok) {
+          const addrsJson = await addrsRes.json();
+          const list = addrsJson.addresses || [];
+          setSavedAddresses(list);
+
+          if (list.length > 0) {
+            const defaultAddr = list.find((a: any) => a.is_default);
+            if (defaultAddr) {
+              setSelectedAddressId(defaultAddr.id);
+            } else {
+              setSelectedAddressId(list[0].id);
+            }
+          } else {
+            setSelectedAddressId("new");
+            setShowNewAddressForm(true);
+          }
+        }
       } catch {
         setUserRole("unauthenticated");
       } finally {
         setAuthLoading(false);
+        setLoadingAddresses(false);
       }
     }
 
     checkAuthAndProfile();
   }, []);
+
+  const handleAddNewAddress = async () => {
+    if (!addressLine1.trim() || !city.trim()) {
+      setErrorMessage("Street address and city are required to save address.");
+      return;
+    }
+    setSavingNewAddress(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: addressLabel.trim() || "Warehouse",
+          fullName: contactPerson.trim() || "Wholesale Recipient",
+          phone: phone.trim() || "",
+          addressLine1: addressLine1.trim(),
+          addressLine2: addressLine2.trim() || null,
+          city: city.trim(),
+          country: "AE",
+          isDefault: savedAddresses.length === 0,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setErrorMessage(json.error || "Failed to save new address.");
+        setSavingNewAddress(false);
+        return;
+      }
+
+      const newAddr = json.address;
+      setSavedAddresses((prev) => [newAddr, ...prev]);
+      setSelectedAddressId(newAddr.id);
+      setShowNewAddressForm(false);
+      setAddressLine1("");
+      setAddressLine2("");
+    } catch {
+      setErrorMessage("Network error saving new address.");
+    } finally {
+      setSavingNewAddress(false);
+    }
+  };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,38 +177,52 @@ export default function WholesaleCheckoutPage() {
       setErrorMessage("Phone / WhatsApp contact number is required.");
       return;
     }
-    if (!addressLine1.trim()) {
-      setErrorMessage("Delivery address is required.");
-      return;
-    }
+
     if (items.length === 0) {
       setErrorMessage("Your wholesale cart is empty.");
+      return;
+    }
+
+    if (!selectedAddressId) {
+      setErrorMessage("A delivery address must be selected before placing the wholesale order.");
+      return;
+    }
+
+    if (selectedAddressId === "new" && !addressLine1.trim()) {
+      setErrorMessage("Please complete and save the new delivery address form.");
       return;
     }
 
     setSubmitting(true);
 
     try {
+      const payload: any = {
+        companyName: companyName.trim(),
+        contactPerson: contactPerson.trim(),
+        phone: phone.trim(),
+        notes: notes.trim(),
+        items: items.map((i) => ({
+          productId: i.productId,
+          purchaseMode: i.purchaseMode,
+          quantity: i.quantity,
+        })),
+      };
+
+      if (selectedAddressId !== "new") {
+        payload.addressId = selectedAddressId;
+      } else {
+        payload.shippingAddress = {
+          addressLine1: addressLine1.trim(),
+          addressLine2: addressLine2.trim(),
+          city: city.trim(),
+          country: "AE",
+        };
+      }
+
       const res = await fetch("/api/wholesale/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: companyName.trim(),
-          contactPerson: contactPerson.trim(),
-          phone: phone.trim(),
-          shippingAddress: {
-            addressLine1: addressLine1.trim(),
-            addressLine2: addressLine2.trim(),
-            city: city.trim(),
-            country: "AE",
-          },
-          notes: notes.trim(),
-          items: items.map((i) => ({
-            productId: i.productId,
-            purchaseMode: i.purchaseMode,
-            quantity: i.quantity,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -180,7 +270,7 @@ export default function WholesaleCheckoutPage() {
               </p>
               <div className="pt-2 space-y-2">
                 <Link
-                  href="/wholesale/account"
+                  href="/wholesale/login?redirect=/wholesale/checkout"
                   className="block w-full py-3 bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider rounded-sm text-center"
                 >
                   Log In to B2B Account
@@ -321,73 +411,197 @@ export default function WholesaleCheckoutPage() {
 
             {/* Delivery Address */}
             <div className="bg-white p-6 rounded-lg border border-[#EFEAE0] shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-[#14231B] uppercase tracking-wider border-b border-[#EFEAE0] pb-2.5 flex items-center gap-2">
-                <MapPin size={16} className="text-[#183D2B]" />
-                <span>2. Delivery Address</span>
-              </h2>
+              <div className="flex items-center justify-between border-b border-[#EFEAE0] pb-2.5">
+                <h2 className="text-sm font-bold text-[#14231B] uppercase tracking-wider flex items-center gap-2">
+                  <MapPin size={16} className="text-[#183D2B]" />
+                  <span>2. Delivery Address</span>
+                </h2>
+                {savedAddresses.length > 0 && !showNewAddressForm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAddressId("new");
+                      setShowNewAddressForm(true);
+                    }}
+                    className="text-xs font-bold text-[#183D2B] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+ Add New Address</span>
+                  </button>
+                )}
+              </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#14231B] uppercase tracking-wider mb-1">
-                    Street Address / Building / Warehouse <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={addressLine1}
-                    onChange={(e) => setAddressLine1(e.target.value)}
-                    placeholder="e.g. Warehouse 14, Ras Al Khor Industrial 2"
-                    className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#14231B] outline-none"
-                  />
+              {loadingAddresses ? (
+                <div className="py-6 text-center text-xs text-[#8E9590]">Loading saved delivery addresses...</div>
+              ) : savedAddresses.length === 0 && !showNewAddressForm ? (
+                <div className="p-5 bg-[#FAF8F5] border border-[#EFEAE0] rounded-md text-center space-y-3">
+                  <p className="text-xs font-bold text-[#14231B]">No saved delivery address found.</p>
+                  <p className="text-xs text-[#5C6460]">Please add a warehouse or business delivery address to continue with your wholesale order.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAddressId("new");
+                      setShowNewAddressForm(true);
+                    }}
+                    className="px-4 py-2 bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider rounded-sm cursor-pointer"
+                  >
+                    + Add Delivery Address
+                  </button>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Saved Address Selection Cards */}
+                  {savedAddresses.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {savedAddresses.map((addr) => {
+                        const isSelected = selectedAddressId === addr.id && !showNewAddressForm;
+                        return (
+                          <div
+                            key={addr.id}
+                            onClick={() => {
+                              setSelectedAddressId(addr.id);
+                              setShowNewAddressForm(false);
+                            }}
+                            className={`p-4 rounded-md border text-left cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
+                                : "border-[#EFEAE0] bg-white hover:border-[#183D2B]/40"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                    isSelected ? "border-[#183D2B] bg-[#183D2B]" : "border-[#8E9590]"
+                                  }`}
+                                >
+                                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                                <span className="text-xs font-bold text-[#14231B] uppercase tracking-wider">
+                                  {addr.label || "Delivery Address"}
+                                </span>
+                              </div>
+                              {addr.is_default && (
+                                <span className="text-[9px] font-bold bg-[#183D2B] text-white px-1.5 py-0.5 rounded-xs uppercase">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-semibold text-[#14231B]">
+                              {addr.full_name} {addr.phone ? `(${addr.phone})` : ""}
+                            </p>
+                            <p className="text-[11px] text-[#5C6460] mt-1 line-clamp-2">
+                              {addr.address_line1}
+                              {addr.address_line2 ? `, ${addr.address_line2}` : ""}, {addr.city}, {addr.country}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  {/* Inline New Address Form */}
+                  {showNewAddressForm && (
+                    <div className="p-4 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#183D2B]">
+                          Enter New Delivery Address
+                        </span>
+                        {savedAddresses.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewAddressForm(false);
+                              if (savedAddresses.length > 0) {
+                                setSelectedAddressId(savedAddresses[0].id);
+                              }
+                            }}
+                            className="text-[11px] text-[#8E9590] hover:text-[#14231B] underline cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#14231B] uppercase mb-1">Address Label</label>
+                          <input
+                            type="text"
+                            value={addressLabel}
+                            onChange={(e) => setAddressLabel(e.target.value)}
+                            placeholder="e.g. Main Warehouse"
+                            className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#14231B] uppercase mb-1">
+                            Street Address / Warehouse <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={addressLine1}
+                            onChange={(e) => setAddressLine1(e.target.value)}
+                            placeholder="Building, Street, Warehouse #"
+                            className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#14231B] uppercase mb-1">Area / Landmark</label>
+                          <input
+                            type="text"
+                            value={addressLine2}
+                            onChange={(e) => setAddressLine2(e.target.value)}
+                            placeholder="Area / Landmark"
+                            className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#14231B] uppercase mb-1">
+                            City / Emirate <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs outline-none"
+                          >
+                            <option value="Dubai">Dubai</option>
+                            <option value="Abu Dhabi">Abu Dhabi</option>
+                            <option value="Sharjah">Sharjah</option>
+                            <option value="Ajman">Ajman</option>
+                            <option value="Ras Al Khaimah">Ras Al Khaimah</option>
+                            <option value="Fujairah">Fujairah</option>
+                            <option value="Umm Al Quwain">Umm Al Quwain</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddNewAddress}
+                        disabled={savingNewAddress || !addressLine1.trim()}
+                        className="w-full py-2.5 bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider rounded-sm cursor-pointer disabled:opacity-40"
+                      >
+                        {savingNewAddress ? "Saving Address..." : "Save & Select Address"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Special Logistics Notes */}
+                  <div className="pt-2">
                     <label className="block text-xs font-bold text-[#14231B] uppercase tracking-wider mb-1">
-                      Area / Landmark
+                      Special Logistics / Order Notes (Optional)
                     </label>
-                    <input
-                      type="text"
-                      value={addressLine2}
-                      onChange={(e) => setAddressLine2(e.target.value)}
-                      placeholder="e.g. Near Dragon Mart"
-                      className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#14231B] outline-none"
+                    <textarea
+                      rows={2}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="e.g. Preferred delivery time interval or gate entry pass instructions."
+                      className="w-full p-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#14231B] outline-none"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#14231B] uppercase tracking-wider mb-1">
-                      City / Emirate <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full h-10 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#14231B] outline-none"
-                    >
-                      <option value="Dubai">Dubai</option>
-                      <option value="Abu Dhabi">Abu Dhabi</option>
-                      <option value="Sharjah">Sharjah</option>
-                      <option value="Ajman">Ajman</option>
-                      <option value="Ras Al Khaimah">Ras Al Khaimah</option>
-                      <option value="Fujairah">Fujairah</option>
-                      <option value="Umm Al Quwain">Umm Al Quwain</option>
-                    </select>
-                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#14231B] uppercase tracking-wider mb-1">
-                    Special Logistics / Order Notes (Optional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Preferred delivery time interval or gate entry pass instructions."
-                    className="w-full p-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#14231B] outline-none"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* B2B Direct Payment Terms Notice */}

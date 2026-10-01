@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
+      addressId,
       shippingAddress,
       notes,
       companyName,
@@ -51,9 +52,38 @@ export async function POST(req: NextRequest) {
       items: incomingItems,
     } = body;
 
-    if (!shippingAddress || !shippingAddress.addressLine1 || !shippingAddress.city) {
+    let dbShippingAddress: any = null;
+
+    if (addressId) {
+      // 1b. Verify address belongs to user
+      const { data: addressRow, error: addrErr } = await admin
+        .from("addresses")
+        .select("*")
+        .eq("id", addressId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (addrErr || !addressRow) {
+        return NextResponse.json(
+          { error: "The selected delivery address was not found or does not belong to your account." },
+          { status: 400 }
+        );
+      }
+      dbShippingAddress = addressRow;
+    } else if (shippingAddress && shippingAddress.addressLine1 && shippingAddress.city) {
+      dbShippingAddress = {
+        full_name: contactPerson || profile.full_name || "",
+        phone: phone || profile.phone || "",
+        address_line1: shippingAddress.addressLine1,
+        address_line2: shippingAddress.addressLine2 || null,
+        city: shippingAddress.city,
+        state: shippingAddress.state || shippingAddress.city,
+        country: shippingAddress.country || "AE",
+        postal_code: shippingAddress.postalCode || null,
+      };
+    } else {
       return NextResponse.json(
-        { error: "Complete delivery address is required." },
+        { error: "A valid delivery address is required to place a wholesale order." },
         { status: 400 }
       );
     }
@@ -196,13 +226,15 @@ export async function POST(req: NextRequest) {
 
     const fullShippingAddress = {
       company_name: companyName || profile.company_name || "",
-      contact_person: contactPerson || profile.full_name || "",
-      phone: phone || profile.phone || "",
-      address_line1: shippingAddress.addressLine1,
-      address_line2: shippingAddress.addressLine2 || null,
-      city: shippingAddress.city,
-      state: shippingAddress.state || shippingAddress.city,
-      country: shippingAddress.country || "AE",
+      contact_person: dbShippingAddress.full_name || contactPerson || profile.full_name || "",
+      phone: dbShippingAddress.phone || phone || profile.phone || "",
+      address_line1: dbShippingAddress.address_line1,
+      address_line2: dbShippingAddress.address_line2 || null,
+      city: dbShippingAddress.city,
+      state: dbShippingAddress.state || dbShippingAddress.city,
+      country: dbShippingAddress.country || "AE",
+      postal_code: dbShippingAddress.postal_code || null,
+      address_label: dbShippingAddress.label || null,
       payment_terms: "Direct B2B Invoice (WhatsApp/Phone Payment Settlement)",
     };
 

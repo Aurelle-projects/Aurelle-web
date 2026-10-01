@@ -21,6 +21,7 @@ export interface WholesaleCartProduct {
   wholesale_box_price?: number | null;
   wholesale_custom_quantity_enabled?: boolean;
   wholesale_price?: number | null;
+  wholesale_moq?: number | null;
   is_wholesale_available?: boolean;
 }
 
@@ -109,7 +110,7 @@ export function WholesaleCartProvider({ children }: { children: React.ReactNode 
               .select(`
                 id, quantity, purchase_mode, units_per_box,
                 product:products(
-                  id, name, slug, sku, is_wholesale_available, wholesale_price,
+                  id, name, slug, sku, is_wholesale_available, wholesale_price, wholesale_moq,
                   wholesale_unit_enabled, wholesale_unit_price, wholesale_box_enabled,
                   wholesale_units_per_box, wholesale_box_price, wholesale_custom_quantity_enabled,
                   brand:brands(name),
@@ -148,6 +149,7 @@ export function WholesaleCartProvider({ children }: { children: React.ReactNode 
                   wholesale_box_price: item.product.wholesale_box_price,
                   wholesale_custom_quantity_enabled: item.product.wholesale_custom_quantity_enabled ?? true,
                   wholesale_price: item.product.wholesale_price,
+                  wholesale_moq: item.product.wholesale_moq ?? 1,
                   is_wholesale_available: item.product.is_wholesale_available ?? true,
                 };
 
@@ -314,60 +316,6 @@ export function WholesaleCartProvider({ children }: { children: React.ReactNode 
     []
   );
 
-  // Update Quantity
-  const updateQuantity = useCallback(
-    async (itemId: string, quantity: number) => {
-      if (quantity <= 0) {
-        await removeItem(itemId);
-        return;
-      }
-
-      setItems((prev) => {
-        const updated = prev.map((item) => {
-          if (item.id === itemId || `${item.productId}-${item.purchaseMode}` === itemId) {
-            const newPricing = calculateWholesaleItemPrice(item.product as any, item.tiers || [], item.purchaseMode, quantity);
-            return {
-              ...item,
-              quantity,
-              pricing: newPricing,
-            };
-          }
-          return item;
-        });
-        saveToLocalStorage(updated);
-        return updated;
-      });
-
-      try {
-        const supabase = createClient() as any;
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const target = items.find((i) => i.id === itemId || `${i.productId}-${i.purchaseMode}` === itemId);
-          if (target) {
-            const { data: cart } = await supabase
-              .from("carts")
-              .select("id")
-              .eq("user_id", user.id)
-              .eq("cart_type", "wholesale")
-              .maybeSingle();
-
-            if (cart?.id) {
-              await supabase
-                .from("cart_items")
-                .update({ quantity, updated_at: new Date().toISOString() })
-                .eq("cart_id", cart.id)
-                .eq("product_id", target.productId)
-                .eq("purchase_mode", target.purchaseMode);
-            }
-          }
-        }
-      } catch {
-        // silent
-      }
-    },
-    [items]
-  );
-
   // Remove Item
   const removeItem = useCallback(
     async (itemId: string) => {
@@ -404,6 +352,72 @@ export function WholesaleCartProvider({ children }: { children: React.ReactNode 
       }
     },
     [items]
+  );
+
+  // Update Quantity
+  const updateQuantity = useCallback(
+    async (itemId: string, quantity: number) => {
+      setItems((prev) => {
+        const target = prev.find((i) => i.id === itemId || `${i.productId}-${i.purchaseMode}` === itemId);
+        if (!target) return prev;
+
+        const minQty = target.purchaseMode === "unit" ? Math.max(1, target.product.wholesale_moq || 1) : 1;
+
+        if (quantity <= 0) {
+          return prev.filter((i) => i.id !== target.id);
+        }
+        const finalQty = Math.max(minQty, quantity);
+
+        const updated = prev.map((item) => {
+          if (item.id === target.id) {
+            const newPricing = calculateWholesaleItemPrice(item.product as any, item.tiers || [], item.purchaseMode, finalQty);
+            return {
+              ...item,
+              quantity: finalQty,
+              pricing: newPricing,
+            };
+          }
+          return item;
+        });
+        saveToLocalStorage(updated);
+        return updated;
+      });
+
+      try {
+        const supabase = createClient() as any;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const target = items.find((i) => i.id === itemId || `${i.productId}-${i.purchaseMode}` === itemId);
+          if (target) {
+            const minQty = target.purchaseMode === "unit" ? Math.max(1, target.product.wholesale_moq || 1) : 1;
+            if (quantity <= 0) {
+              await removeItem(itemId);
+              return;
+            }
+            const finalQty = Math.max(minQty, quantity);
+
+            const { data: cart } = await supabase
+              .from("carts")
+              .select("id")
+              .eq("user_id", user.id)
+              .eq("cart_type", "wholesale")
+              .maybeSingle();
+
+            if (cart?.id) {
+              await supabase
+                .from("cart_items")
+                .update({ quantity: finalQty, updated_at: new Date().toISOString() })
+                .eq("cart_id", cart.id)
+                .eq("product_id", target.productId)
+                .eq("purchase_mode", target.purchaseMode);
+            }
+          }
+        }
+      } catch {
+        // silent
+      }
+    },
+    [items, removeItem]
   );
 
   // Clear Cart

@@ -85,9 +85,6 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
           } else if (p.wholesale_box_enabled) {
             setPurchaseMode("box");
             setQuantity(1);
-          } else if (p.wholesale_custom_quantity_enabled !== false) {
-            setPurchaseMode("custom");
-            setQuantity(Math.max(1, p.wholesale_moq || 1));
           }
 
           // Related wholesale products
@@ -205,7 +202,8 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
 
   const isUnitOptionAvailable = product.wholesale_unit_enabled !== false;
   const isBoxOptionAvailable = !!product.wholesale_box_enabled;
-  const isCustomOptionAvailable = product.wholesale_custom_quantity_enabled !== false;
+  const unitMoq = Math.max(1, product.wholesale_moq || 1);
+  const minSelectableQuantity = purchaseMode === "unit" ? unitMoq : 1;
 
   return (
     <div className="bg-white min-h-screen py-8 md:py-12">
@@ -286,7 +284,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
                     type="button"
                     onClick={() => {
                       setPurchaseMode("unit");
-                      setQuantity((q) => Math.max(1, q));
+                      setQuantity((q) => Math.max(unitMoq, q));
                     }}
                     className={`p-4 rounded-md border text-left transition-all cursor-pointer ${
                       purchaseMode === "unit"
@@ -303,7 +301,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
                         >
                           {purchaseMode === "unit" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
-                        <span className="text-xs font-bold text-[#14231B] uppercase tracking-wider">Single Unit</span>
+                        <span className="text-xs font-bold text-[#14231B] uppercase tracking-wider">Single Unit / Piece</span>
                       </div>
                       <span className="text-sm font-bold text-[#183D2B]">
                         {formatPrice(Number(product.wholesale_unit_price ?? product.wholesale_price ?? 0))}
@@ -311,8 +309,26 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
                       </span>
                     </div>
                     <p className="text-[11px] text-[#5C6460] mt-1.5 pl-6">
-                      Buy individual pieces at standard wholesale unit pricing.
+                      Purchased in individual units (Minimum Order Quantity: {unitMoq} {unitMoq === 1 ? "unit" : "units"}).
                     </p>
+
+                    {/* Volume tiers notice under single unit mode */}
+                    {tiers.length > 0 && (
+                      <div className="mt-2.5 pl-6 flex flex-wrap gap-2">
+                        {tiers.map((t) => (
+                          <div
+                            key={t.id}
+                            className={`text-[10px] px-2 py-0.5 rounded-sm border ${
+                              purchaseMode === "unit" && pricingResult?.tierPriceApplied === Number(t.price_per_unit)
+                                ? "bg-[#183D2B] text-white border-[#183D2B] font-bold"
+                                : "bg-[#FAF8F5] text-[#5C6460] border-[#EFEAE0]"
+                            }`}
+                          >
+                            {t.min_quantity}–{t.max_quantity ?? "+"} units: {formatPrice(Number(t.price_per_unit))}/pc
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </button>
                 )}
 
@@ -352,53 +368,8 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
                       </span>
                     </div>
                     <p className="text-[11px] text-[#5C6460] mt-1.5 pl-6">
-                      Authoritative box rate ({formatPrice(Number(product.wholesale_box_price ?? 0))} for full {product.wholesale_units_per_box}-piece carton).
+                      Configured box price ({formatPrice(Number(product.wholesale_box_price ?? 0))} per {product.wholesale_units_per_box}-piece carton).
                     </p>
-                  </button>
-                )}
-
-                {/* Custom Quantity Mode */}
-                {isCustomOptionAvailable && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPurchaseMode("custom");
-                      setQuantity((q) => Math.max(1, q));
-                    }}
-                    className={`p-4 rounded-md border text-left transition-all cursor-pointer ${
-                      purchaseMode === "custom"
-                        ? "border-[#183D2B] bg-[#183D2B]/5 ring-1 ring-[#183D2B]"
-                        : "border-[#EFEAE0] bg-white hover:border-[#183D2B]/40"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                            purchaseMode === "custom" ? "border-[#183D2B] bg-[#183D2B]" : "border-[#8E9590]"
-                          }`}
-                        >
-                          {purchaseMode === "custom" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                        <span className="text-xs font-bold text-[#14231B] uppercase tracking-wider">Custom Quantity (Volume Tiers)</span>
-                      </div>
-                    </div>
-                    {tiers.length > 0 && (
-                      <div className="mt-2 pl-6 flex flex-wrap gap-2">
-                        {tiers.map((t) => (
-                          <div
-                            key={t.id}
-                            className={`text-[10px] px-2 py-1 rounded-sm border ${
-                              pricingResult?.tierPriceApplied === Number(t.price_per_unit)
-                                ? "bg-[#183D2B] text-white border-[#183D2B] font-bold"
-                                : "bg-[#FAF8F5] text-[#5C6460] border-[#EFEAE0]"
-                            }`}
-                          >
-                            {t.min_quantity}–{t.max_quantity ?? "+"} units: {formatPrice(Number(t.price_per_unit))}/unit
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </button>
                 )}
               </div>
@@ -407,15 +378,22 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
             {/* QUANTITY STEPPER & SUBTOTAL */}
             <div className="p-4 bg-[#FAF8F5] rounded-sm space-y-3 border border-[#EFEAE0]">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#14231B]">
-                  Quantity ({purchaseMode === "box" ? "Boxes" : "Units"})
-                </label>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#14231B] block">
+                    Quantity ({purchaseMode === "box" ? "Boxes" : "Units"})
+                  </label>
+                  {purchaseMode === "unit" && unitMoq > 1 && (
+                    <span className="text-[10px] text-[#183D2B] font-semibold">
+                      Minimum {unitMoq} units required
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center bg-white rounded-sm border border-[#DCCFB9]">
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
+                    onClick={() => setQuantity((q) => Math.max(minSelectableQuantity, q - 1))}
+                    disabled={quantity <= minSelectableQuantity}
                     className="w-10 h-10 flex items-center justify-center text-[#14231B] hover:bg-[#EFEAE0] transition-colors cursor-pointer disabled:opacity-30"
                   >
                     <Minus size={14} />
@@ -423,11 +401,11 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
 
                   <input
                     type="number"
-                    min={1}
+                    min={minSelectableQuantity}
                     value={quantity}
                     onChange={(e) => {
                       const val = parseInt(e.target.value, 10);
-                      if (!isNaN(val)) setQuantity(Math.max(1, val));
+                      if (!isNaN(val)) setQuantity(Math.max(minSelectableQuantity, val));
                     }}
                     className="w-16 text-center text-sm font-bold text-[#14231B] bg-transparent outline-none"
                   />

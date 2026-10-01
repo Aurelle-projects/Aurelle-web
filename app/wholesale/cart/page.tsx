@@ -95,12 +95,8 @@ export default function WholesaleCartPage() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => {
               const { pricing, product, purchaseMode } = item;
-              const modeLabel =
-                purchaseMode === "box"
-                  ? `Full Box (${pricing.unitsPerBox ?? product.wholesale_units_per_box} pcs/box)`
-                  : purchaseMode === "custom"
-                  ? "Custom Quantity"
-                  : "Single Unit";
+              const unitMoq = Math.max(1, product.wholesale_moq || 1);
+              const minQty = purchaseMode === "unit" ? unitMoq : 1;
 
               return (
                 <div
@@ -141,21 +137,29 @@ export default function WholesaleCartPage() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="text-[#8E9590] hover:text-red-600 transition-colors p-1"
+                          className="text-[#8E9590] hover:text-red-600 transition-colors p-1 cursor-pointer"
                           title="Remove item"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
 
-                      {/* Purchasing Mode Badge */}
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FAF8F5] text-[#14231B] px-2 py-0.5 rounded-sm border border-[#EFEAE0]">
-                          Mode: {modeLabel}
-                        </span>
-                        <span className="text-[10px] text-[#5C6460]">
-                          Total: <strong>{pricing.totalUnits} pcs</strong> included
-                        </span>
+                      {/* Purchasing Mode Badge & Details */}
+                      <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                        {purchaseMode === "box" ? (
+                          <span className="font-bold text-[#14231B] bg-[#C9A84C]/20 border border-[#C9A84C]/40 px-2 py-0.5 rounded-sm">
+                            BOX ({pricing.unitsPerBox} pcs/box &bull; {pricing.totalUnits} pcs total)
+                          </span>
+                        ) : (
+                          <span className="font-bold text-[#183D2B] bg-[#183D2B]/10 border border-[#183D2B]/20 px-2 py-0.5 rounded-sm">
+                            UNIT ({pricing.totalUnits} pcs)
+                          </span>
+                        )}
+                        {purchaseMode === "unit" && unitMoq > 1 && (
+                          <span className="text-[10px] text-[#5C6460]">
+                            (MOQ: {unitMoq} pcs)
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -170,7 +174,8 @@ export default function WholesaleCartPage() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center text-[#14231B] hover:bg-[#EFEAE0] transition-colors cursor-pointer"
+                          disabled={item.quantity <= minQty}
+                          className="w-8 h-8 flex items-center justify-center text-[#14231B] hover:bg-[#EFEAE0] transition-colors cursor-pointer disabled:opacity-30"
                         >
                           <Minus size={12} />
                         </button>
@@ -189,7 +194,7 @@ export default function WholesaleCartPage() {
 
                     <div className="text-right">
                       <span className="text-[10px] text-[#8E9590] block">
-                        Rate: {formatPrice(pricing.effectiveUnitPrice)} / {purchaseMode === "box" ? "box" : "unit"}
+                        Rate: {formatPrice(pricing.effectiveUnitPrice)} / {purchaseMode === "box" ? "box" : "piece"}
                       </span>
                       <span className="text-base font-bold text-[#183D2B]">
                         {formatPrice(pricing.subtotal)}

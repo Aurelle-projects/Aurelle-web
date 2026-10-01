@@ -17,7 +17,7 @@ export interface WholesaleItemPricingResult {
   unitsPerBox: number | null;  // Units per box if box mode or configured
   unitPrice: number | null;    // Configured unit price
   boxPrice: number | null;     // Configured box price
-  tierPriceApplied: number | null; // Tier unit price applied if custom quantity mode matched a tier
+  tierPriceApplied: number | null; // Tier unit price applied if volume tier matched
   effectiveUnitPrice: number; // Price per unit or price per box used for calculation
   subtotal: number;           // Calculated line subtotal (excl. tax)
 }
@@ -31,6 +31,7 @@ export function calculateWholesaleItemPrice(
     | "id"
     | "is_wholesale_available"
     | "wholesale_price"
+    | "wholesale_moq"
     | "wholesale_unit_enabled"
     | "wholesale_unit_price"
     | "wholesale_box_enabled"
@@ -53,20 +54,44 @@ export function calculateWholesaleItemPrice(
     if (product.wholesale_unit_enabled === false) {
       throw new Error(`Single unit purchase mode is disabled for this product.`);
     }
-    const unitPrice = Number(product.wholesale_unit_price ?? product.wholesale_price ?? 0);
-    if (unitPrice < 0 || isNaN(unitPrice)) {
+
+    const moq = Math.max(1, product.wholesale_moq || 1);
+    if (qty < moq) {
+      throw new Error(`Order quantity (${qty}) is below product MOQ of ${moq} units.`);
+    }
+
+    // Active volume tiers sorted by min_quantity descending
+    const activeTiers = (tiers || [])
+      .filter((t) => t.is_active !== false)
+      .sort((a, b) => b.min_quantity - a.min_quantity);
+
+    const matchedTier = activeTiers.find(
+      (t) => qty >= t.min_quantity && (t.max_quantity === null || qty <= t.max_quantity)
+    );
+
+    const baseUnitPrice = Number(product.wholesale_unit_price ?? product.wholesale_price ?? 0);
+    let effectiveUnitPrice = baseUnitPrice;
+    let tierPriceApplied: number | null = null;
+
+    if (matchedTier) {
+      tierPriceApplied = Number(matchedTier.price_per_unit);
+      effectiveUnitPrice = tierPriceApplied;
+    }
+
+    if (effectiveUnitPrice < 0 || isNaN(effectiveUnitPrice)) {
       throw new Error(`Invalid wholesale unit price configured for product.`);
     }
-    const subtotal = qty * unitPrice;
+
+    const subtotal = qty * effectiveUnitPrice;
     return {
       purchaseMode: "unit",
       quantity: qty,
       totalUnits: qty,
       unitsPerBox: product.wholesale_units_per_box ?? null,
-      unitPrice,
+      unitPrice: baseUnitPrice,
       boxPrice: product.wholesale_box_price != null ? Number(product.wholesale_box_price) : null,
-      tierPriceApplied: null,
-      effectiveUnitPrice: unitPrice,
+      tierPriceApplied,
+      effectiveUnitPrice,
       subtotal: Math.round(subtotal * 100) / 100,
     };
   }
@@ -99,18 +124,12 @@ export function calculateWholesaleItemPrice(
     };
   }
 
-  // 3. CUSTOM QUANTITY MODE
+  // 3. CUSTOM QUANTITY MODE (Historical / Deprecated fallback)
   if (purchaseMode === "custom") {
-    if (product.wholesale_custom_quantity_enabled === false) {
-      throw new Error(`Custom quantity purchase mode is disabled for this product.`);
-    }
-
-    // Active tiers sorted by min_quantity descending
     const activeTiers = (tiers || [])
       .filter((t) => t.is_active !== false)
       .sort((a, b) => b.min_quantity - a.min_quantity);
 
-    // Find matching tier
     const matchedTier = activeTiers.find(
       (t) => qty >= t.min_quantity && (t.max_quantity === null || qty <= t.max_quantity)
     );
@@ -163,3 +182,30 @@ export function calculateWholesaleOrderSubtotal(items: WholesaleItemPricingResul
     totalPayable: roundedSubtotal,
   };
 }
+
+/**
+ * Admin UX Reference helper for Box Pricing comparisons.
+ */
+export function calculateAdminBoxPricing(
+  unitsPerBox: number,
+  unitPrice: number,
+  boxPrice: number
+) {
+  const calculatedValue = Math.round(unitsPerBox * unitPrice * 100) / 100;
+  const diff = Math.round(Math.abs(boxPrice - calculatedValue) * 100) / 100;
+  const percentage = calculatedValue > 0 ? Math.round((diff / calculatedValue) * 100) : 0;
+
+  const isHigher = boxPrice > calculatedValue;
+  const isEqual = boxPrice === calculatedValue;
+  const isLower = boxPrice < calculatedValue;
+
+  return {
+    calculatedValue,
+    diff,
+    percentage,
+    isHigher,
+    isEqual,
+    isLower,
+  };
+}
+

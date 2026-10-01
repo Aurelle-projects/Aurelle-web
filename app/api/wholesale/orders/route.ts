@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       const { data: dbProd, error: prodErr } = await admin
         .from("products")
         .select(`
-          id, name, slug, sku, is_wholesale_available, wholesale_price,
+          id, name, slug, sku, is_wholesale_available, is_out_of_stock, wholesale_price,
           wholesale_unit_enabled, wholesale_unit_price, wholesale_box_enabled,
           wholesale_units_per_box, wholesale_box_price, wholesale_custom_quantity_enabled,
           product_images(secure_url, is_primary)
@@ -170,6 +170,13 @@ export async function POST(req: NextRequest) {
       if (!dbProd.is_wholesale_available) {
         return NextResponse.json(
           { error: `Product ${dbProd.name} is no longer available for wholesale purchase.` },
+          { status: 400 }
+        );
+      }
+
+      if (dbProd.is_out_of_stock) {
+        return NextResponse.json(
+          { error: `Product ${dbProd.name} is currently out of stock.` },
           { status: 400 }
         );
       }

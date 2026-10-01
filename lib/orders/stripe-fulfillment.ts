@@ -227,6 +227,45 @@ export async function finalizeStripeOrder(
     }
   }
 
+  // Verify availability before creating order
+  const productIds = items.filter((i) => !i.isCombo && !i.comboId && i.id).map((i) => i.id as string);
+  const comboIds = items.filter((i) => (i.isCombo || i.comboId) && (i.comboId || i.id)).map((i) => (i.comboId || i.id) as string);
+
+  if (productIds.length > 0) {
+    const { data: prods } = await admin
+      .from("products")
+      .select("id, name, is_published, status, is_out_of_stock")
+      .in("id", productIds);
+
+    for (const p of prods || []) {
+      const isListed = (p.status === undefined || p.status === "published") && (p.is_published === undefined || p.is_published === true);
+      if (!isListed || p.is_out_of_stock) {
+        console.error(`[Stripe Fulfillment] Product ${p.name} (${p.id}) is unavailable or out of stock.`);
+        return {
+          success: false,
+          error: `Product "${p.name}" is currently out of stock or unavailable.`,
+        };
+      }
+    }
+  }
+
+  if (comboIds.length > 0) {
+    const { data: combos } = await admin
+      .from("combo_offers")
+      .select("id, name, is_active, is_out_of_stock")
+      .in("id", comboIds);
+
+    for (const c of combos || []) {
+      if (!c.is_active || c.is_out_of_stock) {
+        console.error(`[Stripe Fulfillment] Combo ${c.name} (${c.id}) is inactive or out of stock.`);
+        return {
+          success: false,
+          error: `Combo "${c.name}" is currently out of stock or inactive.`,
+        };
+      }
+    }
+  }
+
   // Generate unique order reference
   const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 

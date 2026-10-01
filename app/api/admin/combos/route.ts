@@ -30,6 +30,7 @@ export async function GET() {
         price,
         compare_at_price,
         tax_enabled,
+        is_out_of_stock,
         is_active,
         is_featured,
         primary_image_url,
@@ -139,6 +140,7 @@ export async function POST(req: NextRequest) {
       price,
       compare_at_price,
       tax_enabled = true,
+      is_out_of_stock = false,
       is_active = true,
       is_featured = false,
       primary_image_url,
@@ -226,6 +228,7 @@ export async function POST(req: NextRequest) {
         compare_at_price:
           compare_at_price && Number(compare_at_price) > 0 ? Number(compare_at_price) : null,
         tax_enabled: Boolean(tax_enabled),
+        is_out_of_stock: Boolean(is_out_of_stock),
         is_active: Boolean(is_active),
         is_featured: Boolean(is_featured),
         primary_image_url: primary_image_url || null,

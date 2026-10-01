@@ -23,6 +23,7 @@ export interface ComboOfferItemProduct {
   retail_price: number;
   compare_at_price?: number | null;
   tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   is_published?: boolean;
   is_retail_available?: boolean;
   status?: string;
@@ -55,6 +56,7 @@ export interface ComboOffer {
   price: number;
   compare_at_price: number | null;
   tax_enabled: boolean;
+  is_out_of_stock: boolean;
   is_active: boolean;
   is_featured: boolean;
   primary_image_url: string | null;
@@ -78,6 +80,7 @@ export interface ComboOfferInput {
   price: number;
   compare_at_price?: number | null;
   tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   is_active?: boolean;
   is_featured?: boolean;
   primary_image_url?: string | null;
@@ -98,6 +101,7 @@ export interface ComboCartItemProduct {
   retail_price: number;
   compare_at_price?: number;
   tax_enabled: boolean;
+  is_out_of_stock?: boolean;
   is_combo: true;
   combo_id: string;
   combo_items: Array<{

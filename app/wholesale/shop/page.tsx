@@ -61,7 +61,7 @@ export default async function WholesaleShopPage() {
         .from("products")
         .select(`
           id, name, slug, sku, category_id, subcategory_id, brand_id, description, benefits,
-          retail_price, compare_at_price, wholesale_price, wholesale_moq,
+          retail_price, compare_at_price, wholesale_price, wholesale_moq, is_out_of_stock,
           is_wholesale_available, is_published, is_featured, is_best_seller, is_new_arrival, status,
           brand:brands(id, name, slug),
           category:categories(id, name, slug),

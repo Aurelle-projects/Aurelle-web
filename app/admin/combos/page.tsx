@@ -177,6 +177,7 @@ export default function AdminCombosPage() {
                     <th className="px-4 py-3">Combo Offer</th>
                     <th className="px-4 py-3">Included Products</th>
                     <th className="px-4 py-3">Pricing & Savings</th>
+                    <th className="px-4 py-3 text-center">Availability</th>
                     <th className="px-4 py-3 text-center">Tax (5%)</th>
                     <th className="px-4 py-3 text-center">Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
@@ -270,6 +271,19 @@ export default function AdminCombosPage() {
                               </span>
                             ) : null}
                           </div>
+                        </td>
+
+                        {/* Availability */}
+                        <td className="px-4 py-3.5 text-center">
+                          {combo.is_out_of_stock ? (
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 uppercase tracking-wider">
+                              Out of Stock
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                              Available
+                            </span>
+                          )}
                         </td>
 
                         {/* Tax Enabled */}

@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
         price,
         compare_at_price,
         tax_enabled,
+        is_out_of_stock,
         is_active,
         is_featured,
         primary_image_url,

@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const {
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
-      retail_price, compare_at_price, tax_enabled, wholesale_price, wholesale_moq,
+      retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
       wholesale_unit_enabled, wholesale_unit_price,
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
         retail_price: parseFloat(retail_price),
         compare_at_price: compare_at_price ? parseFloat(compare_at_price) : null,
         tax_enabled: tax_enabled !== undefined ? !!tax_enabled : true,
+        is_out_of_stock: !!is_out_of_stock,
         wholesale_price: wsUnitPriceVal ?? (wsBoxPriceVal && wsUnitsPerBoxVal ? wsBoxPriceVal / wsUnitsPerBoxVal : null),
         wholesale_moq: parseInt(wholesale_moq) || 1,
         wholesale_unit_enabled: wsUnitEnabled,
@@ -190,7 +191,7 @@ export async function PATCH(req: NextRequest) {
       id,
       name, slug, sku, category_slug, category_id: incomingCatId, brand_id, subcategory_id,
       description, benefits, ingredients, usage_instructions,
-      retail_price, compare_at_price, tax_enabled, wholesale_price, wholesale_moq,
+      retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
       wholesale_unit_enabled, wholesale_unit_price,
       wholesale_box_enabled, wholesale_units_per_box, wholesale_box_price,
       wholesale_custom_quantity_enabled,
@@ -284,6 +285,9 @@ export async function PATCH(req: NextRequest) {
     }
     if (tax_enabled !== undefined) {
       updatePayload.tax_enabled = !!tax_enabled;
+    }
+    if (is_out_of_stock !== undefined) {
+      updatePayload.is_out_of_stock = !!is_out_of_stock;
     }
     if (subcategory_id !== undefined) {
       updatePayload.specifications = subcategory_id

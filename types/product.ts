@@ -46,6 +46,7 @@ export interface ProductCard {
   is_featured: boolean;
   is_best_seller: boolean;
   is_new_arrival: boolean;
+  is_out_of_stock?: boolean;
 }
 
 // ─── Product detail (full — for product page) ────────────────────────────────

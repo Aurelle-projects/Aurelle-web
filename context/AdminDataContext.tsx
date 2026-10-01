@@ -12,6 +12,7 @@ export interface ProductRow {
   wholesale_price: number | null;
   category_name: string;
   status: string;
+  is_out_of_stock?: boolean;
   image_url?: string;
 }
 
@@ -233,7 +234,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await (supabase as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, wholesale_price, status,
+          id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock,
           category:categories(name),
           product_images(secure_url, is_primary)
         `)
@@ -254,6 +255,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             wholesale_price: p.wholesale_price,
             category_name: p.category?.name || "Unassigned",
             status: p.status || "published",
+            is_out_of_stock: p.is_out_of_stock ?? false,
             image_url: primaryImg,
           };
         });

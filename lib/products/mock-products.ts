@@ -23,6 +23,7 @@ export interface ProductItem {
   }[];
   stock_quantity?: number;
   stock_status?: "in_stock" | "low_stock" | "out_of_stock" | string;
+  is_out_of_stock?: boolean;
   wholesale_moq: number;
   wholesale_price: number;
   rating: number;

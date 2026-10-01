@@ -18,6 +18,7 @@ type CatalogProduct = {
   retail_price: number;
   compare_at_price?: number | null;
   tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   is_new_arrival?: boolean;
   is_featured?: boolean;
   is_best_seller?: boolean;
@@ -43,6 +44,7 @@ function toCartProduct(product: CatalogProduct, imageUrl: string | null): Produc
     short_description: "",
     retail_price: product.retail_price,
     tax_enabled: product.tax_enabled !== false,
+    is_out_of_stock: Boolean(product.is_out_of_stock),
     category_id: "",
     category_slug: "",
     category_name: "",
@@ -124,6 +126,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
   }, [started, offset, hasMore, loading]);
 
   function handleAdd(product: CatalogProduct) {
+    if (product.is_out_of_stock) return;
     const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
     const imageUrl = image?.secure_url ?? (image?.cloudinary_public_id ? getProductImageUrl(image.cloudinary_public_id, "medium") : null);
     addItem(toCartProduct(product, imageUrl));
@@ -143,6 +146,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
             const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
             const imageUrl = image?.secure_url ?? (image?.cloudinary_public_id ? getProductImageUrl(image.cloudinary_public_id, "medium") : null);
             const onSale = Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
+            const isOutOfStock = Boolean(product.is_out_of_stock);
 
             return (
               <article key={product.id} className="group relative min-w-0" role="listitem">
@@ -154,6 +158,13 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                       <div className="flex h-full items-center justify-center text-3xl font-bold text-[#183D2B]/20">{product.name.charAt(0)}</div>
                     )}
                   </Link>
+
+                  {/* Top-Left Out of Stock Badge */}
+                  {isOutOfStock && (
+                    <span className="absolute top-2 left-2 bg-[#1D211F]/90 text-white text-[9px] font-semibold tracking-wider px-1.5 py-0.5 uppercase z-10 pointer-events-none">
+                      Out of Stock
+                    </span>
+                  )}
 
                   {/* Top-Right Wishlist Heart Button */}
                   <button
@@ -171,23 +182,31 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                     />
                   </button>
                   {/* Desktop Hover Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleAdd(product)}
-                    className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md cursor-pointer"
-                  >
-                    <span className="inline-flex items-center justify-center gap-1.5">{addedId === product.id ? <><Check size={14} className="stroke-[2.5]" />Added</> : <><ShoppingBag size={14} />Add to Cart</>}</span>
-                  </button>
+                  {isOutOfStock ? (
+                    <div className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#8E9590] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md text-center">
+                      <span>Out of Stock</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(product)}
+                      className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md cursor-pointer"
+                    >
+                      <span className="inline-flex items-center justify-center gap-1.5">{addedId === product.id ? <><Check size={14} className="stroke-[2.5]" />Added</> : <><ShoppingBag size={14} />Add to Cart</>}</span>
+                    </button>
+                  )}
 
                   {/* Mobile Bottom-Right Round Icon Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleAdd(product)}
-                    className="sm:hidden absolute bottom-2 right-2 z-10 w-8.5 h-8.5 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all active:scale-90"
-                    aria-label={`Add ${product.name} to cart`}
-                  >
-                    {addedId === product.id ? <Check size={16} className="text-white stroke-[2.5]" /> : <ShoppingBag size={16} className="text-white" />}
-                  </button>
+                  {!isOutOfStock && (
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(product)}
+                      className="sm:hidden absolute bottom-2 right-2 z-10 w-8.5 h-8.5 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all active:scale-90"
+                      aria-label={`Add ${product.name} to cart`}
+                    >
+                      {addedId === product.id ? <Check size={16} className="text-white stroke-[2.5]" /> : <ShoppingBag size={16} className="text-white" />}
+                    </button>
+                  )}
                 </div>
                 <Link href={`/products/${product.slug}`} className="block truncate px-1 pt-2 text-sm text-[#1D211F]">{product.name}</Link>
                 <div className="flex items-baseline gap-2 px-1 pb-4 pt-1">

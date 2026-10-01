@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
       const { data, error: prodErr } = await (admin as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, tax_enabled, is_published, status
+          id, name, slug, sku, retail_price, tax_enabled, is_out_of_stock, is_published, status
         `)
         .in("id", regularProductIds);
 
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
       const { data: comboData, error: comboErr } = await (admin as any)
         .from("combo_offers")
         .select(`
-          id, name, slug, sku, price, compare_at_price, tax_enabled, is_active, primary_image_url,
+          id, name, slug, sku, price, compare_at_price, tax_enabled, is_out_of_stock, is_active, primary_image_url,
           combo_offer_items (
             id, product_id, quantity, sort_order,
             products (
@@ -298,6 +298,15 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               error: `The combo offer "${rawItem.name || "Selected Combo"}" is currently unavailable or inactive.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (dbCombo.is_out_of_stock) {
+          return NextResponse.json(
+            {
+              error: `The combo offer "${dbCombo.name}" is currently out of stock. Please remove it from your cart to continue.`,
             },
             { status: 400 }
           );
@@ -376,6 +385,13 @@ export async function POST(request: NextRequest) {
         if (!isListed) {
           return NextResponse.json(
             { error: `Product "${rawItem.name || "Selected item"}" is no longer available.` },
+            { status: 400 }
+          );
+        }
+
+        if (dbProd.is_out_of_stock) {
+          return NextResponse.json(
+            { error: `Product "${dbProd.name}" is currently out of stock. Please remove it from your cart to continue.` },
             { status: 400 }
           );
         }

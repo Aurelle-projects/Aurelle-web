@@ -21,9 +21,13 @@ export default function ComboCard({ combo }: ComboCardProps) {
     combo.items?.[0]?.product?.product_images?.[0]?.secure_url ||
     null;
 
+  const isOutOfStock = Boolean(combo.is_out_of_stock);
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isOutOfStock) return;
 
     // Convert Combo to cart item format
     addItem({
@@ -36,6 +40,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
       retail_price: Number(combo.price),
       compare_at_price: combo.compare_at_price || combo.total_individual_price || undefined,
       tax_enabled: combo.tax_enabled !== false,
+      is_out_of_stock: isOutOfStock,
       category_id: "combos",
       category_slug: "combos",
       category_name: "Combo Offers",
@@ -89,12 +94,18 @@ export default function ComboCard({ combo }: ComboCardProps) {
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#102D20] text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-md border border-[#C9A84C]/40">
-            <Sparkles size={11} className="text-[#C9A84C]" />
-            Combo Offer
-          </span>
+          {isOutOfStock ? (
+            <span className="inline-flex items-center px-2.5 py-1 bg-[#1D211F]/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-md">
+              Out of Stock
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#102D20] text-white text-[10px] font-bold uppercase tracking-wider rounded-md shadow-md border border-[#C9A84C]/40">
+              <Sparkles size={11} className="text-[#C9A84C]" />
+              Combo Offer
+            </span>
+          )}
 
-          {combo.savings_amount && combo.savings_amount > 0 && (
+          {!isOutOfStock && combo.savings_amount && combo.savings_amount > 0 && (
             <span className="inline-flex items-center px-2 py-0.5 bg-[#C9A84C] text-[#102D20] text-[10.5px] font-extrabold rounded-md shadow-xs">
               Save AED {combo.savings_amount.toFixed(0)}
             </span>
@@ -148,28 +159,38 @@ export default function ComboCard({ combo }: ComboCardProps) {
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isAdded}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer shadow-xs ${
-              isAdded
-                ? "bg-emerald-700 text-white"
-                : "bg-[#183D2B] hover:bg-[#102D20] text-white"
-            }`}
-          >
-            {isAdded ? (
-              <>
-                <Check size={14} />
-                <span>Added</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>Add Set</span>
-              </>
-            )}
-          </button>
+          {isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold bg-[#8E9590] text-white cursor-not-allowed shadow-xs"
+            >
+              <span>Out of Stock</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isAdded}
+              className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+                isAdded
+                  ? "bg-emerald-700 text-white"
+                  : "bg-[#183D2B] hover:bg-[#102D20] text-white"
+              }`}
+            >
+              {isAdded ? (
+                <>
+                  <Check size={14} />
+                  <span>Added</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={14} />
+                  <span>Add Set</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

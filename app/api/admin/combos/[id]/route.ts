@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         price,
         compare_at_price,
         tax_enabled,
+        is_out_of_stock,
         is_active,
         is_featured,
         primary_image_url,
@@ -170,6 +171,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           : null;
     }
     if (body.tax_enabled !== undefined) updateData.tax_enabled = Boolean(body.tax_enabled);
+    if (body.is_out_of_stock !== undefined) updateData.is_out_of_stock = Boolean(body.is_out_of_stock);
     if (body.is_active !== undefined) updateData.is_active = Boolean(body.is_active);
     if (body.is_featured !== undefined) updateData.is_featured = Boolean(body.is_featured);
     if (body.primary_image_url !== undefined) updateData.primary_image_url = body.primary_image_url || null;

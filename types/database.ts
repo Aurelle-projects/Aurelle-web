@@ -140,6 +140,7 @@ export type Database = {
           retail_price: number;
           compare_at_price: number | null;
           tax_enabled: boolean;
+          is_out_of_stock: boolean;
           wholesale_price: number | null;
           wholesale_moq: number | null;
           wholesale_unit_enabled: boolean;
@@ -175,6 +176,7 @@ export type Database = {
           retail_price: number;
           compare_at_price?: number | null;
           tax_enabled?: boolean;
+          is_out_of_stock?: boolean;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
           wholesale_unit_enabled?: boolean;
@@ -209,6 +211,7 @@ export type Database = {
           retail_price?: number;
           compare_at_price?: number | null;
           tax_enabled?: boolean;
+          is_out_of_stock?: boolean;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
           wholesale_unit_enabled?: boolean;

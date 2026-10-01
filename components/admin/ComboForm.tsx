@@ -82,6 +82,9 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
   const [taxEnabled, setTaxEnabled] = useState(
     initialData?.tax_enabled !== undefined ? initialData.tax_enabled : true
   );
+  const [isOutOfStock, setIsOutOfStock] = useState(
+    initialData?.is_out_of_stock !== undefined ? initialData.is_out_of_stock : false
+  );
   const [isActive, setIsActive] = useState(
     initialData?.is_active !== undefined ? initialData.is_active : true
   );
@@ -384,6 +387,7 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
       price: numComboPrice,
       compare_at_price: compareAtPrice ? Number(compareAtPrice) : individualTotalValue || null,
       tax_enabled: Boolean(taxEnabled),
+      is_out_of_stock: Boolean(isOutOfStock),
       is_active: Boolean(isActive),
       is_featured: Boolean(isFeatured),
       primary_image_url: primaryImage?.url || null,
@@ -879,12 +883,57 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
           </div>
 
           {/* 3. Availability & Visibility Settings */}
-          <div className="bg-white rounded-xl border border-[#DCCFB9]/70 p-5 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-[#183D2B] uppercase tracking-wider">
-              Status & Storefront Flags
-            </h3>
+          <div className="bg-white rounded-xl border border-[#DCCFB9]/70 p-5 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#DCCFB9]/40 pb-3">
+              <Tag size={16} className="text-[#183D2B]" />
+              <h2 className="text-sm font-bold text-[#183D2B] uppercase tracking-wider">
+                Combo Availability
+              </h2>
+            </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
+              <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                !isOutOfStock
+                  ? "border-emerald-500 bg-emerald-50/50 text-emerald-900"
+                  : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+              }`}>
+                <input
+                  type="radio"
+                  name="combo_is_out_of_stock"
+                  checked={!isOutOfStock}
+                  onChange={() => setIsOutOfStock(false)}
+                  className="w-4 h-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div>
+                  <p className="text-xs font-bold">Available</p>
+                  <p className="text-[11px] text-[#5C6460]">Customers can purchase this combo offer.</p>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                isOutOfStock
+                  ? "border-amber-500 bg-amber-50/50 text-amber-900"
+                  : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+              }`}>
+                <input
+                  type="radio"
+                  name="combo_is_out_of_stock"
+                  checked={isOutOfStock}
+                  onChange={() => setIsOutOfStock(true)}
+                  className="w-4 h-4 mt-0.5 text-amber-600 focus:ring-amber-500"
+                />
+                <div>
+                  <p className="text-xs font-bold">Mark as Out of Stock</p>
+                  <p className="text-[11px] text-[#5C6460]">Combo displays &quot;Out of Stock&quot; and purchasing is disabled.</p>
+                </div>
+              </label>
+            </div>
+
+            <div className="pt-3 border-t border-[#DCCFB9]/40 space-y-2.5">
+              <h3 className="text-xs font-bold text-[#183D2B] uppercase tracking-wider">
+                Publishing & Storefront Visibility
+              </h3>
+
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -893,7 +942,7 @@ export default function ComboForm({ initialData, isEdit = false }: ComboFormProp
                   className="w-4 h-4 text-[#183D2B] rounded border-[#DCCFB9]"
                 />
                 <span className="text-xs font-semibold text-[#1D211F]">
-                  Active & Available on Retail Storefront
+                  Active & Published on Retail Storefront
                 </span>
               </label>
 

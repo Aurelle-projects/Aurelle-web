@@ -22,6 +22,8 @@ export default function AdminProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
+  const [selectedAvailability, setSelectedAvailability] = useState("all");
+
   useEffect(() => {
     loadProducts();
     loadCategories();
@@ -42,9 +44,13 @@ export default function AdminProductsPage() {
         (p.sku && p.sku.toLowerCase().includes(term));
       const matchesCategory =
         selectedCategory === "all" || p.category_name === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesAvailability =
+        selectedAvailability === "all" ||
+        (selectedAvailability === "available" && !p.is_out_of_stock) ||
+        (selectedAvailability === "out_of_stock" && p.is_out_of_stock);
+      return matchesSearch && matchesCategory && matchesAvailability;
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [products, searchTerm, selectedCategory, selectedAvailability]);
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
@@ -102,6 +108,16 @@ export default function AdminProductsPage() {
                 </option>
               ))}
             </select>
+
+            <select
+              value={selectedAvailability}
+              onChange={(e) => setSelectedAvailability(e.target.value)}
+              className="h-8 px-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs font-semibold text-[#1D211F] outline-none cursor-pointer w-full sm:w-auto"
+            >
+              <option value="all">All Availability</option>
+              <option value="available">Available</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
           </div>
         </div>
 
@@ -115,6 +131,7 @@ export default function AdminProductsPage() {
                   <th className="py-2.5 px-3.5">Category</th>
                   <th className="py-2.5 px-3.5">Retail Price</th>
                   <th className="py-2.5 px-3.5">Wholesale Price</th>
+                  <th className="py-2.5 px-3.5">Availability</th>
                   <th className="py-2.5 px-3.5">Status</th>
                   <th className="py-2.5 px-3.5 text-right">Actions</th>
                 </tr>
@@ -122,7 +139,7 @@ export default function AdminProductsPage() {
               <tbody className="divide-y divide-[#DCCFB9]/30 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-[#5C6460]">
+                    <td colSpan={7} className="py-10 text-center text-[#5C6460]">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <div className="w-5 h-5 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin" />
                         <p className="font-semibold text-xs text-[#5C6460]">Loading database products...</p>
@@ -131,7 +148,7 @@ export default function AdminProductsPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-[#5C6460]">
+                    <td colSpan={7} className="py-10 text-center text-[#5C6460]">
                       <Package size={30} className="mx-auto mb-2 text-[#8E9590]" />
                       <p className="font-semibold text-xs">No products found</p>
                       <p className="text-[11px] text-[#8E9590] mt-0.5">
@@ -186,7 +203,19 @@ export default function AdminProductsPage() {
                       </td>
 
                       <td className="py-2.5 px-3.5">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                        {item.is_out_of_stock ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 uppercase tracking-wider">
+                            Out of Stock
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                            Available
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-2.5 px-3.5">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-[#F7F5EF] text-[#5C6460] uppercase tracking-wider">
                           {item.status}
                         </span>
                       </td>

@@ -70,6 +70,7 @@ export default function NewProductPage() {
     retail_price: "",
     compare_at_price: "",
     tax_enabled: true,
+    is_out_of_stock: false,
     wholesale_price: "",
     wholesale_unit_price: "",
     wholesale_unit_enabled: true,
@@ -588,6 +589,50 @@ export default function NewProductPage() {
               ) : (
                 <p className="text-xs text-[#8E9590] italic">Wholesale ordering is disabled for this product.</p>
               )}
+            </div>
+
+            {/* Product Availability */}
+            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">
+                Product Availability
+              </h2>
+              <div className="space-y-2">
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  !formData.is_out_of_stock
+                    ? "border-emerald-500 bg-emerald-50/50 text-emerald-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={!formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: false }))}
+                    className="w-4 h-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Available</p>
+                    <p className="text-[11px] text-[#5C6460]">Customers can add this product to their cart and checkout.</p>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  formData.is_out_of_stock
+                    ? "border-amber-500 bg-amber-50/50 text-amber-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: true }))}
+                    className="w-4 h-4 mt-0.5 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Mark as Out of Stock</p>
+                    <p className="text-[11px] text-[#5C6460]">Product shows as &quot;Out of Stock&quot; and purchasing is disabled.</p>
+                  </div>
+                </label>
+              </div>
             </div>
 
             {/* Badges & Status */}

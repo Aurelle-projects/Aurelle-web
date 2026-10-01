@@ -104,6 +104,8 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
   const activeImage = allImages[selectedImageIdx] || allImages[0] || null;
 
   const handleAddToCart = () => {
+    if (combo.is_out_of_stock) return;
+
     addItem(
       {
         id: combo.id,
@@ -115,6 +117,7 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
         retail_price: Number(combo.price),
         compare_at_price: combo.compare_at_price || combo.total_individual_price || undefined,
         tax_enabled: combo.tax_enabled !== false,
+        is_out_of_stock: Boolean(combo.is_out_of_stock),
         category_id: "combos",
         category_slug: "combos",
         category_name: "Combo Offers",
@@ -193,12 +196,18 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
 
               {/* Combo Offer Pill */}
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider rounded-md shadow-md border border-[#C9A84C]/50">
-                  <Sparkles size={13} className="text-[#C9A84C]" />
-                  COMBO OFFER
-                </span>
+                {combo.is_out_of_stock ? (
+                  <span className="inline-flex items-center px-3 py-1.5 bg-[#1D211F]/90 text-white text-xs font-bold uppercase tracking-wider rounded-md shadow-md">
+                    OUT OF STOCK
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#102D20] text-white text-xs font-bold uppercase tracking-wider rounded-md shadow-md border border-[#C9A84C]/50">
+                    <Sparkles size={13} className="text-[#C9A84C]" />
+                    COMBO OFFER
+                  </span>
+                )}
 
-                {combo.savings_amount && combo.savings_amount > 0 && (
+                {!combo.is_out_of_stock && combo.savings_amount && combo.savings_amount > 0 && (
                   <span className="inline-flex items-center px-2.5 py-1 bg-[#C9A84C] text-[#102D20] text-xs font-extrabold rounded-md shadow-sm">
                     SAVE AED {combo.savings_amount.toFixed(2)} ({combo.savings_percentage}%)
                   </span>
@@ -259,7 +268,7 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
                   </p>
                 </div>
 
-                {combo.savings_amount && combo.savings_amount > 0 && (
+                {!combo.is_out_of_stock && combo.savings_amount && combo.savings_amount > 0 && (
                   <div className="sm:text-right bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
                     <span className="text-xs font-extrabold text-emerald-800 block">
                       Total Savings: AED {combo.savings_amount.toFixed(2)}
@@ -300,61 +309,84 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
             <div className="space-y-4 pt-4 border-t border-[#DCCFB9]/60">
               {/* Availability Notice */}
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-                <span className="text-xs font-semibold text-[#1D211F]">
-                  In Stock — Ready for UAE Dispatch
-                </span>
+                {combo.is_out_of_stock ? (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-600" />
+                    <span className="text-xs font-semibold text-[#1D211F]">
+                      Out of Stock
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                    <span className="text-xs font-semibold text-[#1D211F]">
+                      Available — Ready for UAE Dispatch
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Controls */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Quantity Selector */}
-                <div className="flex items-center border border-[#DCCFB9] rounded-lg bg-[#F7F5EF] overflow-hidden self-start">
+              {combo.is_out_of_stock ? (
+                <div>
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white disabled:opacity-40 transition-colors cursor-pointer"
-                    aria-label="Decrease quantity"
+                    disabled
+                    className="w-full flex items-center justify-center py-3.5 px-6 rounded-lg text-xs font-bold tracking-wider uppercase bg-[#8E9590] text-white cursor-not-allowed shadow-xs"
                   >
-                    <Minus size={14} />
-                  </button>
-                  <span className="w-12 text-center text-xs font-bold text-[#183D2B]">
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white transition-colors cursor-pointer"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus size={14} />
+                    Out of Stock
                   </button>
                 </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Quantity Selector */}
+                  <div className="flex items-center border border-[#DCCFB9] rounded-lg bg-[#F7F5EF] overflow-hidden self-start">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white disabled:opacity-40 transition-colors cursor-pointer"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-12 text-center text-xs font-bold text-[#183D2B]">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => q + 1)}
+                      className="p-2.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-white transition-colors cursor-pointer"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
 
-                {/* Add to Cart Button */}
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-lg text-xs font-bold tracking-wider uppercase transition-all shadow-md cursor-pointer ${
-                    isAdded
-                      ? "bg-emerald-700 text-white"
-                      : "bg-[#183D2B] hover:bg-[#102D20] text-white hover:shadow-lg"
-                  }`}
-                >
-                  {isAdded ? (
-                    <>
-                      <Check size={16} />
-                      <span>Added to Bag!</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag size={16} />
-                      <span>Add Combo to Bag — AED {(combo.price * quantity).toFixed(2)}</span>
-                    </>
-                  )}
-                </button>
-              </div>
+                  {/* Add to Cart Button */}
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-lg text-xs font-bold tracking-wider uppercase transition-all shadow-md cursor-pointer ${
+                      isAdded
+                        ? "bg-emerald-700 text-white"
+                        : "bg-[#183D2B] hover:bg-[#102D20] text-white hover:shadow-lg"
+                    }`}
+                  >
+                    {isAdded ? (
+                      <>
+                        <Check size={16} />
+                        <span>Added to Bag!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag size={16} />
+                        <span>Add Combo to Bag — AED {(combo.price * quantity).toFixed(2)}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Guarantees */}
               <div className="grid grid-cols-3 gap-2 pt-3 text-center border-t border-[#DCCFB9]/40 text-[11px] text-[#5C6460]">

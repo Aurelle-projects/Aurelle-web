@@ -63,15 +63,17 @@ export async function POST(request: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (admin as any)
-      .from("wholesale_applications")
+      .from("wholesale_enquiries")
       .insert({
-        business_name: companyName.trim(),
+        company_name: companyName.trim(),
         contact_person: contactPerson.trim(),
-        email: finalEmail,
         phone: phone.trim(),
-        country: "United Arab Emirates",
-        business_type: "Wholesale Trade Enquiry",
-        expected_order_volume: quantity?.trim() || "Wholesale MOQ",
+        email: email && email.trim() ? email.trim() : null,
+        whatsapp: whatsapp && whatsapp.trim() ? whatsapp.trim() : null,
+        category_name: categoryName && categoryName.trim() ? categoryName.trim() : null,
+        product_name: productName && productName.trim() ? productName.trim() : null,
+        quantity: quantity && quantity.trim() ? quantity.trim() : null,
+        message: message && message.trim() ? message.trim() : null,
         notes: notesSummary,
         status: "pending",
       })

@@ -574,6 +574,54 @@ export type Database = {
           updated_at?: string;
         };
       };
+      wholesale_enquiries: {
+        Row: {
+          id: string;
+          company_name: string;
+          contact_person: string;
+          phone: string;
+          email: string | null;
+          whatsapp: string | null;
+          category_name: string | null;
+          product_name: string | null;
+          quantity: string | null;
+          message: string | null;
+          notes: string | null;
+          status: "pending" | "under_review" | "approved" | "rejected";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_name: string;
+          contact_person: string;
+          phone: string;
+          email?: string | null;
+          whatsapp?: string | null;
+          category_name?: string | null;
+          product_name?: string | null;
+          quantity?: string | null;
+          message?: string | null;
+          notes?: string | null;
+          status?: "pending" | "under_review" | "approved" | "rejected";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          company_name?: string;
+          contact_person?: string;
+          phone?: string;
+          email?: string | null;
+          whatsapp?: string | null;
+          category_name?: string | null;
+          product_name?: string | null;
+          quantity?: string | null;
+          message?: string | null;
+          notes?: string | null;
+          status?: "pending" | "under_review" | "approved" | "rejected";
+          updated_at?: string;
+        };
+      };
       banners: {
         Row: {
           id: string;

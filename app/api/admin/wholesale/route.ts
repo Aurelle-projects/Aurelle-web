@@ -15,22 +15,19 @@ export async function GET() {
 
     const admin = createAdminClient();
 
+    // 1. Fetch B2B Account Applications
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (admin as any)
+    const { data: appsData, error: appsError } = await (admin as any)
       .from("wholesale_applications")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.warn("[Admin Wholesale API] load error:", error);
-      return NextResponse.json({ success: true, applications: [] });
+    if (appsError) {
+      console.warn("[Admin Wholesale API] applications load error:", appsError);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allRows = data || [];
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mapped = allRows.map((app: any) => ({
+    const applications = (appsData || []).map((app: any) => ({
       id: app.id,
       company_name: app.business_name || app.company_name || "Company",
       trade_license_number: app.trade_license_number || app.trade_license_url || "—",
@@ -47,18 +44,36 @@ export async function GET() {
       trade_license_url: app.trade_license_url || null,
     }));
 
-    // Separate Account Applications vs Trade Enquiries
-    const applications = mapped.filter(
-      (item: any) =>
-        item.business_type !== "Wholesale Trade Enquiry" &&
-        !(item.notes && item.notes.includes("[Wholesale Product Enquiry]"))
-    );
+    // 2. Fetch Trade / Product Enquiries from dedicated public.wholesale_enquiries table
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: enqData, error: enqError } = await (admin as any)
+      .from("wholesale_enquiries")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    const enquiries = mapped.filter(
-      (item: any) =>
-        item.business_type === "Wholesale Trade Enquiry" ||
-        (item.notes && item.notes.includes("[Wholesale Product Enquiry]"))
-    );
+    if (enqError) {
+      console.warn("[Admin Wholesale API] enquiries load error:", enqError);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enquiries = (enqData || []).map((enq: any) => ({
+      id: enq.id,
+      company_name: enq.company_name,
+      contact_person: enq.contact_person,
+      email: enq.email || "—",
+      phone: enq.phone || "—",
+      whatsapp: enq.whatsapp || null,
+      category_name: enq.category_name || null,
+      product_name: enq.product_name || null,
+      quantity: enq.quantity || null,
+      message: enq.message || null,
+      business_type: "Wholesale Trade Enquiry",
+      status: enq.status || "pending",
+      created_at: enq.created_at || new Date().toISOString(),
+      country: "United Arab Emirates",
+      expected_order_volume: enq.quantity || null,
+      notes: enq.notes || enq.message || null,
+    }));
 
     // Also fetch wholesale site_settings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,7 +192,37 @@ export async function PATCH(request: Request) {
 
     const admin = createAdminClient();
 
-    // 1. Fetch application details
+    // 1. Check if this is a Trade Enquiry in public.wholesale_enquiries
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: enquiryRecord } = await (admin as any)
+      .from("wholesale_enquiries")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (enquiryRecord) {
+      // Update enquiry status in wholesale_enquiries
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: enqUpdateErr } = await (admin as any)
+        .from("wholesale_enquiries")
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (enqUpdateErr) {
+        console.error("[Admin Wholesale PATCH enquiry error]:", enqUpdateErr);
+        return NextResponse.json({ error: enqUpdateErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Enquiry status updated to ${status}.`,
+      });
+    }
+
+    // 2. Otherwise handle B2B Account Application in public.wholesale_applications
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: application, error: appFetchErr } = await (admin as any)
       .from("wholesale_applications")
@@ -187,7 +232,7 @@ export async function PATCH(request: Request) {
 
     if (appFetchErr || !application) {
       return NextResponse.json(
-        { error: appFetchErr?.message || "Wholesale application not found." },
+        { error: appFetchErr?.message || "Wholesale application or enquiry not found." },
         { status: 404 }
       );
     }

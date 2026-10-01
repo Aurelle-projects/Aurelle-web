@@ -69,6 +69,8 @@ export default function NewProductPage() {
     usage_instructions: "",
     retail_price: "",
     compare_at_price: "",
+    tax_enabled: true,
+    is_out_of_stock: false,
     wholesale_price: "",
     wholesale_unit_price: "",
     wholesale_unit_enabled: true,
@@ -77,8 +79,6 @@ export default function NewProductPage() {
     wholesale_box_price: "",
     wholesale_custom_quantity_enabled: true,
     wholesale_moq: "12",
-    stock_quantity: "50",
-    low_stock_threshold: "5",
     is_published: true,
     is_featured: false,
     is_best_seller: false,
@@ -400,6 +400,34 @@ export default function NewProductPage() {
                     className="w-full h-10 pl-14 pr-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#5C6460] outline-none" />
                 </div>
               </div>
+
+              {/* Retail Tax Toggle */}
+              <div className="pt-2 border-t border-[#DCCFB9]/40">
+                <div className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0]">
+                  <div>
+                    <label htmlFor="tax_enabled_toggle" className="text-xs font-bold text-[#1D211F] block cursor-pointer">Retail Tax (5% VAT)</label>
+                    <p className="text-[11px] text-[#5C6460] mt-0.5">
+                      {formData.tax_enabled
+                        ? "5% retail tax applies to this product."
+                        : "This product is tax-exempt for retail."}
+                    </p>
+                    <p className="text-[10px] text-[#8E9590] mt-0.5 italic">
+                      Applies to RETAIL only. Does not affect wholesale pricing.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                    <input
+                      id="tax_enabled_toggle"
+                      type="checkbox"
+                      name="tax_enabled"
+                      checked={formData.tax_enabled}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#DCCFB9] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#183D2B]"></div>
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* Wholesale Selling Configuration */}
@@ -563,18 +591,47 @@ export default function NewProductPage() {
               )}
             </div>
 
-            {/* Inventory */}
-            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">Inventory</h2>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Stock Units</label>
-                <input type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Low Stock Alert Level</label>
-                <input type="number" name="low_stock_threshold" value={formData.low_stock_threshold} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
+            {/* Product Availability */}
+            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">
+                Product Availability
+              </h2>
+              <div className="space-y-2">
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  !formData.is_out_of_stock
+                    ? "border-emerald-500 bg-emerald-50/50 text-emerald-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={!formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: false }))}
+                    className="w-4 h-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Available</p>
+                    <p className="text-[11px] text-[#5C6460]">Customers can add this product to their cart and checkout.</p>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  formData.is_out_of_stock
+                    ? "border-amber-500 bg-amber-50/50 text-amber-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: true }))}
+                    className="w-4 h-4 mt-0.5 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Mark as Out of Stock</p>
+                    <p className="text-[11px] text-[#5C6460]">Product shows as &quot;Out of Stock&quot; and purchasing is disabled.</p>
+                  </div>
+                </label>
               </div>
             </div>
 

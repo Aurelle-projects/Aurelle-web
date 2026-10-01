@@ -96,7 +96,7 @@ export default function WishlistDrawer({
         const { data, error } = await (supabase as any)
           .from("products")
           .select(`
-            id, name, slug, sku, retail_price, description,
+            id, name, slug, sku, retail_price, tax_enabled, is_out_of_stock, description,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .in("id", ids);
@@ -114,6 +114,8 @@ export default function WishlistDrawer({
             description: p.description || "",
             short_description: "",
             retail_price: Number(p.retail_price) || 0,
+            tax_enabled: p.tax_enabled !== false,
+            is_out_of_stock: Boolean(p.is_out_of_stock),
             category_id: "",
             category_slug: "",
             category_name: "",
@@ -128,8 +130,6 @@ export default function WishlistDrawer({
               alt: img.alt_text || p.name,
               is_primary: img.is_primary ?? false,
             })),
-            stock_quantity: 1,
-            stock_status: "in_stock" as const,
             wholesale_moq: 1,
             wholesale_price: Number(p.retail_price) || 0,
             rating: 5,
@@ -162,6 +162,7 @@ export default function WishlistDrawer({
   }, [open, loadData]);
 
   function handleAdd(product: ProductItem) {
+    if (product.is_out_of_stock) return;
     addItem(product);
     setAddedId(product.id);
     setTimeout(() => setAddedId(null), 1200);
@@ -296,18 +297,24 @@ export default function WishlistDrawer({
                             AED {product.retail_price.toFixed(2)}
                           </p>
                           <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleAdd(product)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] text-white text-[11px] font-semibold uppercase tracking-wide rounded-sm hover:bg-[#102D20] transition-colors"
-                            >
-                              <ShoppingBag size={12} strokeWidth={2} />
-                              {addedId === product.id ? "Added!" : "Add to Cart"}
-                            </button>
+                            {product.is_out_of_stock ? (
+                              <span className="inline-block px-2.5 py-1 bg-[#8E9590] text-white text-[10px] font-semibold uppercase tracking-wider rounded-sm cursor-not-allowed">
+                                Out of Stock
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAdd(product)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] text-white text-[11px] font-semibold uppercase tracking-wide rounded-sm hover:bg-[#102D20] transition-colors cursor-pointer"
+                              >
+                                <ShoppingBag size={12} strokeWidth={2} />
+                                {addedId === product.id ? "Added!" : "Add to Cart"}
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleRemove(product.id)}
-                              className="p-1.5 text-[#C4C4C4] hover:text-red-500 transition-colors"
+                              className="p-1.5 text-[#C4C4C4] hover:text-red-500 transition-colors cursor-pointer"
                               aria-label="Remove from wishlist"
                             >
                               <X size={14} strokeWidth={2} />

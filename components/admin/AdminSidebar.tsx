@@ -18,6 +18,7 @@ import {
   MessageSquare,
   LogOut,
   RotateCw,
+  Sparkles,
 } from "lucide-react";
 
 interface NavItem {
@@ -58,6 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "CATALOG & STORE",
     items: [
       { href: "/admin/products", label: "Products Catalog", icon: Package, smallFont: true },
+      { href: "/admin/combos", label: "Combo Offers", icon: Sparkles, smallFont: true },
       { href: "/admin/categories", label: "Category & Subcategory", icon: Layers, smallFont: true },
       { href: "/admin/brands", label: "Brands", icon: Tag, smallFont: true },
       { href: "/admin/hero", label: "Home Management", icon: Sliders, smallFont: true },

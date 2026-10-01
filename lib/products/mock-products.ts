@@ -7,6 +7,7 @@ export interface ProductItem {
   short_description: string;
   retail_price: number;
   compare_at_price?: number;
+  tax_enabled?: boolean;
   category_id: string;
   category_slug: string;
   category_name: string;
@@ -20,8 +21,9 @@ export interface ProductItem {
     alt: string;
     is_primary: boolean;
   }[];
-  stock_quantity: number;
-  stock_status: "in_stock" | "low_stock" | "out_of_stock";
+  stock_quantity?: number;
+  stock_status?: "in_stock" | "low_stock" | "out_of_stock" | string;
+  is_out_of_stock?: boolean;
   wholesale_moq: number;
   wholesale_price: number;
   rating: number;
@@ -29,6 +31,16 @@ export interface ProductItem {
   tags: string[];
   ingredients?: string;
   how_to_use?: string;
+  is_combo?: boolean;
+  combo_id?: string;
+  combo_items?: Array<{
+    product_id: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    image?: string | null;
+    retail_price?: number;
+  }>;
 }
 
 export const AURELLE_PRODUCTS: ProductItem[] = [

@@ -12,8 +12,8 @@ export interface ProductRow {
   wholesale_price: number | null;
   category_name: string;
   status: string;
+  is_out_of_stock?: boolean;
   image_url?: string;
-  stock_quantity: number;
 }
 
 export interface AdminCategory {
@@ -94,6 +94,7 @@ export interface AdminOrderItem {
   total_amount: number;
   subtotal?: number;
   discount_amount?: number;
+  tax_amount?: number;
   shipping_amount?: number;
   payment_status: "paid" | "pending" | "failed" | string;
   order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
@@ -233,10 +234,9 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await (supabase as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, wholesale_price, status,
+          id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock,
           category:categories(name),
-          product_images(secure_url, is_primary),
-          inventory(stock_quantity)
+          product_images(secure_url, is_primary)
         `)
         .order("created_at", { ascending: false });
 
@@ -255,8 +255,8 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             wholesale_price: p.wholesale_price,
             category_name: p.category?.name || "Unassigned",
             status: p.status || "published",
+            is_out_of_stock: p.is_out_of_stock ?? false,
             image_url: primaryImg,
-            stock_quantity: p.inventory?.[0]?.stock_quantity ?? 10,
           };
         });
         setProducts(mapped);
@@ -378,6 +378,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
                 0,
               sku: it.sku_snapshot || snap.sku || "",
               slug: snap.slug || "",
+              product_snapshot: snap,
             };
           });
 
@@ -391,6 +392,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             total_amount: Number(o.total) || 0,
             subtotal: Number(o.subtotal) || Number(o.total) || 0,
             discount_amount: Number(o.discount_amount) || 0,
+            tax_amount: Number(o.tax_amount) || 0,
             shipping_amount: Number(o.shipping_amount) || 0,
             payment_status: o.payment_status || "pending",
             order_status: (o.status || "pending") as AdminOrderItem["order_status"],

@@ -5,8 +5,12 @@ import {
   sendOrderConfirmationEmail,
   sendAdminOrderNotificationEmail,
 } from "@/lib/email/brevo";
+import { calculateRetailOrderTotals, RETAIL_TAX_RATE } from "@/lib/pricing/retail";
 
 export const dynamic = "force-dynamic";
+
+const FREE_SHIPPING_THRESHOLD = 199; // AED
+const STANDARD_SHIPPING_FEE = 20; // AED
 
 // ── Ensure a profile row exists for the auth user (FK guard) ──────
 async function ensureProfile(
@@ -73,6 +77,8 @@ export async function GET() {
         status,
         payment_status,
         subtotal,
+        discount_amount,
+        tax_amount,
         shipping_amount,
         total,
         shipping_address,
@@ -143,10 +149,6 @@ export async function POST(request: NextRequest) {
       customerPhone,
       shippingAddress,
       items,
-      subtotal,
-      shippingAmount,
-      total,
-      taxAmount = 0,
       customerType = "retail",
       paymentMethod = "stripe",
       notes,
@@ -195,10 +197,382 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Server-Side Authoritative Pricing, Stock & Tax Verification ──────
+    // 1. Separate regular product IDs and combo IDs
+    const comboIds = items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((it: any) => it.isCombo || it.comboId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((it: any) => it.comboId || it.productId)
+      .filter((id: unknown) => typeof id === "string" && (id as string).length > 0);
+
+    const regularProductIds = items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((it: any) => !it.isCombo && !it.comboId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((it: any) => it.productId)
+      .filter((id: unknown) => typeof id === "string" && (id as string).length > 0);
+
+    // Fetch matching products
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dbProducts: any[] = [];
+    if (regularProductIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: prodErr } = await (admin as any)
+        .from("products")
+        .select(`
+          id, name, slug, sku, retail_price, tax_enabled, is_out_of_stock, is_published, status
+        `)
+        .in("id", regularProductIds);
+
+      if (!prodErr && data) {
+        dbProducts = data;
+      }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const productMap = new Map<string, any>(dbProducts.map((p) => [p.id, p]));
+
+    // Fetch matching combos with components
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dbCombos: any[] = [];
+    if (comboIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: comboData, error: comboErr } = await (admin as any)
+        .from("combo_offers")
+        .select(`
+          id, name, slug, sku, price, compare_at_price, tax_enabled, is_out_of_stock, is_active, primary_image_url,
+          combo_offer_items (
+            id, product_id, quantity, sort_order,
+            products (
+              id, name, slug, sku, retail_price, is_published, status,
+              product_images ( secure_url, is_primary )
+            )
+          )
+        `)
+        .in("id", comboIds);
+
+      if (!comboErr && comboData) {
+        dbCombos = comboData;
+      }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const comboMap = new Map<string, any>(dbCombos.map((c) => [c.id, c]));
+
+    interface VerifiedOrderItem {
+      productId: string | null;
+      comboId: string | null;
+      isCombo: boolean;
+      name: string;
+      sku: string;
+      slug: string;
+      image: string | null;
+      price: number;
+      quantity: number;
+      taxEnabled: boolean;
+      lineSubtotal: number;
+      lineTax: number;
+      lineTotal: number;
+      components?: Array<{
+        product_id: string;
+        name: string;
+        sku?: string;
+        quantity: number;
+        image?: string | null;
+        retail_price?: number;
+      }>;
+    }
+
+    // 2. Build verified item details and authoritative pricing input
+    const verifiedItems: VerifiedOrderItem[] = [];
+
+    for (const rawItem of items) {
+      const isComboItem = Boolean(
+        rawItem.isCombo || rawItem.comboId || comboMap.has(rawItem.productId)
+      );
+      const targetId = isComboItem ? rawItem.comboId || rawItem.productId : rawItem.productId;
+      const qty = Math.max(1, parseInt(rawItem.quantity, 10) || 1);
+
+      if (isComboItem) {
+        const dbCombo = comboMap.get(targetId);
+        if (!dbCombo || !dbCombo.is_active) {
+          return NextResponse.json(
+            {
+              error: `The combo offer "${rawItem.name || "Selected Combo"}" is currently unavailable or inactive.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (dbCombo.is_out_of_stock) {
+          return NextResponse.json(
+            {
+              error: `The combo offer "${dbCombo.name}" is currently out of stock. Please remove it from your cart to continue.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        const comboItems = dbCombo.combo_offer_items || [];
+        if (comboItems.length === 0) {
+          return NextResponse.json(
+            { error: `The combo offer "${dbCombo.name}" has no available components.` },
+            { status: 400 }
+          );
+        }
+
+        // Verify that component products are listed/published
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const componentsSnapshot: any[] = [];
+        for (const ci of comboItems) {
+          const compProd = ci.products;
+          const isListed =
+            compProd &&
+            (compProd.status === undefined || compProd.status === "published") &&
+            (compProd.is_published === undefined || compProd.is_published === true);
+
+          if (!isListed) {
+            return NextResponse.json(
+              {
+                error: `The combo offer "${dbCombo.name}" is unavailable because component "${compProd?.name || "product"}" is currently unlisted.`,
+              },
+              { status: 400 }
+            );
+          }
+
+          componentsSnapshot.push({
+            product_id: ci.product_id,
+            name: compProd.name,
+            sku: compProd.sku,
+            quantity: ci.quantity,
+            image:
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              compProd.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+              compProd.product_images?.[0]?.secure_url ||
+              null,
+            retail_price: Number(compProd.retail_price) || 0,
+          });
+        }
+
+        const verifiedPrice = Number(dbCombo.price) || 0;
+        const isTaxable = dbCombo.tax_enabled !== false;
+        const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
+        const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+
+        verifiedItems.push({
+          productId: null,
+          comboId: dbCombo.id,
+          isCombo: true,
+          name: dbCombo.name,
+          sku: dbCombo.sku,
+          slug: dbCombo.slug,
+          image: dbCombo.primary_image_url || rawItem.image || null,
+          price: verifiedPrice,
+          quantity: qty,
+          taxEnabled: isTaxable,
+          lineSubtotal,
+          lineTax,
+          lineTotal: lineSubtotal,
+          components: componentsSnapshot,
+        });
+      } else {
+        // Regular catalog product
+        const dbProd = productMap.get(targetId);
+        const isListed =
+          dbProd &&
+          (dbProd.status === undefined || dbProd.status === "published") &&
+          (dbProd.is_published === undefined || dbProd.is_published === true);
+
+        if (!isListed) {
+          return NextResponse.json(
+            { error: `Product "${rawItem.name || "Selected item"}" is no longer available.` },
+            { status: 400 }
+          );
+        }
+
+        if (dbProd.is_out_of_stock) {
+          return NextResponse.json(
+            { error: `Product "${dbProd.name}" is currently out of stock. Please remove it from your cart to continue.` },
+            { status: 400 }
+          );
+        }
+
+        const verifiedPrice = Number(dbProd.retail_price) || 0;
+        const isTaxable = dbProd.tax_enabled !== false;
+        const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
+        const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+
+        verifiedItems.push({
+          productId: dbProd.id,
+          comboId: null,
+          isCombo: false,
+          name: dbProd.name,
+          sku: dbProd.sku,
+          slug: dbProd.slug,
+          image: rawItem.image || null,
+          price: verifiedPrice,
+          quantity: qty,
+          taxEnabled: isTaxable,
+          lineSubtotal,
+          lineTax,
+          lineTotal: lineSubtotal,
+        });
+      }
+    }
+
+    // 3. Compute authoritative order totals
+    const rawSubtotal = verifiedItems.reduce(
+      (sum: number, item: VerifiedOrderItem) => sum + item.lineSubtotal,
+      0
+    );
+    const authoritativeShipping =
+      rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
+
+    const authoritativeTotals = calculateRetailOrderTotals(
+      verifiedItems.map((it: VerifiedOrderItem) => ({
+        price: it.price,
+        quantity: it.quantity,
+        tax_enabled: it.taxEnabled,
+      })),
+      authoritativeShipping,
+      0 // No discount code applied by default
+    );
+
+    // 4. Handle Online Payment (Stripe Checkout Session)
+    if (paymentMethod === "stripe") {
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      if (!secretKey) {
+        return NextResponse.json(
+          {
+            error:
+              "Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const { getStripe } = await import("@/lib/stripe/client");
+      const stripe = getStripe();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      // Build Stripe line items from authoritative verified items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stripeLineItems: any[] = verifiedItems.map((item: VerifiedOrderItem) => ({
+        price_data: {
+          currency: "aed",
+          product_data: {
+            name: item.name,
+            images: item.image ? [item.image] : [],
+            metadata: {
+              product_id: item.productId || "",
+              combo_id: item.comboId || "",
+              is_combo: item.isCombo ? "true" : "false",
+              sku: item.sku || "",
+              slug: item.slug || "",
+              tax_enabled: item.taxEnabled ? "true" : "false",
+            },
+          },
+          unit_amount: Math.round(Number(item.price) * 100),
+        },
+        quantity: item.quantity,
+      }));
+
+      // Add tax line item if applicable
+      if (authoritativeTotals.taxAmount > 0) {
+        stripeLineItems.push({
+          price_data: {
+            currency: "aed",
+            product_data: {
+              name: "VAT (5%)",
+              images: [],
+            },
+            unit_amount: Math.round(Number(authoritativeTotals.taxAmount) * 100),
+          },
+          quantity: 1,
+        });
+      }
+
+      // Add shipping fee if applicable
+      if (authoritativeTotals.shippingAmount > 0) {
+        stripeLineItems.push({
+          price_data: {
+            currency: "aed",
+            product_data: {
+              name: "UAE Delivery Fee",
+              images: [],
+            },
+            unit_amount: Math.round(Number(authoritativeTotals.shippingAmount) * 100),
+          },
+          quantity: 1,
+        });
+      }
+
+      // Prepare verified items JSON for metadata
+      const minifiedItems = verifiedItems.map((it) => ({
+        id: it.productId || it.comboId,
+        comboId: it.comboId,
+        isCombo: it.isCombo,
+        name: it.name,
+        sku: it.sku,
+        slug: it.slug,
+        image: it.image,
+        price: it.price,
+        quantity: it.quantity,
+        taxEnabled: it.taxEnabled,
+        lineTotal: it.lineSubtotal,
+        components: it.components || [],
+      }));
+
+      const itemsJson = JSON.stringify(minifiedItems);
+
+      // Handle metadata chunking if items JSON exceeds Stripe's 500-char value limit
+      const metadataPayload: Record<string, string> = {
+        user_id: verifiedUserId || "",
+        customer_email: customerEmail.trim().toLowerCase(),
+        customer_name: customerName || "",
+        customer_phone: customerPhone || "",
+        customer_type: customerType || "retail",
+        subtotal: authoritativeTotals.subtotal.toString(),
+        tax_amount: authoritativeTotals.taxAmount.toString(),
+        shipping_amount: authoritativeTotals.shippingAmount.toString(),
+        total: authoritativeTotals.total.toString(),
+        notes: notes || "",
+        save_address: saveAddress && verifiedUserId ? "true" : "false",
+        is_default_address: isDefaultAddress ? "true" : "false",
+        shipping_address: JSON.stringify(shippingAddress).slice(0, 500),
+      };
+
+      if (itemsJson.length <= 500) {
+        metadataPayload.items_data = itemsJson;
+      } else {
+        // Chunk into 450 char segments
+        for (let i = 0; i < Math.ceil(itemsJson.length / 450); i++) {
+          metadataPayload[`items_data_${i}`] = itemsJson.slice(i * 450, (i + 1) * 450);
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: customerEmail.trim().toLowerCase(),
+        client_reference_id: verifiedUserId || undefined,
+        line_items: stripeLineItems,
+        metadata: metadataPayload,
+        success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/checkout?cancelled=true`,
+      });
+
+      return NextResponse.json({
+        success: true,
+        checkoutUrl: session.url,
+        paymentMethod: "stripe",
+      });
+    }
+
+    // 5. Handle Normal Payment (Cash on Delivery)
     // Generate unique order number with timestamp + random entropy to eliminate collision
     const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 1. Insert order
+    // Insert order with authoritative amounts
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: order, error: orderError } = await (admin as any)
       .from("orders")
@@ -207,20 +581,20 @@ export async function POST(request: NextRequest) {
         user_id: verifiedUserId,
         customer_email: customerEmail.trim().toLowerCase(),
         customer_type: customerType || "retail",
-        status: paymentMethod === "stripe" ? "pending" : "processing",
-        payment_status: "pending", // Never hardcode as paid; verified only upon Stripe payment
-        subtotal: subtotal || 0,
-        discount_amount: 0,
-        tax_amount: taxAmount || 0,
-        shipping_amount: shippingAmount || 0,
-        total: total || 0,
+        status: "processing",
+        payment_status: "pending",
+        subtotal: authoritativeTotals.subtotal,
+        discount_amount: authoritativeTotals.discountAmount,
+        tax_amount: authoritativeTotals.taxAmount,
+        shipping_amount: authoritativeTotals.shippingAmount,
+        total: authoritativeTotals.total,
         shipping_address: {
           ...shippingAddress,
-          payment_method: paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment",
+          payment_method: "Normal Payment (COD)",
         },
         notes: notes
-          ? `${notes}\n[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`
-          : `[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`,
+          ? `${notes}\n[Payment Method: Normal Payment (COD)]`
+          : `[Payment Method: Normal Payment (COD)]`,
       })
       .select()
       .single();
@@ -233,21 +607,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Insert order items
-    if (items && items.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const orderItemsToInsert = items.map((item: any) => ({
+    // Insert order items with authoritative snapshots
+    if (verifiedItems.length > 0) {
+      const orderItemsToInsert = verifiedItems.map((item: VerifiedOrderItem) => ({
         order_id: order.id,
-        product_id: item.productId || null,
+        product_id: item.productId,
+        combo_id: item.comboId,
         product_snapshot: {
-          name: item.name || "Product",
-          image: item.image || null,
-          slug: item.slug || "",
+          name: item.name,
+          image: item.image,
+          slug: item.slug,
+          tax_enabled: item.taxEnabled,
+          is_combo: item.isCombo,
+          combo_id: item.comboId,
+          components: item.components || [],
         },
-        sku_snapshot: item.sku || "AUR-PROD",
-        price_snapshot: item.price || 0,
-        quantity: item.quantity || 1,
-        line_total: (item.price || 0) * (item.quantity || 1),
+        sku_snapshot: item.sku,
+        price_snapshot: item.price,
+        quantity: item.quantity,
+        line_total: item.lineSubtotal,
       }));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -260,7 +638,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. If user requested saving this address to their account
+    // Save address if requested
     if (saveAddress && verifiedUserId) {
       try {
         if (isDefaultAddress) {
@@ -289,99 +667,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Handle Online Payment (Stripe Checkout Session)
-    if (paymentMethod === "stripe") {
-      const secretKey = process.env.STRIPE_SECRET_KEY;
-      if (!secretKey) {
-        return NextResponse.json(
-          {
-            error:
-              "Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.",
-          },
-          { status: 500 }
-        );
-      }
-
-      const { getStripe } = await import("@/lib/stripe/client");
-      const stripe = getStripe();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-      // Build Stripe line items
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lineItems = (items || []).map((item: any) => ({
-        price_data: {
-          currency: "aed",
-          product_data: {
-            name: item.name || "Aurelle Product",
-            images: item.image ? [item.image] : [],
-          },
-          unit_amount: Math.round(Number(item.price || 0) * 100),
-        },
-        quantity: item.quantity || 1,
-      }));
-
-      // Add shipping fee if applicable
-      if (shippingAmount && shippingAmount > 0) {
-        lineItems.push({
-          price_data: {
-            currency: "aed",
-            product_data: {
-              name: "UAE Delivery Fee",
-            },
-            unit_amount: Math.round(Number(shippingAmount) * 100),
-          },
-          quantity: 1,
-        });
-      }
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        customer_email: customerEmail.trim().toLowerCase(),
-        client_reference_id: order.id,
-        line_items: lineItems,
-        metadata: {
-          order_id: order.id,
-          order_number: order.order_number,
-        },
-        success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
-        cancel_url: `${siteUrl}/checkout?cancelled=true`,
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin as any)
-        .from("orders")
-        .update({
-          stripe_checkout_session_id: session.id,
-        })
-        .eq("id", order.id);
-
-      return NextResponse.json({
-        success: true,
-        orderNumber: order.order_number,
-        orderId: order.id,
-        checkoutUrl: session.url,
-        paymentMethod: "stripe",
-      });
-    }
-
-    // 5. For Normal Payment (Cash on Delivery): dispatch confirmation emails immediately
+    // Dispatch COD confirmation emails
     const emailData = {
       orderNumber: order.order_number,
       customerName: customerName || "",
       customerEmail: customerEmail.trim().toLowerCase(),
-      items: (items ?? []).map((item: { name?: string; price?: number; quantity?: number; sku?: string; image?: string }) => ({
-        name: item.name || "Product",
-        price: item.price || 0,
-        quantity: item.quantity || 1,
+      items: verifiedItems.map((item: VerifiedOrderItem) => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
         sku: item.sku,
         image: item.image,
       })),
-      subtotal: subtotal || 0,
-      shippingAmount: shippingAmount || 0,
-      total: total || 0,
+      subtotal: authoritativeTotals.subtotal,
+      taxAmount: authoritativeTotals.taxAmount,
+      shippingAmount: authoritativeTotals.shippingAmount,
+      total: authoritativeTotals.total,
       shippingAddress: shippingAddress || {},
-      paymentMethod,
+      paymentMethod: "cod",
     };
 
     Promise.all([

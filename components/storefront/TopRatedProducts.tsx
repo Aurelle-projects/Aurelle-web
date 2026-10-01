@@ -13,6 +13,8 @@ interface TopRatedProduct {
   name: string;
   slug: string;
   retail_price: number;
+  tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   rating: number;
   reviews_count: number;
   product_images?: Array<{
@@ -59,6 +61,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
   const displayProducts = products.length > 1 ? [...products, ...products] : products;
 
   function addToCart(product: TopRatedProduct) {
+    if (product.is_out_of_stock) return;
     const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
     const cartProduct = {
       id: product.id,
@@ -68,6 +71,8 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
       description: "",
       short_description: "",
       retail_price: product.retail_price,
+      tax_enabled: product.tax_enabled !== false,
+      is_out_of_stock: Boolean(product.is_out_of_stock),
       category_id: "",
       category_slug: "",
       category_name: "",
@@ -77,8 +82,6 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
       is_best_seller: false,
       is_new_arrival: false,
       images: image?.secure_url ? [{ url: image.secure_url, alt: image.alt_text || product.name, is_primary: true }] : [],
-      stock_quantity: 1,
-      stock_status: "in_stock" as const,
       wholesale_moq: 1,
       wholesale_price: product.retail_price,
       rating: product.rating,
@@ -127,10 +130,16 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                       )}
                     </Link>
 
-                    {/* Top-Left Top Rated Badge */}
-                    <span className="absolute top-2.5 left-2.5 bg-yellow-300 text-black text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
-                      Top Rated
-                    </span>
+                    {/* Top-Left Badge: Out of Stock or Top Rated */}
+                    {product.is_out_of_stock ? (
+                      <span className="absolute top-2.5 left-2.5 bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+                        Out of Stock
+                      </span>
+                    ) : (
+                      <span className="absolute top-2.5 left-2.5 bg-yellow-300 text-black text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+                        Top Rated
+                      </span>
+                    )}
 
                     {/* Top-Right Wishlist Heart Button */}
                     <button
@@ -149,37 +158,49 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                     </button>
 
                     {/* Desktop Hover Button */}
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product)}
-                      className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#183D2B] hover:bg-[#102D20] px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 cursor-pointer shadow-md z-10"
-                    >
-                      {addedId === product.id ? (
-                        <>
-                          <Check size={14} className="stroke-[2.5]" />
-                          <span>Added</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag size={14} />
-                          <span>Add to Cart</span>
-                        </>
-                      )}
-                    </button>
+                    {product.is_out_of_stock ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#8E9590] cursor-not-allowed px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 shadow-md z-10"
+                      >
+                        <span>Out of Stock</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product)}
+                        className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#183D2B] hover:bg-[#102D20] px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 cursor-pointer shadow-md z-10"
+                      >
+                        {addedId === product.id ? (
+                          <>
+                            <Check size={14} className="stroke-[2.5]" />
+                            <span>Added</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag size={14} />
+                            <span>Add to Cart</span>
+                          </>
+                        )}
+                      </button>
+                    )}
 
                     {/* Mobile View: Bottom-Right Round Add to Cart Button (Icon Only) */}
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product)}
-                      className="sm:hidden absolute bottom-2.5 right-2.5 z-10 w-9 h-9 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
-                      aria-label={`Add ${product.name} to cart`}
-                    >
-                      {addedId === product.id ? (
-                        <Check size={16} className="text-white stroke-[2.5]" />
-                      ) : (
-                        <ShoppingBag size={16} className="text-white" />
-                      )}
-                    </button>
+                    {!product.is_out_of_stock && (
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product)}
+                        className="sm:hidden absolute bottom-2.5 right-2.5 z-10 w-9 h-9 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
+                        aria-label={`Add ${product.name} to cart`}
+                      >
+                        {addedId === product.id ? (
+                          <Check size={16} className="text-white stroke-[2.5]" />
+                        ) : (
+                          <ShoppingBag size={16} className="text-white" />
+                        )}
+                      </button>
+                    )}
                   </div>
                   <Link href={`/products/${product.slug}`} className="mt-3 block text-sm text-[#1D211F] line-clamp-1">
                     {product.name}

@@ -17,6 +17,8 @@ type CatalogProduct = {
   sku?: string;
   retail_price: number;
   compare_at_price?: number | null;
+  tax_enabled?: boolean;
+  is_out_of_stock?: boolean;
   is_new_arrival?: boolean;
   is_featured?: boolean;
   is_best_seller?: boolean;
@@ -26,7 +28,6 @@ type CatalogProduct = {
     alt_text?: string | null;
     is_primary?: boolean;
   }>;
-  inventory?: { stock_status: string } | null;
 };
 
 interface AllProductsSectionProps {
@@ -42,6 +43,8 @@ function toCartProduct(product: CatalogProduct, imageUrl: string | null): Produc
     description: "",
     short_description: "",
     retail_price: product.retail_price,
+    tax_enabled: product.tax_enabled !== false,
+    is_out_of_stock: Boolean(product.is_out_of_stock),
     category_id: "",
     category_slug: "",
     category_name: "",
@@ -51,8 +54,6 @@ function toCartProduct(product: CatalogProduct, imageUrl: string | null): Produc
     is_best_seller: false,
     is_new_arrival: false,
     images: imageUrl ? [{ url: imageUrl, alt: product.name, is_primary: true }] : [],
-    stock_quantity: 1,
-    stock_status: product.inventory?.stock_status === "out_of_stock" ? "out_of_stock" : "in_stock",
     wholesale_moq: 1,
     wholesale_price: product.retail_price,
     rating: 0,
@@ -125,6 +126,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
   }, [started, offset, hasMore, loading]);
 
   function handleAdd(product: CatalogProduct) {
+    if (product.is_out_of_stock) return;
     const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
     const imageUrl = image?.secure_url ?? (image?.cloudinary_public_id ? getProductImageUrl(image.cloudinary_public_id, "medium") : null);
     addItem(toCartProduct(product, imageUrl));
@@ -143,8 +145,8 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
           {products.slice(0, visibleCount).map((product, index) => {
             const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
             const imageUrl = image?.secure_url ?? (image?.cloudinary_public_id ? getProductImageUrl(image.cloudinary_public_id, "medium") : null);
-            const isOutOfStock = product.inventory?.stock_status === "out_of_stock";
             const onSale = Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
+            const isOutOfStock = Boolean(product.is_out_of_stock);
 
             return (
               <article key={product.id} className="group relative min-w-0" role="listitem">
@@ -156,6 +158,13 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                       <div className="flex h-full items-center justify-center text-3xl font-bold text-[#183D2B]/20">{product.name.charAt(0)}</div>
                     )}
                   </Link>
+
+                  {/* Top-Left Out of Stock Badge */}
+                  {isOutOfStock && (
+                    <span className="absolute top-2 left-2 bg-[#1D211F]/90 text-white text-[9px] font-semibold tracking-wider px-1.5 py-0.5 uppercase z-10 pointer-events-none">
+                      Out of Stock
+                    </span>
+                  )}
 
                   {/* Top-Right Wishlist Heart Button */}
                   <button
@@ -173,17 +182,22 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                     />
                   </button>
                   {/* Desktop Hover Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleAdd(product)}
-                    disabled={product.inventory?.stock_status === "out_of_stock"}
-                    className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 disabled:cursor-not-allowed disabled:bg-gray-500 shadow-md"
-                  >
-                    <span className="inline-flex items-center justify-center gap-1.5">{addedId === product.id ? <><Check size={14} className="stroke-[2.5]" />Added</> : <><ShoppingBag size={14} />Add to Cart</>}</span>
-                  </button>
+                  {isOutOfStock ? (
+                    <div className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#8E9590] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md text-center">
+                      <span>Out of Stock</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(product)}
+                      className="hidden sm:block absolute bottom-2 left-2 right-2 translate-y-2 bg-[#183D2B] px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 shadow-md cursor-pointer"
+                    >
+                      <span className="inline-flex items-center justify-center gap-1.5">{addedId === product.id ? <><Check size={14} className="stroke-[2.5]" />Added</> : <><ShoppingBag size={14} />Add to Cart</>}</span>
+                    </button>
+                  )}
 
                   {/* Mobile Bottom-Right Round Icon Button */}
-                  {product.inventory?.stock_status !== "out_of_stock" && (
+                  {!isOutOfStock && (
                     <button
                       type="button"
                       onClick={() => handleAdd(product)}

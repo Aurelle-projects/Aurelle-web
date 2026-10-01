@@ -55,11 +55,10 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
             retail_price, compare_at_price, wholesale_price, wholesale_moq,
             wholesale_unit_enabled, wholesale_unit_price, wholesale_box_enabled,
             wholesale_units_per_box, wholesale_box_price, wholesale_custom_quantity_enabled,
-            is_wholesale_available, is_published, is_featured, is_best_seller, is_new_arrival,
+            is_wholesale_available, is_out_of_stock, is_published, is_featured, is_best_seller, is_new_arrival,
             brand:brands(name, slug),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status, stock_quantity)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .eq("slug", slug)
           .eq("status", "published")
@@ -93,11 +92,10 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
               .from("products")
               .select(`
                 id, name, slug, sku, retail_price, compare_at_price, wholesale_price, wholesale_moq,
-                is_new_arrival, is_featured, is_best_seller,
+                is_out_of_stock, is_new_arrival, is_featured, is_best_seller,
                 brand:brands(name),
                 category:categories(name, slug),
-                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-                inventory(stock_status)
+                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
               `)
               .eq("status", "published")
               .eq("category_id", p.category_id)
@@ -121,7 +119,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
 
   // Compute real-time pricing
   const pricingResult = useMemo(() => {
-    if (!product || !product.is_wholesale_available) return null;
+    if (!product || !product.is_wholesale_available || product.is_out_of_stock) return null;
     try {
       return calculateWholesaleItemPrice(product, tiers, purchaseMode, quantity);
     } catch {
@@ -170,9 +168,10 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
     }));
 
   const primaryImage = images[selectedImageIdx] ?? images[0] ?? null;
+  const isOutOfStock = Boolean(product.is_out_of_stock);
 
   const handleAddToCart = async () => {
-    if (!pricingResult) return;
+    if (isOutOfStock || !pricingResult) return;
 
     await wholesaleCart.addItem(
       {
@@ -190,6 +189,7 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
         wholesale_custom_quantity_enabled: product.wholesale_custom_quantity_enabled,
         wholesale_price: product.wholesale_price,
         is_wholesale_available: product.is_wholesale_available,
+        is_out_of_stock: product.is_out_of_stock,
       },
       purchaseMode,
       quantity,
@@ -224,12 +224,17 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
 
               {/* Badges */}
               <div className="absolute top-3 left-3 flex flex-col gap-1">
-                {product.wholesale_moq && (
+                {isOutOfStock && (
+                  <div className="bg-[#8E9590] text-white text-[11px] font-bold px-2.5 py-1 rounded-sm shadow-xs uppercase tracking-wider">
+                    Out of Stock
+                  </div>
+                )}
+                {product.wholesale_moq && !isOutOfStock && (
                   <div className="bg-[#183D2B] text-white text-[11px] font-bold px-2.5 py-1 rounded-sm shadow-xs uppercase tracking-wider">
                     MOQ: {product.wholesale_moq} units
                   </div>
                 )}
-                {product.wholesale_units_per_box && (
+                {product.wholesale_units_per_box && !isOutOfStock && (
                   <div className="bg-[#C9A84C] text-[#14231B] text-[11px] font-bold px-2.5 py-1 rounded-sm shadow-xs uppercase tracking-wider">
                     {product.wholesale_units_per_box} pcs / box
                   </div>
@@ -441,15 +446,28 @@ export default function WholesaleProductDetailPage({ params }: WholesaleProductP
               )}
             </div>
 
+            {/* Out of stock notice */}
+            {isOutOfStock && (
+              <div className="p-3 bg-[#FAF8F5] border border-[#8E9590]/30 rounded-sm text-xs text-[#5C6460]">
+                <p className="font-bold text-[#14231B] uppercase tracking-wider mb-0.5">Currently Out of Stock</p>
+                <p>This item is currently out of stock for immediate dispatch. You can still submit a custom commercial enquiry below.</p>
+              </div>
+            )}
+
             {/* CTA BUTTONS */}
             <div className="space-y-2 pt-2">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full py-3.5 px-6 rounded-sm font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-[#183D2B] hover:bg-[#102D20] text-white transition-colors cursor-pointer shadow-xs"
+                disabled={isOutOfStock || !pricingResult}
+                className={`w-full py-3.5 px-6 rounded-sm font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
+                  isOutOfStock || !pricingResult
+                    ? "bg-[#DCCFB9] text-white cursor-not-allowed"
+                    : "bg-[#183D2B] hover:bg-[#102D20] text-white cursor-pointer shadow-xs"
+                }`}
               >
                 <ShoppingBag size={16} />
-                <span>Add to Wholesale Cart</span>
+                <span>{isOutOfStock ? "Out of Stock" : "Add to Wholesale Cart"}</span>
               </button>
 
               <button

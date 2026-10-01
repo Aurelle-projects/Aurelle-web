@@ -274,101 +274,7 @@ export async function POST(request: NextRequest) {
       0 // No discount code applied by default
     );
 
-    // Generate unique order number with timestamp + random entropy to eliminate collision
-    const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // 4. Insert order with authoritative amounts
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: order, error: orderError } = await (admin as any)
-      .from("orders")
-      .insert({
-        order_number: orderNumber,
-        user_id: verifiedUserId,
-        customer_email: customerEmail.trim().toLowerCase(),
-        customer_type: customerType || "retail",
-        status: paymentMethod === "stripe" ? "pending" : "processing",
-        payment_status: "pending", // Never hardcode as paid; verified only upon Stripe payment
-        subtotal: authoritativeTotals.subtotal,
-        discount_amount: authoritativeTotals.discountAmount,
-        tax_amount: authoritativeTotals.taxAmount,
-        shipping_amount: authoritativeTotals.shippingAmount,
-        total: authoritativeTotals.total,
-        shipping_address: {
-          ...shippingAddress,
-          payment_method: paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment",
-        },
-        notes: notes
-          ? `${notes}\n[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`
-          : `[Payment Method: ${paymentMethod === "cod" ? "Normal Payment (COD)" : "Online Payment"}]`,
-      })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      console.error("[Order insert error]:", orderError);
-      return NextResponse.json(
-        { error: orderError?.message || "Failed to create order record." },
-        { status: 500 }
-      );
-    }
-
-    // 5. Insert order items with authoritative snapshots
-    if (verifiedItems.length > 0) {
-      const orderItemsToInsert = verifiedItems.map((item: VerifiedOrderItem) => ({
-        order_id: order.id,
-        product_id: item.productId,
-        product_snapshot: {
-          name: item.name,
-          image: item.image,
-          slug: item.slug,
-          tax_enabled: item.taxEnabled,
-        },
-        sku_snapshot: item.sku,
-        price_snapshot: item.price,
-        quantity: item.quantity,
-        line_total: item.lineSubtotal,
-      }));
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: itemsError } = await (admin as any)
-        .from("order_items")
-        .insert(orderItemsToInsert);
-
-      if (itemsError) {
-        console.error("[Order items insert error]:", itemsError);
-      }
-    }
-
-    // 6. If user requested saving this address to their account
-    if (saveAddress && verifiedUserId) {
-      try {
-        if (isDefaultAddress) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (admin as any)
-            .from("addresses")
-            .update({ is_default: false })
-            .eq("user_id", verifiedUserId);
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (admin as any).from("addresses").insert({
-          user_id: verifiedUserId,
-          label: shippingAddress.label || "Home",
-          full_name: customerName || shippingAddress.fullName,
-          phone: customerPhone || shippingAddress.phone,
-          address_line1: shippingAddress.streetAddress || shippingAddress.addressLine1,
-          address_line2: shippingAddress.area || shippingAddress.addressLine2 || null,
-          city: shippingAddress.emirate || shippingAddress.city || "Dubai",
-          state: shippingAddress.emirate || shippingAddress.city || "Dubai",
-          country: shippingAddress.country || "AE",
-          is_default: Boolean(isDefaultAddress),
-        });
-      } catch (saveAddrErr) {
-        console.warn("[Save address during checkout warning]:", saveAddrErr);
-      }
-    }
-
-    // 7. Handle Online Payment (Stripe Checkout Session)
+    // 4. Handle Online Payment (Stripe Checkout Session)
     if (paymentMethod === "stripe") {
       const secretKey = process.env.STRIPE_SECRET_KEY;
       if (!secretKey) {
@@ -386,12 +292,19 @@ export async function POST(request: NextRequest) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
       // Build Stripe line items from authoritative verified items
-      const stripeLineItems = verifiedItems.map((item: VerifiedOrderItem) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stripeLineItems: any[] = verifiedItems.map((item: VerifiedOrderItem) => ({
         price_data: {
           currency: "aed",
           product_data: {
             name: item.name,
             images: item.image ? [item.image] : [],
+            metadata: {
+              product_id: item.productId || "",
+              sku: item.sku || "",
+              slug: item.slug || "",
+              tax_enabled: item.taxEnabled ? "true" : "false",
+            },
           },
           unit_amount: Math.round(Number(item.price) * 100),
         },
@@ -428,38 +341,161 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Prepare verified items JSON for metadata
+      const minifiedItems = verifiedItems.map((it) => ({
+        id: it.productId,
+        name: it.name,
+        sku: it.sku,
+        slug: it.slug,
+        image: it.image,
+        price: it.price,
+        quantity: it.quantity,
+        taxEnabled: it.taxEnabled,
+        lineTotal: it.lineSubtotal,
+      }));
+
+      const itemsJson = JSON.stringify(minifiedItems);
+
+      // Handle metadata chunking if items JSON exceeds Stripe's 500-char value limit
+      const metadataPayload: Record<string, string> = {
+        user_id: verifiedUserId || "",
+        customer_email: customerEmail.trim().toLowerCase(),
+        customer_name: customerName || "",
+        customer_phone: customerPhone || "",
+        customer_type: customerType || "retail",
+        subtotal: authoritativeTotals.subtotal.toString(),
+        tax_amount: authoritativeTotals.taxAmount.toString(),
+        shipping_amount: authoritativeTotals.shippingAmount.toString(),
+        total: authoritativeTotals.total.toString(),
+        notes: notes || "",
+        save_address: saveAddress && verifiedUserId ? "true" : "false",
+        is_default_address: isDefaultAddress ? "true" : "false",
+        shipping_address: JSON.stringify(shippingAddress).slice(0, 500),
+      };
+
+      if (itemsJson.length <= 500) {
+        metadataPayload.items_data = itemsJson;
+      } else {
+        // Chunk into 450 char segments
+        for (let i = 0; i < Math.ceil(itemsJson.length / 450); i++) {
+          metadataPayload[`items_data_${i}`] = itemsJson.slice(i * 450, (i + 1) * 450);
+        }
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "payment",
         customer_email: customerEmail.trim().toLowerCase(),
-        client_reference_id: order.id,
+        client_reference_id: verifiedUserId || undefined,
         line_items: stripeLineItems,
-        metadata: {
-          order_id: order.id,
-          order_number: order.order_number,
-        },
-        success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+        metadata: metadataPayload,
+        success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl}/checkout?cancelled=true`,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin as any)
-        .from("orders")
-        .update({
-          stripe_checkout_session_id: session.id,
-        })
-        .eq("id", order.id);
-
       return NextResponse.json({
         success: true,
-        orderNumber: order.order_number,
-        orderId: order.id,
         checkoutUrl: session.url,
         paymentMethod: "stripe",
       });
     }
 
-    // 8. For Normal Payment (Cash on Delivery): dispatch confirmation emails immediately
+    // 5. Handle Normal Payment (Cash on Delivery)
+    // Generate unique order number with timestamp + random entropy to eliminate collision
+    const orderNumber = `AUR-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Insert order with authoritative amounts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: order, error: orderError } = await (admin as any)
+      .from("orders")
+      .insert({
+        order_number: orderNumber,
+        user_id: verifiedUserId,
+        customer_email: customerEmail.trim().toLowerCase(),
+        customer_type: customerType || "retail",
+        status: "processing",
+        payment_status: "pending",
+        subtotal: authoritativeTotals.subtotal,
+        discount_amount: authoritativeTotals.discountAmount,
+        tax_amount: authoritativeTotals.taxAmount,
+        shipping_amount: authoritativeTotals.shippingAmount,
+        total: authoritativeTotals.total,
+        shipping_address: {
+          ...shippingAddress,
+          payment_method: "Normal Payment (COD)",
+        },
+        notes: notes
+          ? `${notes}\n[Payment Method: Normal Payment (COD)]`
+          : `[Payment Method: Normal Payment (COD)]`,
+      })
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error("[Order insert error]:", orderError);
+      return NextResponse.json(
+        { error: orderError?.message || "Failed to create order record." },
+        { status: 500 }
+      );
+    }
+
+    // Insert order items with authoritative snapshots
+    if (verifiedItems.length > 0) {
+      const orderItemsToInsert = verifiedItems.map((item: VerifiedOrderItem) => ({
+        order_id: order.id,
+        product_id: item.productId,
+        product_snapshot: {
+          name: item.name,
+          image: item.image,
+          slug: item.slug,
+          tax_enabled: item.taxEnabled,
+        },
+        sku_snapshot: item.sku,
+        price_snapshot: item.price,
+        quantity: item.quantity,
+        line_total: item.lineSubtotal,
+      }));
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: itemsError } = await (admin as any)
+        .from("order_items")
+        .insert(orderItemsToInsert);
+
+      if (itemsError) {
+        console.error("[Order items insert error]:", itemsError);
+      }
+    }
+
+    // Save address if requested
+    if (saveAddress && verifiedUserId) {
+      try {
+        if (isDefaultAddress) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (admin as any)
+            .from("addresses")
+            .update({ is_default: false })
+            .eq("user_id", verifiedUserId);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (admin as any).from("addresses").insert({
+          user_id: verifiedUserId,
+          label: shippingAddress.label || "Home",
+          full_name: customerName || shippingAddress.fullName,
+          phone: customerPhone || shippingAddress.phone,
+          address_line1: shippingAddress.streetAddress || shippingAddress.addressLine1,
+          address_line2: shippingAddress.area || shippingAddress.addressLine2 || null,
+          city: shippingAddress.emirate || shippingAddress.city || "Dubai",
+          state: shippingAddress.emirate || shippingAddress.city || "Dubai",
+          country: shippingAddress.country || "AE",
+          is_default: Boolean(isDefaultAddress),
+        });
+      } catch (saveAddrErr) {
+        console.warn("[Save address during checkout warning]:", saveAddrErr);
+      }
+    }
+
+    // Dispatch COD confirmation emails
     const emailData = {
       orderNumber: order.order_number,
       customerName: customerName || "",
@@ -476,7 +512,7 @@ export async function POST(request: NextRequest) {
       shippingAmount: authoritativeTotals.shippingAmount,
       total: authoritativeTotals.total,
       shippingAddress: shippingAddress || {},
-      paymentMethod,
+      paymentMethod: "cod",
     };
 
     Promise.all([

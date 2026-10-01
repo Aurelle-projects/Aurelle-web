@@ -24,6 +24,7 @@ interface CartContextType {
   total: number;
   freeShippingThreshold: number;
   amountUntilFreeShipping: number;
+  isHydrated: boolean;
   addItem: (product: ProductItem, quantity?: number) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
@@ -38,32 +39,34 @@ const STANDARD_SHIPPING_FEE = 20; // AED
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Hydrate from localStorage asynchronously to prevent cascading render
+  // 1. Hydrate from localStorage once on client mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          queueMicrotask(() => {
-            setItems(parsed);
-          });
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setItems(parsed);
         }
       }
-    } catch {
-      // Storage unavailable
+    } catch (e) {
+      console.warn("[CartContext] Failed to load cart from localStorage:", e);
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
-  // Save to localStorage whenever items change
+  // 2. Save to localStorage ONLY after hydration has completed
   useEffect(() => {
+    if (!isHydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Ignore
+    } catch (e) {
+      console.warn("[CartContext] Failed to save cart to localStorage:", e);
     }
-  }, [items]);
+  }, [items, isHydrated]);
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -140,6 +143,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const value = useMemo(
@@ -155,6 +163,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       total,
       freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
       amountUntilFreeShipping,
+      isHydrated,
       addItem,
       removeItem,
       updateQuantity,
@@ -170,6 +179,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       shippingFee,
       total,
       amountUntilFreeShipping,
+      isHydrated,
       addItem,
       removeItem,
       updateQuantity,

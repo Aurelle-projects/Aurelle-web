@@ -387,7 +387,6 @@ export async function DELETE(req: NextRequest) {
 
     // Delete related rows first (cascade may handle some, but be explicit)
     await supabase.from("product_images").delete().eq("product_id", id);
-    await supabase.from("inventory").delete().eq("product_id", id);
 
     const { error } = await supabase.from("products").delete().eq("id", id);
 

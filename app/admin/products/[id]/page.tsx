@@ -910,7 +910,7 @@ export default function EditProductPage() {
         itemType="product"
         itemName={formData.name}
         description={`Are you sure you want to permanently delete "${formData.name}"?`}
-        warningNote="Deleting this product will permanently erase all inventory data and destroy its associated images on Cloudinary."
+        warningNote="Deleting this product will permanently erase all product data and destroy its associated images on Cloudinary."
         isLoading={isDeleting}
       />
 

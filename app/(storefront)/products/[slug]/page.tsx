@@ -111,7 +111,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             const { data: related } = await supabase
               .from("products")
               .select(`
-                id, name, slug, sku, retail_price, compare_at_price, tax_enabled,
+                id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
                 is_new_arrival, is_featured, is_best_seller,
                 brand:brands(name),
                 category:categories(name, slug),

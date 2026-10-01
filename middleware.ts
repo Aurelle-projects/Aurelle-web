@@ -60,22 +60,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  if (isProtected && !user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // ─── Admin routes ──────────────────────────────────────────────────────────
-  // Handled directly by AdminLayout which serves the dedicated AdminLoginPanel
-  // when unauthenticated, so admins log in directly on /admin without customer redirect.
-
-  // ─── Protect wholesale portal routes ──────────────────────────────────────
-  const isWholesalePortal = WHOLESALE_PORTAL_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  if (isWholesalePortal) {
+  if (isProtected) {
     if (!user) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
@@ -87,28 +72,23 @@ export async function middleware(request: NextRequest) {
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile?.role !== "wholesale_customer") {
+    if (profile?.role === "wholesale_customer" || profile?.role === "wholesale_pending") {
       return NextResponse.redirect(new URL("/wholesale", request.url));
     }
   }
 
-  // ─── Redirect authenticated users away from auth pages ────────────────────
-  const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/signup");
+  // ─── Protect wholesale portal routes ──────────────────────────────────────
+  const isWholesalePortal = WHOLESALE_PORTAL_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
 
-  if (isAuthPage && user) {
-    const redirectParam =
-      request.nextUrl.searchParams.get("redirect") ||
-      request.nextUrl.searchParams.get("next");
-
-    if (
-      redirectParam &&
-      redirectParam.startsWith("/") &&
-      !redirectParam.startsWith("//")
-    ) {
-      return NextResponse.redirect(new URL(redirectParam, request.url));
+  if (isWholesalePortal) {
+    if (!user) {
+      const loginUrl = new URL("/wholesale/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,11 +98,67 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.role === "wholesale_customer") {
-      return NextResponse.redirect(new URL("/wholesale", request.url));
+    if (profile?.role !== "wholesale_customer") {
+      const loginUrl = new URL("/wholesale/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
+  }
 
-    return NextResponse.redirect(new URL("/account", request.url));
+  // ─── Redirect authenticated users away from respective auth pages ──────────
+  const isRetailAuthPage =
+    pathname === "/login" || pathname === "/signup";
+  const isWholesaleAuthPage =
+    pathname === "/wholesale/login";
+
+  if (isRetailAuthPage && user) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "customer") {
+      const redirectParam =
+        request.nextUrl.searchParams.get("redirect") ||
+        request.nextUrl.searchParams.get("next");
+
+      const target =
+        redirectParam &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//") &&
+        !redirectParam.startsWith("/wholesale")
+          ? redirectParam
+          : "/account";
+
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+  }
+
+  if (isWholesaleAuthPage && user) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "wholesale_customer") {
+      const redirectParam =
+        request.nextUrl.searchParams.get("redirect") ||
+        request.nextUrl.searchParams.get("next");
+
+      const target =
+        redirectParam &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//") &&
+        redirectParam.startsWith("/wholesale")
+          ? redirectParam
+          : "/wholesale";
+
+      return NextResponse.redirect(new URL(target, request.url));
+    }
   }
 
   return supabaseResponse;

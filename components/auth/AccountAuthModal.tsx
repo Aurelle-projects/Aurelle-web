@@ -113,13 +113,15 @@ export default function AccountAuthModal({
           }, 800);
         }
       } else {
-        // Standard Sign In
+        // Standard Sign In (Strictly Retail Customer)
         const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (signInError) throw signInError;
+        if (signInError) {
+          throw new Error("Invalid credentials.");
+        }
 
         if (authData?.user) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,27 +131,10 @@ export default function AccountAuthModal({
             .eq("id", authData.user.id)
             .maybeSingle();
 
-          if (profile?.role === "wholesale_pending") {
-            setMessage(
-              "Your wholesale account application is currently pending admin review. You will receive an email notification once your application is approved."
-            );
-            return;
-          }
-
-          if (profile?.role === "wholesale_customer") {
-            onClose();
-            if (onSuccess) {
-              onSuccess();
-            } else {
-              const target =
-                redirectParam &&
-                redirectParam.startsWith("/") &&
-                !redirectParam.startsWith("//")
-                  ? redirectParam
-                  : "/wholesale";
-              window.location.assign(target);
-            }
-            return;
+          // Reject non-retail roles from retail login
+          if (profile?.role !== "customer") {
+            await supabase.auth.signOut();
+            throw new Error("Invalid credentials.");
           }
         }
 
@@ -160,7 +145,8 @@ export default function AccountAuthModal({
           const target =
             redirectParam &&
             redirectParam.startsWith("/") &&
-            !redirectParam.startsWith("//")
+            !redirectParam.startsWith("//") &&
+            !redirectParam.startsWith("/wholesale")
               ? redirectParam
               : "/account";
           window.location.assign(target);
@@ -168,7 +154,7 @@ export default function AccountAuthModal({
       }
     } catch (authError) {
       setError(
-        authError instanceof Error ? authError.message : "Unable to complete authentication."
+        authError instanceof Error ? authError.message : "Invalid credentials."
       );
     } finally {
       setLoading(false);

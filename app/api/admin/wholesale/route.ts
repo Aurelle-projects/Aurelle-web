@@ -262,6 +262,41 @@ export async function PATCH(request: Request) {
         );
       }
 
+      // 4b. Create initial default address from application if not already present
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingAddresses } = await (admin as any)
+          .from("addresses")
+          .select("id")
+          .eq("user_id", authUserId)
+          .limit(1);
+
+        if (!existingAddresses || existingAddresses.length === 0) {
+          const appAddressLine1 = application.address_line1 || application.address || null;
+          const appCity = application.city || null;
+          const appCountry = application.country || "AE";
+
+          if (appAddressLine1 && appCity) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (admin as any).from("addresses").insert({
+              user_id: authUserId,
+              label: "Main Business / Warehouse",
+              full_name: application.contact_person || application.business_name || "Wholesale Recipient",
+              phone: application.phone || null,
+              address_line1: appAddressLine1,
+              address_line2: application.address_line2 || null,
+              city: appCity,
+              state: application.state || appCity,
+              postal_code: application.postal_code || null,
+              country: appCountry.length === 2 ? appCountry.toUpperCase() : "AE",
+              is_default: true,
+            });
+          }
+        }
+      } catch (addrErr) {
+        console.warn("[Admin Wholesale Approval] Address initialization error:", addrErr);
+      }
+
       // 5. Send Approval Email via Brevo (Non-blocking)
       try {
         await sendWholesaleApprovalEmail({

@@ -51,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/wholesale", label: "Account Applications", icon: Briefcase, smallFont: true },
       { href: "/admin/wholesale/enquiries", label: "Enquiries", icon: MessageSquare, smallFont: true },
+      { href: "/admin/wholesale/orders", label: "Wholesale Orders", icon: ShoppingBag, smallFont: true },
     ],
   },
   {

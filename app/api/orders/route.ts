@@ -17,12 +17,24 @@ async function ensureProfile(
   phone?: string | null
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin as any)
+  const { data: existing } = await (admin as any)
     .from("profiles")
-    .upsert(
-      { id: userId, email, full_name: fullName ?? null, phone: phone ?? null, role: "customer" },
-      { onConflict: "id" }
-    );
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any)
+      .from("profiles")
+      .insert({
+        id: userId,
+        email,
+        full_name: fullName ?? null,
+        phone: phone ?? null,
+        role: "customer",
+      });
+  }
 }
 
 // ── GET: List user's orders ───────────────────────────────────────
@@ -38,6 +50,18 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (admin as any)
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile && profile.role !== "customer") {
+      // Non-retail customer role (e.g. wholesale_customer) should not get retail orders
+      return NextResponse.json({ orders: [] });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: orders, error } = await (admin as any)
       .from("orders")
@@ -71,6 +95,7 @@ export async function GET() {
           )
         )
       `)
+      .eq("customer_type", "retail")
       .or(`user_id.eq.${user.id},customer_email.eq.${user.email}`)
       .order("created_at", { ascending: false });
 
@@ -138,12 +163,27 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Ensure profile exists before writing orders (FK guard) & verify userId
+    // Verify user profile role if authenticated
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     let verifiedUserId: string | null = null;
-    if (userId) {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && user.id === userId) {
+    if (user) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (admin as any)
+        .from("profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile && profile.role === "wholesale_customer") {
+        return NextResponse.json(
+          { error: "Retail checkout is not available for this account." },
+          { status: 403 }
+        );
+      }
+
+      if (userId && user.id === userId) {
         verifiedUserId = user.id;
         await ensureProfile(
           admin,

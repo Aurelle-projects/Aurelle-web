@@ -12,9 +12,11 @@ import {
   Settings,
   Package,
   MapPin,
+  ShoppingBag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { useWholesaleCart } from "@/context/WholesaleCartContext";
 
 export interface WholesaleNavBrand {
   id: string;
@@ -67,6 +69,7 @@ export default function WholesaleHeader({
   navBrands = [],
   navCategories = [],
 }: WholesaleHeaderProps) {
+  const wholesaleCart = useWholesaleCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -294,6 +297,20 @@ export default function WholesaleHeader({
 
             {/* Actions: B2B Register, Login, Enquiry Buttons / Authenticated Wholesale State */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Wholesale Cart Icon */}
+              <Link
+                href="/wholesale/cart"
+                className="relative p-2 text-[#14231B] hover:text-[#183D2B] transition-colors"
+                title="Wholesale Cart"
+              >
+                <ShoppingBag size={20} />
+                {wholesaleCart.itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#183D2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {wholesaleCart.itemCount}
+                  </span>
+                )}
+              </Link>
+
               {authLoading ? (
                 <div className="hidden sm:block w-28 h-8 bg-neutral-100 rounded-sm animate-pulse" />
               ) : currentUser && currentProfile?.role === "wholesale_customer" ? (
@@ -305,9 +322,9 @@ export default function WholesaleHeader({
                   >
                     <User size={14} className="shrink-0 text-[#183D2B]" />
                     <span className="max-w-[130px] md:max-w-[170px] truncate">
-                      {currentProfile.full_name || currentProfile.company_name || "Wholesale Partner"}
+                      {currentProfile?.full_name || currentProfile?.company_name || currentUser.email || "Account"}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wider bg-[#183D2B] text-white px-1.5 py-0.5 rounded-xs font-bold shrink-0">
+                    <span className="text-[9px] uppercase tracking-wider text-white px-1.5 py-0.5 rounded-xs font-bold shrink-0 bg-[#183D2B]">
                       B2B
                     </span>
                     <ChevronDown
@@ -322,12 +339,12 @@ export default function WholesaleHeader({
                     <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-sm shadow-xl border border-[#EFEAE0] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                       <div className="px-4 py-2.5 border-b border-[#EFEAE0] bg-[#FAF8F5]">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#8E9590]">
-                          Wholesale Account
+                          Wholesale B2B Account
                         </p>
                         <p className="text-xs font-bold text-[#14231B] truncate mt-0.5">
-                          {currentProfile.full_name || "Wholesale Partner"}
+                          {currentProfile?.full_name || currentUser.email}
                         </p>
-                        {currentProfile.company_name && (
+                        {currentProfile?.company_name && (
                           <p className="text-xs text-[#183D2B] font-semibold truncate">
                             {currentProfile.company_name}
                           </p>
@@ -380,8 +397,8 @@ export default function WholesaleHeader({
               ) : (
                 <>
                   <Link
-                    href="/login?redirect=/wholesale"
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
+                    href="/wholesale/login?redirect=/wholesale"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors cursor-pointer"
                   >
                     Sign In
                   </Link>
@@ -537,13 +554,13 @@ export default function WholesaleHeader({
                     <div className="flex items-center gap-2">
                       <User size={16} className="shrink-0 text-[#183D2B]" />
                       <span className="text-xs font-bold truncate">
-                        {currentProfile.full_name || "Wholesale Partner"}
+                        {currentProfile?.full_name || currentUser.email}
                       </span>
-                      <span className="text-[9px] uppercase tracking-wider bg-[#183D2B] text-white px-1.5 py-0.5 rounded-xs font-bold ml-auto shrink-0">
+                      <span className="text-[9px] uppercase tracking-wider text-white px-1.5 py-0.5 rounded-xs font-bold ml-auto shrink-0 bg-[#183D2B]">
                         B2B
                       </span>
                     </div>
-                    {currentProfile.company_name && (
+                    {currentProfile?.company_name && (
                       <p className="text-xs font-semibold text-[#183D2B] mt-1 pl-6">
                         {currentProfile.company_name}
                       </p>
@@ -603,7 +620,7 @@ export default function WholesaleHeader({
                     Enquiry
                   </Link>
                   <Link
-                    href="/login?redirect=/wholesale"
+                    href="/wholesale/login?redirect=/wholesale"
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full py-2 text-xs font-semibold text-[#5C6460] hover:text-[#183D2B] text-center block"
                   >

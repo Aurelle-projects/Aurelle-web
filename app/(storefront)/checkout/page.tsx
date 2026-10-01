@@ -52,6 +52,7 @@ function CheckoutContent() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isWholesaleUser, setIsWholesaleUser] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | "new">("new");
   const [useNewAddress, setUseNewAddress] = useState(false);
@@ -90,13 +91,16 @@ function CheckoutContent() {
       if (user) {
         setCurrentUser(user);
 
-        // Pre-fill user profile info
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: profile } = await (supabase as any)
           .from("profiles")
-          .select("full_name, phone")
+          .select("full_name, phone, role")
           .eq("id", user.id)
           .single();
+
+        if (profile?.role === "wholesale_customer") {
+          setIsWholesaleUser(true);
+        }
 
         const defaultName = profile?.full_name || user.user_metadata?.full_name || "";
         const defaultPhone = profile?.phone || user.user_metadata?.phone || "";
@@ -180,6 +184,10 @@ function CheckoutContent() {
   // Handle Order Placement
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
+    if (isWholesaleUser) {
+      setErrorMessage("Retail checkout is not available for wholesale accounts. Please place wholesale orders via the Wholesale Portal.");
+      return;
+    }
     if (items.length === 0) {
       setErrorMessage("Your shopping bag is empty.");
       return;
@@ -340,6 +348,20 @@ function CheckoutContent() {
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12 pb-28 md:pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
+        {isWholesaleUser && (
+          <div className="p-4 bg-[#183D2B]/10 border border-[#183D2B]/30 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#183D2B]">
+            <div>
+              <p className="font-bold uppercase tracking-wider">B2B Wholesale Account Active</p>
+              <p className="text-[11px] text-[#5C6460]">You are currently signed in as an approved B2B Wholesale Customer. B2B orders should be placed via the Wholesale Portal.</p>
+            </div>
+            <Link
+              href="/wholesale/cart"
+              className="px-4 py-2 bg-[#183D2B] text-white font-bold rounded-sm text-[11px] uppercase tracking-wider shrink-0 text-center"
+            >
+              Go to Wholesale Cart &rarr;
+            </Link>
+          </div>
+        )}
         {/* Top Header */}
         {/* <div className="flex items-center justify-between border-b border-[#EDE9DF] pb-4">
           <div className="flex items-center gap-2">
@@ -745,7 +767,7 @@ function CheckoutContent() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || items.length === 0}
+                disabled={isSubmitting || items.length === 0 || isWholesaleUser}
                 className="w-full py-3.5 rounded-md bg-[#183D2B] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#102D20] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Lock size={14} />
@@ -753,6 +775,8 @@ function CheckoutContent() {
                   ? formData.paymentMethod === "stripe"
                     ? "Redirecting to Stripe..."
                     : "Placing Order..."
+                  : isWholesaleUser
+                  ? "Retail Checkout Not Available for B2B Account"
                   : formData.paymentMethod === "stripe"
                   ? `Proceed to Pay • AED ${finalTotal.toFixed(2)}`
                   : `Place Order • AED ${finalTotal.toFixed(2)}`}
@@ -777,7 +801,7 @@ function CheckoutContent() {
           {/* Right: Single Place Order button */}
           <button
             type="button"
-            disabled={isSubmitting || items.length === 0}
+            disabled={isSubmitting || items.length === 0 || isWholesaleUser}
             onClick={() => {
               const form = document.querySelector<HTMLFormElement>("form");
               if (form) form.requestSubmit();
@@ -787,6 +811,8 @@ function CheckoutContent() {
             <Lock size={12} />
             {isSubmitting
               ? "Connecting..."
+              : isWholesaleUser
+              ? "B2B Account"
               : formData.paymentMethod === "stripe"
               ? "Pay with Card"
               : "Place Order"}

@@ -268,9 +268,15 @@ export default function OrderDetailsModal({
                           <p className="font-semibold text-xs text-[#1D211F] truncate">
                             {item.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#5C6460]">
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#5C6460] flex-wrap">
                             {item.sku && <span>SKU: {item.sku}</span>}
-                            <span>Qty: {item.quantity}</span>
+                            <span>Ordered Qty: <strong>{item.quantity}</strong></span>
+                            {(item.product_snapshot as any)?.purchase_mode && (
+                              <span className="bg-[#183D2B]/10 text-[#183D2B] px-1.5 py-0.5 rounded-xs font-bold uppercase text-[9px]">
+                                Mode: {(item.product_snapshot as any).purchase_mode}
+                                {(item.product_snapshot as any).total_units ? ` (${(item.product_snapshot as any).total_units} pcs)` : ""}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -279,9 +285,9 @@ export default function OrderDetailsModal({
                         <p className="font-bold text-xs text-[#183D2B]">
                           AED {item.line_total.toFixed(2)}
                         </p>
-                        {item.quantity > 1 && item.price && (
+                        {item.price && (
                           <p className="text-[10px] text-[#5C6460]">
-                            AED {item.price.toFixed(2)} each
+                            AED {item.price.toFixed(2)} / rate
                           </p>
                         )}
                       </div>

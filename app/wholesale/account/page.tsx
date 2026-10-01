@@ -21,7 +21,7 @@ export default async function WholesaleAccountPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/wholesale/account");
+    redirect("/wholesale/login?redirect=/wholesale/account");
   }
 
   // ── 2. Server-side Role Check ───────────────────────────────────────

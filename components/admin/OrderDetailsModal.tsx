@@ -265,9 +265,16 @@ export default function OrderDetailsModal({
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs text-[#1D211F] truncate">
-                            {item.name}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(item.product_snapshot as any)?.is_combo && (
+                              <span className="px-1.5 py-0.2 bg-[#102D20] text-white text-[9px] font-bold uppercase tracking-wider rounded-xs">
+                                Combo Offer
+                              </span>
+                            )}
+                            <p className="font-semibold text-xs text-[#1D211F] truncate">
+                              {item.name}
+                            </p>
+                          </div>
                           <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#5C6460] flex-wrap">
                             {item.sku && <span>SKU: {item.sku}</span>}
                             <span>Ordered Qty: <strong>{item.quantity}</strong></span>
@@ -278,6 +285,25 @@ export default function OrderDetailsModal({
                               </span>
                             )}
                           </div>
+                          {/* Combo Components Breakdown */}
+                          {(item.product_snapshot as any)?.is_combo &&
+                            Array.isArray((item.product_snapshot as any)?.components) &&
+                            (item.product_snapshot as any).components.length > 0 && (
+                              <div className="mt-1.5 p-2 bg-[#FAF8F5] rounded border border-[#DCCFB9]/50 text-[10.5px] space-y-0.5">
+                                <span className="font-bold text-[#183D2B] block">Includes per combo:</span>
+                                <ul className="space-y-0.5 text-[#5C6460]">
+                                  {(item.product_snapshot as any).components.map((comp: any, cIdx: number) => {
+                                    const totalCompUnits = (comp.quantity || 1) * item.quantity;
+                                    return (
+                                      <li key={cIdx} className="flex items-center justify-between gap-2">
+                                        <span>• {comp.name} × {comp.quantity}</span>
+                                        <span className="text-[#183D2B] font-semibold">({totalCompUnits} total units)</span>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            )}
                         </div>
                       </div>
 

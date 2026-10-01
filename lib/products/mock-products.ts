@@ -30,6 +30,16 @@ export interface ProductItem {
   tags: string[];
   ingredients?: string;
   how_to_use?: string;
+  is_combo?: boolean;
+  combo_id?: string;
+  combo_items?: Array<{
+    product_id: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    image?: string | null;
+    retail_price?: number;
+  }>;
 }
 
 export const AURELLE_PRODUCTS: ProductItem[] = [

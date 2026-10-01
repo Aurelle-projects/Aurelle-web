@@ -6,6 +6,7 @@ import {
   sendAdminOrderNotificationEmail,
 } from "@/lib/email/brevo";
 import { calculateRetailOrderTotals, RETAIL_TAX_RATE } from "@/lib/pricing/retail";
+import { getProductStockQuantity } from "@/lib/products/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,52 @@ async function ensureProfile(
         phone: phone ?? null,
         role: "customer",
       });
+  }
+}
+
+// ── Atomic stock reduction ──────────────────────────────────────────
+async function reduceStockForOrder(
+  orderId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any
+): Promise<void> {
+  const { data: orderItems, error } = await supabase
+    .from("order_items")
+    .select("product_id, combo_id, quantity, sku_snapshot, product_snapshot")
+    .eq("order_id", orderId);
+
+  if (error || !orderItems?.length) return;
+
+  for (const item of orderItems) {
+    const snap = item.product_snapshot || {};
+    // If item is a combo offer, atomically decrement each component's stock
+    if ((snap.is_combo || item.combo_id) && Array.isArray(snap.components) && snap.components.length > 0) {
+      for (const comp of snap.components) {
+        if (!comp.product_id) continue;
+        const totalUnits = Math.max(1, (comp.quantity || 1) * (item.quantity || 1));
+        try {
+          await supabase.rpc("decrement_stock", {
+            p_product_id: comp.product_id,
+            p_quantity: totalUnits,
+          });
+        } catch (stockErr) {
+          console.warn(
+            "[Orders API] decrement_stock warning for combo component",
+            comp.product_id,
+            stockErr
+          );
+        }
+      }
+    } else if (item.product_id) {
+      try {
+        await supabase.rpc("decrement_stock", {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity,
+        });
+      } catch (stockErr) {
+        console.warn("[Orders API] decrement_stock warning for product", item.product_id, stockErr);
+      }
+    }
   }
 }
 
@@ -197,32 +244,73 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Server-Side Authoritative Pricing & Tax Verification ──────
-    // 1. Fetch current product records from DB for verification
-    const productIds = items
+    // ── Server-Side Authoritative Pricing, Stock & Tax Verification ──────
+    // 1. Separate regular product IDs and combo IDs
+    const comboIds = items
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((item: any) => item.productId)
-      .filter((id: any) => typeof id === "string" && id.length > 0);
+      .filter((it: any) => it.isCombo || it.comboId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((it: any) => it.comboId || it.productId)
+      .filter((id: unknown) => typeof id === "string" && (id as string).length > 0);
 
+    const regularProductIds = items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((it: any) => !it.isCombo && !it.comboId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((it: any) => it.productId)
+      .filter((id: unknown) => typeof id === "string" && (id as string).length > 0);
+
+    // Fetch matching products
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dbProducts: any[] = [];
-    if (productIds.length > 0) {
+    if (regularProductIds.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: prodErr } = await (admin as any)
         .from("products")
-        .select("id, name, slug, sku, retail_price, tax_enabled, is_published, status")
-        .in("id", productIds);
+        .select(`
+          id, name, slug, sku, retail_price, tax_enabled, is_published, status,
+          inventory ( stock_quantity, stock_status )
+        `)
+        .in("id", regularProductIds);
 
       if (!prodErr && data) {
         dbProducts = data;
       }
     }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const productMap = new Map<string, any>(dbProducts.map((p) => [p.id, p]));
 
+    // Fetch matching combos with components and inventory
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dbCombos: any[] = [];
+    if (comboIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: comboData, error: comboErr } = await (admin as any)
+        .from("combo_offers")
+        .select(`
+          id, name, slug, sku, price, compare_at_price, tax_enabled, is_active, primary_image_url,
+          combo_offer_items (
+            id, product_id, quantity, sort_order,
+            products (
+              id, name, slug, sku, retail_price, is_published, status,
+              product_images ( secure_url, is_primary ),
+              inventory ( stock_quantity, stock_status )
+            )
+          )
+        `)
+        .in("id", comboIds);
+
+      if (!comboErr && comboData) {
+        dbCombos = comboData;
+      }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const comboMap = new Map<string, any>(dbCombos.map((c) => [c.id, c]));
+
     interface VerifiedOrderItem {
       productId: string | null;
+      comboId: string | null;
+      isCombo: boolean;
       name: string;
       sku: string;
       slug: string;
@@ -233,36 +321,166 @@ export async function POST(request: NextRequest) {
       lineSubtotal: number;
       lineTax: number;
       lineTotal: number;
+      components?: Array<{
+        product_id: string;
+        name: string;
+        sku?: string;
+        quantity: number;
+        image?: string | null;
+        retail_price?: number;
+      }>;
     }
 
     // 2. Build verified item details and authoritative pricing input
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const verifiedItems: VerifiedOrderItem[] = items.map((rawItem: any) => {
-      const dbProd = productMap.get(rawItem.productId);
-      const verifiedPrice = dbProd ? Number(dbProd.retail_price) : (Number(rawItem.price) || 0);
-      const isTaxable = dbProd ? dbProd.tax_enabled !== false : true;
-      const qty = Math.max(1, parseInt(rawItem.quantity, 10) || 1);
-      const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
-      const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+    const verifiedItems: VerifiedOrderItem[] = [];
 
-      return {
-        productId: rawItem.productId || null,
-        name: dbProd?.name || rawItem.name || "Product",
-        sku: dbProd?.sku || rawItem.sku || "AUR-PROD",
-        slug: dbProd?.slug || rawItem.slug || "",
-        image: rawItem.image || null,
-        price: verifiedPrice,
-        quantity: qty,
-        taxEnabled: isTaxable,
-        lineSubtotal,
-        lineTax,
-        lineTotal: lineSubtotal,
-      };
-    });
+    for (const rawItem of items) {
+      const isComboItem = Boolean(
+        rawItem.isCombo || rawItem.comboId || comboMap.has(rawItem.productId)
+      );
+      const targetId = isComboItem ? rawItem.comboId || rawItem.productId : rawItem.productId;
+      const qty = Math.max(1, parseInt(rawItem.quantity, 10) || 1);
+
+      if (isComboItem) {
+        const dbCombo = comboMap.get(targetId);
+        if (!dbCombo || !dbCombo.is_active) {
+          return NextResponse.json(
+            {
+              error: `The combo offer "${rawItem.name || "Selected Combo"}" is currently unavailable or inactive.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        const comboItems = dbCombo.combo_offer_items || [];
+        if (comboItems.length === 0) {
+          return NextResponse.json(
+            { error: `The combo offer "${dbCombo.name}" has no available components.` },
+            { status: 400 }
+          );
+        }
+
+        // Verify stock availability for every component product
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const componentsSnapshot: any[] = [];
+        for (const ci of comboItems) {
+          const compProd = ci.products;
+          const isListed =
+            compProd &&
+            (compProd.status === undefined || compProd.status === "published") &&
+            (compProd.is_published === undefined || compProd.is_published === true);
+
+          if (!isListed) {
+            return NextResponse.json(
+              {
+                error: `The combo offer "${dbCombo.name}" is unavailable because component "${compProd?.name || "product"}" is currently unlisted.`,
+              },
+              { status: 400 }
+            );
+          }
+
+          const compStock = getProductStockQuantity(compProd.inventory);
+          const neededUnits = (ci.quantity || 1) * qty;
+          if (compStock < neededUnits) {
+            const maxCombosPossible = Math.floor(compStock / (ci.quantity || 1));
+            return NextResponse.json(
+              {
+                error: `Insufficient stock for "${dbCombo.name}". Component "${compProd.name}" only has ${compStock} units available (${neededUnits} required for ${qty} combos). Maximum sets available: ${maxCombosPossible}.`,
+              },
+              { status: 400 }
+            );
+          }
+
+          componentsSnapshot.push({
+            product_id: ci.product_id,
+            name: compProd.name,
+            sku: compProd.sku,
+            quantity: ci.quantity,
+            image:
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              compProd.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+              compProd.product_images?.[0]?.secure_url ||
+              null,
+            retail_price: Number(compProd.retail_price) || 0,
+          });
+        }
+
+        const verifiedPrice = Number(dbCombo.price) || 0;
+        const isTaxable = dbCombo.tax_enabled !== false;
+        const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
+        const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+
+        verifiedItems.push({
+          productId: null,
+          comboId: dbCombo.id,
+          isCombo: true,
+          name: dbCombo.name,
+          sku: dbCombo.sku,
+          slug: dbCombo.slug,
+          image: dbCombo.primary_image_url || rawItem.image || null,
+          price: verifiedPrice,
+          quantity: qty,
+          taxEnabled: isTaxable,
+          lineSubtotal,
+          lineTax,
+          lineTotal: lineSubtotal,
+          components: componentsSnapshot,
+        });
+      } else {
+        // Regular catalog product
+        const dbProd = productMap.get(targetId);
+        const isListed =
+          dbProd &&
+          (dbProd.status === undefined || dbProd.status === "published") &&
+          (dbProd.is_published === undefined || dbProd.is_published === true);
+
+        if (!isListed) {
+          return NextResponse.json(
+            { error: `Product "${rawItem.name || "Selected item"}" is no longer available.` },
+            { status: 400 }
+          );
+        }
+
+        const prodStock = getProductStockQuantity(dbProd.inventory);
+        if (prodStock < qty) {
+          return NextResponse.json(
+            {
+              error: `Insufficient stock for "${dbProd.name}". Only ${prodStock} units available (${qty} requested).`,
+            },
+            { status: 400 }
+          );
+        }
+
+        const verifiedPrice = Number(dbProd.retail_price) || 0;
+        const isTaxable = dbProd.tax_enabled !== false;
+        const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
+        const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
+
+        verifiedItems.push({
+          productId: dbProd.id,
+          comboId: null,
+          isCombo: false,
+          name: dbProd.name,
+          sku: dbProd.sku,
+          slug: dbProd.slug,
+          image: rawItem.image || null,
+          price: verifiedPrice,
+          quantity: qty,
+          taxEnabled: isTaxable,
+          lineSubtotal,
+          lineTax,
+          lineTotal: lineSubtotal,
+        });
+      }
+    }
 
     // 3. Compute authoritative order totals
-    const rawSubtotal = verifiedItems.reduce((sum: number, item: VerifiedOrderItem) => sum + item.lineSubtotal, 0);
-    const authoritativeShipping = rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
+    const rawSubtotal = verifiedItems.reduce(
+      (sum: number, item: VerifiedOrderItem) => sum + item.lineSubtotal,
+      0
+    );
+    const authoritativeShipping =
+      rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
 
     const authoritativeTotals = calculateRetailOrderTotals(
       verifiedItems.map((it: VerifiedOrderItem) => ({
@@ -301,6 +519,8 @@ export async function POST(request: NextRequest) {
             images: item.image ? [item.image] : [],
             metadata: {
               product_id: item.productId || "",
+              combo_id: item.comboId || "",
+              is_combo: item.isCombo ? "true" : "false",
               sku: item.sku || "",
               slug: item.slug || "",
               tax_enabled: item.taxEnabled ? "true" : "false",
@@ -343,7 +563,9 @@ export async function POST(request: NextRequest) {
 
       // Prepare verified items JSON for metadata
       const minifiedItems = verifiedItems.map((it) => ({
-        id: it.productId,
+        id: it.productId || it.comboId,
+        comboId: it.comboId,
+        isCombo: it.isCombo,
         name: it.name,
         sku: it.sku,
         slug: it.slug,
@@ -352,6 +574,7 @@ export async function POST(request: NextRequest) {
         quantity: it.quantity,
         taxEnabled: it.taxEnabled,
         lineTotal: it.lineSubtotal,
+        components: it.components || [],
       }));
 
       const itemsJson = JSON.stringify(minifiedItems);
@@ -444,11 +667,15 @@ export async function POST(request: NextRequest) {
       const orderItemsToInsert = verifiedItems.map((item: VerifiedOrderItem) => ({
         order_id: order.id,
         product_id: item.productId,
+        combo_id: item.comboId,
         product_snapshot: {
           name: item.name,
           image: item.image,
           slug: item.slug,
           tax_enabled: item.taxEnabled,
+          is_combo: item.isCombo,
+          combo_id: item.comboId,
+          components: item.components || [],
         },
         sku_snapshot: item.sku,
         price_snapshot: item.price,
@@ -465,6 +692,9 @@ export async function POST(request: NextRequest) {
         console.error("[Order items insert error]:", itemsError);
       }
     }
+
+    // Atomic Stock Reduction for COD
+    await reduceStockForOrder(order.id, admin);
 
     // Save address if requested
     if (saveAddress && verifiedUserId) {

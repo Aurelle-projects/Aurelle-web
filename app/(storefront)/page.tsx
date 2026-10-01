@@ -12,6 +12,7 @@ import HomeBanners from "@/components/storefront/HomeBanners";
 import TopRatedProducts from "@/components/storefront/TopRatedProducts";
 import AllProductsSection from "@/components/storefront/AllProductsSection";
 import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
+import ComboOffersSection from "@/components/storefront/ComboOffersSection";
 
 export const metadata: Metadata = {
   title: "Aurelle — Everyday Essentials. Elevated.",
@@ -241,6 +242,9 @@ export default async function HomePage() {
 
       {/* ─── 4. Shop By Category ─────────────────────────────────── */}
       <CategorySection categories={displayCategories} />
+
+      {/* ─── 4b. Exclusive Combo Offers ───────────────────────────── */}
+      <ComboOffersSection />
 
       {/* ─── 5. New Arrivals Section — database products only ── */}
       <ProductSection

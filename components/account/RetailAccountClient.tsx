@@ -858,11 +858,14 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
                   {ord.order_items && ord.order_items.length > 0 && (
                     <div className="space-y-3 pt-1">
                       {ord.order_items.map((item) => {
-                        const snap = item.product_snapshot || {};
+                        const snap = (item.product_snapshot as any) || {};
                         const image = snap.image;
+                        const isCombo = Boolean(snap.is_combo);
+                        const components = Array.isArray(snap.components) ? snap.components : [];
+
                         return (
-                          <div key={item.id} className="flex items-center justify-between text-xs py-1.5 gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
+                          <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs py-2 gap-3 border-b border-[#EDE9DF]/40 last:border-0">
+                            <div className="flex items-start sm:items-center gap-3 min-w-0">
                               <div className="w-12 h-12 rounded-md overflow-hidden bg-[#FAF8F5] border border-[#EDE9DF] shrink-0 flex items-center justify-center">
                                 {image ? (
                                   // eslint-disable-next-line @next/next/no-img-element
@@ -876,15 +879,35 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[#1D211F] font-medium truncate">
-                                  {snap.name || "Product"}
-                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {isCombo && (
+                                    <span className="px-1.5 py-0.2 bg-[#102D20] text-white text-[9px] font-bold uppercase tracking-wider rounded-xs">
+                                      Combo Offer
+                                    </span>
+                                  )}
+                                  <p className="text-[#1D211F] font-semibold truncate">
+                                    {snap.name || "Product"}
+                                  </p>
+                                </div>
                                 <p className="text-[#8C938F] text-[11px] mt-0.5">
-                                  Qty: {item.quantity} × AED {Number(item.price_snapshot || 0).toFixed(2)}
+                                  Qty: <strong>{item.quantity}</strong> × AED {Number(item.price_snapshot || 0).toFixed(2)}
                                 </p>
+
+                                {isCombo && components.length > 0 && (
+                                  <div className="mt-1 text-[10.5px] text-[#5C6460] bg-[#FAF8F5] p-1.5 rounded border border-[#EDE9DF]/60 space-y-0.5">
+                                    <span className="font-semibold text-[#183D2B]">Includes per combo:</span>
+                                    <ul className="pl-1 space-y-0.5">
+                                      {components.map((c: any, cIdx: number) => (
+                                        <li key={cIdx} className="truncate">
+                                          • {c.name} × <strong>{c.quantity}</strong>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <span className="text-[#1D211F] font-semibold shrink-0">
+                            <span className="text-[#1D211F] font-bold shrink-0 self-end sm:self-auto">
                               AED {Number(item.line_total).toFixed(2)}
                             </span>
                           </div>

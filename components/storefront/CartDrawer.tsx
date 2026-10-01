@@ -120,10 +120,13 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
               ) : (
                 items.map((item) => {
                   const image = item.product.images?.find((i) => i.is_primary) ?? item.product.images?.[0];
+                  const isCombo = Boolean(item.product.is_combo);
+                  const itemLink = isCombo ? `/combos/${item.product.slug}` : `/products/${item.product.slug}`;
+
                   return (
                     <div key={item.id} className="flex gap-3 pb-4 border-b border-[#EDE9DF] last:border-0 last:pb-0">
                       {/* Image */}
-                      <Link href={`/products/${item.product.slug}`} onClick={onClose} className="shrink-0">
+                      <Link href={itemLink} onClick={onClose} className="shrink-0">
                         <div className="w-[76px] h-[90px] bg-[#F5F5F5] rounded-sm overflow-hidden relative">
                           {image?.url ? (
                             <Image
@@ -143,13 +146,34 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
 
                       {/* Details */}
                       <div className="flex-1 min-w-0">
-                        <Link
-                          href={`/products/${item.product.slug}`}
-                          onClick={onClose}
-                          className="text-[13px] font-semibold text-[#1D211F] line-clamp-2 hover:text-[#183D2B] transition-colors leading-snug"
-                        >
-                          {item.product.name}
-                        </Link>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isCombo && (
+                            <span className="px-1.5 py-0.2 bg-[#102D20] text-white text-[9px] font-bold uppercase tracking-wider rounded-xs">
+                              Combo Offer
+                            </span>
+                          )}
+                          <Link
+                            href={itemLink}
+                            onClick={onClose}
+                            className="text-[13px] font-semibold text-[#1D211F] line-clamp-2 hover:text-[#183D2B] transition-colors leading-snug"
+                          >
+                            {item.product.name}
+                          </Link>
+                        </div>
+
+                        {isCombo && item.product.combo_items && item.product.combo_items.length > 0 && (
+                          <div className="mt-1 text-[10.5px] text-[#5C6460] space-y-0.5">
+                            <span className="font-semibold text-[#183D2B]">Includes:</span>
+                            <ul className="pl-1 space-y-0.5">
+                              {item.product.combo_items.map((ci, idx) => (
+                                <li key={idx} className="truncate">
+                                  • {ci.name} × <strong>{ci.quantity}</strong>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
                         <p className="mt-1 text-[12px] text-[#8C938F]">
                           AED {item.product.retail_price.toFixed(2)}
                         </p>

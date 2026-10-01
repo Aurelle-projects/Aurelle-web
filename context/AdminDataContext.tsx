@@ -379,6 +379,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
                 0,
               sku: it.sku_snapshot || snap.sku || "",
               slug: snap.slug || "",
+              product_snapshot: snap,
             };
           });
 

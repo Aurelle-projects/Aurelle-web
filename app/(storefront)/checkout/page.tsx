@@ -223,6 +223,8 @@ function CheckoutContent() {
           sku: item.product?.sku || "AUR-ITEM",
           price: item.product?.retail_price || 0,
           quantity: item.quantity,
+          isCombo: Boolean(item.product?.is_combo),
+          comboId: item.product?.combo_id || (item.product?.is_combo ? (item.product?.id || item.id) : undefined),
           image:
             item.product?.images?.[0]?.url ||
             (item.product as any)?.product_images?.find((img: any) => img.is_primary)?.secure_url ||

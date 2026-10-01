@@ -47,20 +47,40 @@ async function reduceStockForOrder(
 ): Promise<void> {
   const { data: orderItems, error } = await supabase
     .from("order_items")
-    .select("product_id, quantity, sku_snapshot")
+    .select("product_id, combo_id, quantity, sku_snapshot, product_snapshot")
     .eq("order_id", orderId);
 
   if (error || !orderItems?.length) return;
 
   for (const item of orderItems) {
-    if (!item.product_id) continue;
-    try {
-      await supabase.rpc("decrement_stock", {
-        p_product_id: item.product_id,
-        p_quantity: item.quantity,
-      });
-    } catch (stockErr) {
-      console.warn("[Stripe Fulfillment] decrement_stock warning for product", item.product_id, stockErr);
+    const snap = item.product_snapshot || {};
+    // If item is a combo offer, atomically decrement each component's stock
+    if ((snap.is_combo || item.combo_id) && Array.isArray(snap.components) && snap.components.length > 0) {
+      for (const comp of snap.components) {
+        if (!comp.product_id) continue;
+        const totalUnits = Math.max(1, (comp.quantity || 1) * (item.quantity || 1));
+        try {
+          await supabase.rpc("decrement_stock", {
+            p_product_id: comp.product_id,
+            p_quantity: totalUnits,
+          });
+        } catch (stockErr) {
+          console.warn(
+            "[Stripe Fulfillment] decrement_stock warning for combo component",
+            comp.product_id,
+            stockErr
+          );
+        }
+      }
+    } else if (item.product_id) {
+      try {
+        await supabase.rpc("decrement_stock", {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity,
+        });
+      } catch (stockErr) {
+        console.warn("[Stripe Fulfillment] decrement_stock warning for product", item.product_id, stockErr);
+      }
     }
   }
 }
@@ -202,6 +222,16 @@ export async function finalizeStripeOrder(
     quantity?: number;
     taxEnabled?: boolean;
     lineTotal?: number;
+    isCombo?: boolean;
+    comboId?: string | null;
+    components?: Array<{
+      product_id: string;
+      name: string;
+      sku?: string;
+      quantity: number;
+      image?: string | null;
+      retail_price?: number;
+    }>;
   }
 
   let items: MinifiedItem[] = [];
@@ -284,20 +314,27 @@ export async function finalizeStripeOrder(
 
   // Insert Order Items
   if (items.length > 0) {
-    const orderItemsToInsert = items.map((item) => ({
-      order_id: newOrder.id,
-      product_id: item.id || null,
-      product_snapshot: {
-        name: item.name || "Product",
-        image: item.image || null,
-        slug: item.slug || "",
-        tax_enabled: item.taxEnabled !== false,
-      },
-      sku_snapshot: item.sku || "AUR-ITEM",
-      price_snapshot: item.price || 0,
-      quantity: item.quantity || 1,
-      line_total: item.lineTotal || (Number(item.price || 0) * Number(item.quantity || 1)),
-    }));
+    const orderItemsToInsert = items.map((item) => {
+      const isCombo = Boolean(item.isCombo || item.comboId);
+      return {
+        order_id: newOrder.id,
+        product_id: isCombo ? null : item.id || null,
+        combo_id: item.comboId || (isCombo ? item.id : null),
+        product_snapshot: {
+          name: item.name || "Product",
+          image: item.image || null,
+          slug: item.slug || "",
+          tax_enabled: item.taxEnabled !== false,
+          is_combo: isCombo,
+          combo_id: item.comboId || (isCombo ? item.id : null),
+          components: item.components || [],
+        },
+        sku_snapshot: item.sku || "AUR-ITEM",
+        price_snapshot: item.price || 0,
+        quantity: item.quantity || 1,
+        line_total: item.lineTotal || (Number(item.price || 0) * Number(item.quantity || 1)),
+      };
+    });
 
     const { error: itemsError } = await admin.from("order_items").insert(orderItemsToInsert);
     if (itemsError) {

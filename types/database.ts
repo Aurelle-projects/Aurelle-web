@@ -480,9 +480,87 @@ export type Database = {
           price_snapshot: number;
           quantity: number;
           line_total: number;
+          combo_id?: string | null;
           created_at?: string;
         };
         Update: Record<string, never>;
+      };
+      combo_offers: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          sku: string;
+          description: string | null;
+          features: Json;
+          price: number;
+          compare_at_price: number | null;
+          tax_enabled: boolean;
+          is_active: boolean;
+          is_featured: boolean;
+          primary_image_url: string | null;
+          primary_image_public_id: string | null;
+          images: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          sku: string;
+          description?: string | null;
+          features?: Json;
+          price: number;
+          compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_active?: boolean;
+          is_featured?: boolean;
+          primary_image_url?: string | null;
+          primary_image_public_id?: string | null;
+          images?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          sku?: string;
+          description?: string | null;
+          features?: Json;
+          price?: number;
+          compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_active?: boolean;
+          is_featured?: boolean;
+          primary_image_url?: string | null;
+          primary_image_public_id?: string | null;
+          images?: Json;
+          updated_at?: string;
+        };
+      };
+      combo_offer_items: {
+        Row: {
+          id: string;
+          combo_id: string;
+          product_id: string;
+          quantity: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          combo_id: string;
+          product_id: string;
+          quantity: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          quantity?: number;
+          sort_order?: number;
+        };
       };
       addresses: {
         Row: {

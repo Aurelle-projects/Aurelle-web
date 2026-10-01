@@ -72,6 +72,7 @@ export default function AdminProductsPage() {
         title="Products Catalog"
         subtitle="Manage retail and wholesale inventory across the 10 official Aurelle categories."
         actionButton={{ label: "New Product", href: "/admin/products/new" }}
+        secondaryButton={{ label: "Create Combo Offer", href: "/admin/combos/new" }}
       />
 
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4">

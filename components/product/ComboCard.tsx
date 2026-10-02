@@ -164,7 +164,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
 
           {/* Subtle Product Composition Preview (Thumbnail stack + count) */}
           {validItems.length > 0 && (
-            <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-[#EDE9DF]/60">
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#EDE9DF]/60">
               <div className="flex -space-x-1.5 overflow-hidden shrink-0">
                 {validItems.slice(0, 4).map((item, idx) => {
                   const itemImg =

@@ -52,12 +52,12 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
 
   return (
     <section
-      className="py-10 md:py-16 bg-[#FAF8F5] border-y border-[#EDE9DF]"
+      className="py-8 md:py-14 bg-[#FAF8F5] border-y border-[#EDE9DF]"
       aria-labelledby="curated-combos-heading"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-7">
           <div className="max-w-xl">
             <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-1.5">
               Curated Combinations
@@ -68,14 +68,14 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
             >
               Thoughtfully paired for better routines.
             </h2>
-            <p className="text-xs sm:text-sm text-[#5C6460] mt-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#5C6460] mt-1.5 leading-relaxed">
               Discover carefully selected product combinations designed to complement your everyday beauty routine — with exclusive savings.
             </p>
           </div>
 
           <Link
             href="/combos"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#183D2B] hover:text-[#C9A84C] transition-colors group self-start sm:self-end pb-0.5 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#183D2B] hover:text-[#C9A84C] transition-colors group self-start sm:self-end pb-0.5 whitespace-nowrap"
           >
             <span>Explore all combos</span>
             <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -90,14 +90,14 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
           </div>
         ) : count === 2 ? (
           /* Two Combos: Centered 2-column layout */
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 justify-center">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5 lg:gap-6 justify-center">
             {homepageCombos.map((combo) => (
               <ComboCard key={combo.id} combo={combo} />
             ))}
           </div>
         ) : (
           /* Three Combos (homepage max 3): Refined responsive grid (3 desktop, 2 tablet, 1 mobile) */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
             {homepageCombos.map((combo) => (
               <ComboCard key={combo.id} combo={combo} />
             ))}

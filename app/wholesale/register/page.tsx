@@ -15,6 +15,8 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function WholesaleRegisterPage() {
@@ -32,6 +34,8 @@ export default function WholesaleRegisterPage() {
     confirmPassword: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -383,32 +387,52 @@ export default function WholesaleRegisterPage() {
                     <label className="block text-xs font-semibold text-[#1D211F] mb-1.5">
                       Create Account Password *
                     </label>
-                    <input
-                      type="password"
-                      name="password"
-                      required
-                      minLength={6}
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Minimum 6 characters"
-                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        required
+                        minLength={6}
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="Minimum 6 characters"
+                        className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] pl-3.5 pr-10 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C938F] hover:text-[#183D2B] transition-colors cursor-pointer"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-[#1D211F] mb-1.5">
                       Confirm Password *
                     </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      required
-                      minLength={6}
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="Re-enter password"
-                      className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] px-3.5 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        required
+                        minLength={6}
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        placeholder="Re-enter password"
+                        className="h-11 w-full rounded-md border border-[#EDE9DF] bg-[#FAF8F5] pl-3.5 pr-10 text-xs text-[#1D211F] outline-none transition-all placeholder:text-[#8C938F] focus:border-[#183D2B] focus:bg-[#FFFFFF] focus:ring-1 focus:ring-[#183D2B]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C938F] hover:text-[#183D2B] transition-colors cursor-pointer"
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <p className="mt-2 text-[11px] text-[#5C6460]">

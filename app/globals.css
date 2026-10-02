@@ -148,19 +148,6 @@
 
 /* ─── Utilities ──────────────────────────────────────────────────────────── */
 @layer utilities {
-  .animate-top-rated {
-    animation: top-rated-slide 16s linear infinite;
-  }
-
-  @keyframes top-rated-slide {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
-
   /* Hide scrollbar but keep scroll functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;

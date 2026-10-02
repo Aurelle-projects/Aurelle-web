@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
-import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye } from "lucide-react";
+import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye, Sparkles } from "lucide-react";
 import { useAdminData, AdminOrderItem } from "@/context/AdminDataContext";
 
 type OrderItem = AdminOrderItem;
@@ -23,14 +23,14 @@ function OrdersContent() {
   const orders = useMemo(() => contextOrders ?? [], [contextOrders]);
   const loading = contextOrders === null && ordersLoading;
   const [searchTerm, setSearchTerm] = useState("");
-  const [channelFilter, setChannelFilter] = useState<"all" | "retail" | "wholesale">("all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "retail" | "wholesale" | "combo">("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") || searchParams.get("channel") || searchParams.get("type");
-    if (tabParam === "retail" || tabParam === "wholesale" || tabParam === "all") {
+    if (tabParam === "retail" || tabParam === "wholesale" || tabParam === "combo" || tabParam === "all") {
       setChannelFilter(tabParam);
     }
   }, [searchParams]);
@@ -47,6 +47,10 @@ function OrdersContent() {
   }, [feedback]);
 
   function getOrderThumbnail(ord: OrderItem): string | null {
+    // If order has combo, prefer the combo's image
+    const comboItem = ord.items?.find((i) => i.is_combo);
+    if (comboItem && comboItem.image) return comboItem.image;
+
     const firstItem = ord.items?.[0];
     if (!firstItem) return null;
     if (firstItem.image) return firstItem.image;
@@ -115,14 +119,23 @@ function OrdersContent() {
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return orders.filter((o) => {
-      const matchesChannel =
-        channelFilter === "all" || o.customer_type === channelFilter;
+      let matchesChannel = true;
+      if (channelFilter === "retail") {
+        matchesChannel = o.customer_type === "retail";
+      } else if (channelFilter === "wholesale") {
+        matchesChannel = o.customer_type === "wholesale";
+      } else if (channelFilter === "combo") {
+        matchesChannel = Boolean(o.has_combo);
+      }
+
       const matchesSearch =
         !term ||
         o.order_number?.toLowerCase().includes(term) ||
         o.customer_name?.toLowerCase().includes(term) ||
         o.customer_email?.toLowerCase().includes(term) ||
-        o.city?.toLowerCase().includes(term);
+        o.city?.toLowerCase().includes(term) ||
+        o.items?.some((it) => it.name?.toLowerCase().includes(term) || it.sku?.toLowerCase().includes(term));
+
       const matchesStatus = statusFilter === "all" || o.order_status === statusFilter;
       return matchesChannel && matchesSearch && matchesStatus;
     });
@@ -136,21 +149,23 @@ function OrdersContent() {
     cancelled: "bg-red-50 text-red-800 border border-red-200",
   };
 
-  const { retailCount, wholesaleCount } = useMemo(() => {
+  const { retailCount, wholesaleCount, comboCount } = useMemo(() => {
     let r = 0;
     let w = 0;
+    let c = 0;
     for (const o of orders) {
       if (o.customer_type === "retail") r++;
       else if (o.customer_type === "wholesale") w++;
+      if (o.has_combo) c++;
     }
-    return { retailCount: r, wholesaleCount: w };
+    return { retailCount: r, wholesaleCount: w, comboCount: c };
   }, [orders]);
 
   return (
     <div className="flex flex-col">
       <AdminHeader
         title="Orders"
-        subtitle="Track UAE retail deliveries and B2B wholesale orders, payment settlements, and fulfillment status."
+        subtitle="Track UAE retail deliveries, combo offer bundles, B2B wholesale orders, payment settlements, and fulfillment status."
       />
 
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-4">
@@ -176,8 +191,8 @@ function OrdersContent() {
         {/* Channel Selection & Filter Bar */}
         <div className="bg-white p-3.5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
           {/* Channel Tabs */}
-          <div className="flex items-center gap-1.5 border-b border-[#DCCFB9]/30 pb-2.5">
-            <span className="text-[11px] font-bold text-[#5C6460] mr-1.5">Channel:</span>
+          <div className="flex items-center gap-1.5 border-b border-[#DCCFB9]/30 pb-2.5 flex-wrap">
+            <span className="text-[11px] font-bold text-[#5C6460] mr-1.5">View:</span>
             <button
               type="button"
               onClick={() => setChannelFilter("all")}
@@ -213,6 +228,18 @@ function OrdersContent() {
               <Building2 size={12} />
               <span>Wholesale B2B ({wholesaleCount})</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setChannelFilter("combo")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-colors cursor-pointer ${
+                channelFilter === "combo"
+                  ? "bg-[#102D20] text-[#D4AF37] border border-[#D4AF37]/40 shadow-2xs"
+                  : "bg-[#F7F5EF] text-[#5C6460] hover:text-[#102D20]"
+              }`}
+            >
+              <Sparkles size={12} className="text-[#D4AF37]" />
+              <span>Combo Offers ({comboCount})</span>
+            </button>
           </div>
 
           {/* Search & Status Filters */}
@@ -221,7 +248,7 @@ function OrdersContent() {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C6460]" />
               <input
                 type="text"
-                placeholder="Search order #, customer, city, email..."
+                placeholder="Search order #, customer, combo, product, city..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-8 pl-8 pr-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all"
@@ -281,6 +308,8 @@ function OrdersContent() {
             <p className="text-xs text-[#5C6460]">
               {channelFilter === "wholesale"
                 ? "No wholesale commercial orders placed yet. Account applications and trade enquiries are managed under B2B Wholesale in the sidebar."
+                : channelFilter === "combo"
+                ? "No combo offer orders match your current filters."
                 : channelFilter === "retail"
                 ? "No retail orders match your current filters."
                 : "No orders match your current filters."}
@@ -320,48 +349,106 @@ function OrdersContent() {
                     <th className="py-2.5 px-3.5">Order #</th>
                     <th className="py-2.5 px-3.5">Channel</th>
                     <th className="py-2.5 px-3.5">Customer</th>
-                    <th className="py-2.5 px-3.5">Product</th>
+                    <th className="py-2.5 px-3.5">Items</th>
                     <th className="py-2.5 px-3.5 text-center">View</th>
-                    <th className="py-2.5 px-3.5">Total (AED)</th>
+                    <th className="py-2.5 px-3.5">Total</th>
                     <th className="py-2.5 px-3.5">Payment</th>
                     <th className="py-2.5 px-3.5">Fulfillment</th>
                     <th className="py-2.5 px-3.5 text-right">Update Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCCFB9]/30 text-xs">
-                  {filtered.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-[#F7F5EF]/50 transition-colors">
-                      <td className="py-2.5 px-3.5 font-mono font-bold text-xs text-[#183D2B]">
-                        {ord.order_number}
-                      </td>
-                      <td className="py-2.5 px-3.5">
-                        {ord.customer_type === "wholesale" ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
-                            <Building2 size={9} />
-                            <span>Wholesale</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <ShoppingBag size={9} />
-                            <span>Retail</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3.5">
-                        <p className="font-semibold text-xs text-[#1D211F]">{ord.customer_name}</p>
-                        <span className="text-[10px] text-[#5C6460]">{ord.customer_email}</span>
-                      </td>
-                      <td className="py-2.5 px-3.5">
-                        {(() => {
-                          const thumb = getOrderThumbnail(ord);
-                          const firstItemName = ord.items?.[0]?.name || "Order item";
-                          return (
-                            <div className="flex items-center gap-1.5">
+                  {filtered.map((ord) => {
+                    const thumb = getOrderThumbnail(ord);
+                    const comboItem = ord.items?.find((i) => i.is_combo);
+                    const firstItem = ord.items?.[0];
+                    const firstItemName = firstItem?.name || "Order item";
+
+                    return (
+                      <tr key={ord.id} className="hover:bg-[#F7F5EF]/50 transition-colors">
+                        <td className="py-2.5 px-3.5 font-mono font-bold text-xs text-[#183D2B]">
+                          {ord.order_number}
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          {ord.customer_type === "wholesale" ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
+                              <Building2 size={9} />
+                              <span>Wholesale</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <ShoppingBag size={9} />
+                              <span>Retail</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          <p className="font-semibold text-xs text-[#1D211F]">{ord.customer_name}</p>
+                          <span className="text-[10px] text-[#5C6460]">{ord.customer_email}</span>
+                        </td>
+
+                        {/* ITEMS COLUMN - COMBO RECOGNITION */}
+                        <td className="py-2.5 px-3.5">
+                          {ord.has_combo && comboItem ? (
+                            <div className="flex items-center gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrder(ord)}
+                                title={`View combo offer details: ${comboItem.name}`}
+                                className="group relative cursor-pointer block shrink-0"
+                              >
+                                {thumb ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={thumb}
+                                    alt={comboItem.name}
+                                    className="w-10 h-10 rounded-md object-cover border-2 border-[#183D2B]/30 group-hover:border-[#183D2B] transition-colors"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-md bg-[#102D20]/10 border border-[#183D2B]/30 flex items-center justify-center text-[#183D2B] group-hover:bg-[#102D20]/20 transition-colors">
+                                    <Sparkles size={16} />
+                                  </div>
+                                )}
+                              </button>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-widest bg-[#102D20] text-[#D4AF37] border border-[#D4AF37]/30">
+                                    <Sparkles size={8} />
+                                    <span>COMBO</span>
+                                  </span>
+                                  <span className="font-bold text-xs text-[#1D211F] truncate max-w-[190px]" title={comboItem.name}>
+                                    {comboItem.name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10.5px] text-[#5C6460] mt-0.5 flex-wrap">
+                                  <span>{comboItem.components?.length || 2} products</span>
+                                  {comboItem.quantity > 1 && (
+                                    <span>• Qty: <strong className="text-[#1D211F]">{comboItem.quantity}</strong></span>
+                                  )}
+                                  {ord.is_mixed && (
+                                    <span className="text-[#183D2B] font-semibold bg-[#183D2B]/10 px-1 py-0.2 rounded text-[9.5px]">
+                                      +{ord.regular_items_count} regular {ord.regular_items_count === 1 ? "product" : "products"}
+                                    </span>
+                                  )}
+                                  {!ord.is_mixed && ord.items && ord.items.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedOrder(ord)}
+                                      className="text-[9.5px] font-bold text-[#183D2B] bg-[#183D2B]/10 px-1 py-0.2 rounded hover:underline cursor-pointer"
+                                    >
+                                      +{ord.items.length - 1} more combos
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => setSelectedOrder(ord)}
                                 title={`View details for ${firstItemName}`}
-                                className="group relative cursor-pointer block"
+                                className="group relative cursor-pointer block shrink-0"
                               >
                                 {thumb ? (
                                   // eslint-disable-next-line @next/next/no-img-element
@@ -376,72 +463,90 @@ function OrdersContent() {
                                   </div>
                                 )}
                               </button>
-                              {ord.items && ord.items.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedOrder(ord)}
-                                  title={`${ord.items.length} items total — Click to view`}
-                                  className="text-[9.5px] font-bold text-[#5C6460] bg-[#F7F5EF] border border-[#DCCFB9]/60 px-1 py-0.5 rounded cursor-pointer hover:bg-white hover:text-[#183D2B] transition-colors"
-                                >
-                                  +{ord.items.length - 1}
-                                </button>
-                              )}
+                              <div className="min-w-0">
+                                <p className="font-semibold text-xs text-[#1D211F] truncate max-w-[190px]" title={firstItemName}>
+                                  {firstItemName}
+                                </p>
+                                <div className="flex items-center gap-1.5 text-[10.5px] text-[#5C6460]">
+                                  <span>Qty: {firstItem?.quantity || 1}</span>
+                                  {ord.items && ord.items.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedOrder(ord)}
+                                      title={`${ord.items.length} items total — Click to view`}
+                                      className="text-[9.5px] font-bold text-[#5C6460] bg-[#F7F5EF] border border-[#DCCFB9]/60 px-1 py-0.2 rounded cursor-pointer hover:bg-white hover:text-[#183D2B] transition-colors"
+                                    >
+                                      +{ord.items.length - 1} more
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(ord)}
-                          title="View Order Details"
-                          className="p-1.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-[#183D2B]/10 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center"
-                        >
-                          <Eye size={15} />
-                        </button>
-                      </td>
-                      <td className="py-2.5 px-3.5 font-bold text-[#1D211F]">
-                        AED {(ord.total_amount ?? 0).toFixed(2)}
-                      </td>
-                      <td className="py-2.5 px-3.5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
-                            ord.payment_status === "paid"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : ord.payment_status === "failed"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {ord.payment_status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3.5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
-                            STATUS_COLORS[ord.order_status] || "bg-neutral-100 text-neutral-700"
-                          }`}
-                        >
-                          {ord.order_status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3.5 text-right">
-                        <select
-                          value={ord.order_status}
-                          onChange={(e) =>
-                            handleStatusChange(ord.id, e.target.value as OrderItem["order_status"])
-                          }
-                          className="text-[11px] bg-[#F7F5EF] border border-[#DCCFB9] rounded px-1.5 py-0.5 text-[#1D211F] font-medium outline-none cursor-pointer hover:bg-white transition-colors"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-3.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(ord)}
+                            title="View Order Details"
+                            className="p-1.5 text-[#5C6460] hover:text-[#183D2B] hover:bg-[#183D2B]/10 rounded-md transition-colors cursor-pointer inline-flex items-center justify-center"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </td>
+
+                        <td className="py-2.5 px-3.5">
+                          <div className="font-bold text-xs text-[#1D211F]">
+                            AED {(ord.total_amount ?? 0).toFixed(2)}
+                          </div>
+                          {ord.total_savings && ord.total_savings > 0 ? (
+                            <div className="text-[10px] font-semibold text-emerald-700 whitespace-nowrap">
+                              Saved AED {ord.total_savings.toFixed(2)}
+                            </div>
+                          ) : null}
+                        </td>
+
+                        <td className="py-2.5 px-3.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                              ord.payment_status === "paid"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : ord.payment_status === "failed"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {ord.payment_status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
+                              STATUS_COLORS[ord.order_status] || "bg-neutral-100 text-neutral-700"
+                            }`}
+                          >
+                            {ord.order_status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5 text-right">
+                          <select
+                            value={ord.order_status}
+                            onChange={(e) =>
+                              handleStatusChange(ord.id, e.target.value as OrderItem["order_status"])
+                            }
+                            className="text-[11px] bg-[#F7F5EF] border border-[#DCCFB9] rounded px-1.5 py-0.5 text-[#1D211F] font-medium outline-none cursor-pointer hover:bg-white transition-colors"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

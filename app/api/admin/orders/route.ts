@@ -33,7 +33,7 @@ export async function GET() {
         created_at,
         shipping_address,
         notes,
-        order_items ( id, product_id, product_snapshot, sku_snapshot, price_snapshot, quantity, line_total )
+        order_items ( id, product_id, combo_id, product_snapshot, sku_snapshot, price_snapshot, quantity, line_total )
       `)
       .order("created_at", { ascending: false });
 

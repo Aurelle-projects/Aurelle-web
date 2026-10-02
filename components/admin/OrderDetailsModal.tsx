@@ -230,26 +230,204 @@ export default function OrderDetailsModal({
           </div>
 
           {/* Items Section */}
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-[#183D2B] uppercase tracking-wider flex items-center gap-1.5">
                 <Package size={14} />
                 <span>Order Items ({order.items?.length || 0})</span>
               </h4>
-              <span className="text-[11px] text-[#5C6460]">
-                Total Units:{" "}
-                <strong className="text-[#1D211F]">{order.items_count}</strong>
-              </span>
+              <div className="flex items-center gap-2 text-[11px] text-[#5C6460]">
+                {order.has_combo && (
+                  <span className="bg-[#102D20] text-[#E8DCC4] px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider border border-[#DCCFB9]/40">
+                    Combo Included
+                  </span>
+                )}
+                <span>
+                  Total Units: <strong className="text-[#1D211F]">{order.items_count}</strong>
+                </span>
+              </div>
             </div>
 
-            <div className="border border-[#DCCFB9]/60 rounded-lg overflow-hidden divide-y divide-[#DCCFB9]/40 bg-white">
+            <div className="space-y-3">
               {order.items && order.items.length > 0 ? (
-                order.items.map((item) => {
+                order.items.map((item, idx) => {
                   const image = getItemImage(item);
+                  const isCombo = Boolean(item.is_combo);
+                  const components = item.components || [];
+
+                  if (isCombo) {
+                    return (
+                      <div
+                        key={item.id || `combo-${idx}`}
+                        className="rounded-xl border-2 border-[#183D2B]/20 bg-gradient-to-b from-[#FAF8F5] to-white shadow-2xs overflow-hidden"
+                      >
+                        {/* Combo Header Strip */}
+                        <div className="px-4 py-2.5 bg-[#102D20] text-white flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-widest bg-[#D4AF37] text-[#102D20]">
+                              COMBO OFFER
+                            </span>
+                            <span className="font-bold text-xs text-[#FAF8F5]">
+                              {item.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-[11px] text-[#DCCFB9]">
+                            {item.sku && <span>SKU: {item.sku}</span>}
+                            <span>
+                              Bundle Qty: <strong className="text-white">{item.quantity}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Combo Body & Pricing Analysis */}
+                        <div className="p-4 space-y-4">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#DCCFB9]/50">
+                            <div className="flex items-center gap-3">
+                              {image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={image}
+                                  alt={item.name}
+                                  className="w-14 h-14 rounded-lg object-cover border border-[#DCCFB9] shrink-0 shadow-2xs"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-lg bg-[#F7F5EF] border border-[#DCCFB9] flex items-center justify-center text-[#8E9590] shrink-0">
+                                  <Package size={22} strokeWidth={1.5} />
+                                </div>
+                              )}
+                              <div>
+                                <h5 className="font-bold text-xs text-[#1D211F]">{item.name}</h5>
+                                <p className="text-[11px] text-[#5C6460]">
+                                  Contains {components.length} curated product{components.length !== 1 ? "s" : ""}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Authoritative Historical Pricing Metrics */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto bg-[#F7F5EF] p-2.5 rounded-lg border border-[#DCCFB9]/60 text-center">
+                              <div className="px-2">
+                                <span className="text-[9.5px] font-bold text-[#5C6460] uppercase block">
+                                  Combo Price
+                                </span>
+                                <span className="text-xs font-bold text-[#183D2B]">
+                                  AED {(item.price ?? 0).toFixed(2)}
+                                </span>
+                              </div>
+
+                              {item.original_price ? (
+                                <div className="px-2 border-l border-[#DCCFB9]/50">
+                                  <span className="text-[9.5px] font-bold text-[#5C6460] uppercase block">
+                                    Original Value
+                                  </span>
+                                  <span className="text-xs font-semibold text-[#8E9590] line-through">
+                                    AED {item.original_price.toFixed(2)}
+                                  </span>
+                                </div>
+                              ) : null}
+
+                              {item.savings_amount ? (
+                                <div className="px-2 border-l border-[#DCCFB9]/50">
+                                  <span className="text-[9.5px] font-bold text-emerald-800 uppercase block">
+                                    You Save
+                                  </span>
+                                  <span className="text-xs font-bold text-emerald-700">
+                                    AED {item.savings_amount.toFixed(2)}
+                                  </span>
+                                </div>
+                              ) : null}
+
+                              {item.savings_percentage ? (
+                                <div className="px-2 border-l border-[#DCCFB9]/50">
+                                  <span className="text-[9.5px] font-bold text-[#D4AF37] uppercase block">
+                                    Discount
+                                  </span>
+                                  <span className="text-xs font-extrabold text-[#996515]">
+                                    {item.savings_percentage}% OFF
+                                  </span>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {/* Components Contents Breakdown */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-[#183D2B] uppercase tracking-wider">
+                              <span>Included Products in this Combo ({components.length})</span>
+                              <span className="text-[10px] text-[#5C6460] normal-case">
+                                Total Units for Fulfillment
+                              </span>
+                            </div>
+
+                            {components.length > 0 ? (
+                              <div className="divide-y divide-[#DCCFB9]/30 border border-[#DCCFB9]/60 rounded-lg overflow-hidden bg-white">
+                                {components.map((comp, cIdx) => {
+                                  const totalCompUnits = (comp.quantity || 1) * item.quantity;
+                                  return (
+                                    <div
+                                      key={cIdx}
+                                      className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-[#FAF8F5]/60 transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        {comp.image ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img
+                                            src={comp.image}
+                                            alt={comp.name}
+                                            className="w-9 h-9 rounded object-cover border border-[#DCCFB9]/60 shrink-0"
+                                          />
+                                        ) : (
+                                          <div className="w-9 h-9 rounded bg-[#F7F5EF] border border-[#DCCFB9]/60 flex items-center justify-center text-[#8E9590] shrink-0">
+                                            <Package size={14} />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <p className="font-semibold text-xs text-[#1D211F] truncate">
+                                            {comp.quantity > 1 ? `${comp.quantity} × ` : ""}{comp.name}
+                                          </p>
+                                          <div className="flex items-center gap-2 text-[10.5px] text-[#5C6460]">
+                                            {comp.sku && <span>SKU: {comp.sku}</span>}
+                                            {comp.retail_price ? (
+                                              <span>Standard: AED {comp.retail_price.toFixed(2)}</span>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="text-right shrink-0">
+                                        <span className="inline-block px-2 py-0.5 rounded text-[10.5px] font-bold bg-[#183D2B]/10 text-[#183D2B]">
+                                          {totalCompUnits} {totalCompUnits === 1 ? "unit" : "units"} to pack
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-[#5C6460] italic">
+                                Component details not listed.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Combo Line Total Strip */}
+                        <div className="px-4 py-2 bg-[#F7F5EF] border-t border-[#DCCFB9]/50 flex items-center justify-between text-xs">
+                          <span className="text-[#5C6460]">
+                            Line Total ({item.quantity} combo{item.quantity !== 1 ? "s" : ""} × AED {(item.price ?? 0).toFixed(2)})
+                          </span>
+                          <span className="font-bold text-xs text-[#183D2B]">
+                            AED {item.line_total.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Normal Product Row
                   return (
                     <div
-                      key={item.id}
-                      className="p-3 flex items-center justify-between gap-3 hover:bg-[#FAF8F5]/60 transition-colors"
+                      key={item.id || `product-${idx}`}
+                      className="p-3 border border-[#DCCFB9]/60 rounded-lg bg-white flex items-center justify-between gap-3 hover:bg-[#FAF8F5]/60 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {image ? (
@@ -265,45 +443,23 @@ export default function OrderDetailsModal({
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {(item.product_snapshot as any)?.is_combo && (
-                              <span className="px-1.5 py-0.2 bg-[#102D20] text-white text-[9px] font-bold uppercase tracking-wider rounded-xs">
-                                Combo Offer
-                              </span>
-                            )}
-                            <p className="font-semibold text-xs text-[#1D211F] truncate">
-                              {item.name}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-xs text-[#1D211F] truncate">
+                            {item.name}
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#5C6460] flex-wrap">
                             {item.sku && <span>SKU: {item.sku}</span>}
-                            <span>Ordered Qty: <strong>{item.quantity}</strong></span>
+                            <span>
+                              Ordered Qty: <strong>{item.quantity}</strong>
+                            </span>
                             {(item.product_snapshot as any)?.purchase_mode && (
                               <span className="bg-[#183D2B]/10 text-[#183D2B] px-1.5 py-0.5 rounded-xs font-bold uppercase text-[9px]">
                                 Mode: {(item.product_snapshot as any).purchase_mode}
-                                {(item.product_snapshot as any).total_units ? ` (${(item.product_snapshot as any).total_units} pcs)` : ""}
+                                {(item.product_snapshot as any).total_units
+                                  ? ` (${(item.product_snapshot as any).total_units} pcs)`
+                                  : ""}
                               </span>
                             )}
                           </div>
-                          {/* Combo Components Breakdown */}
-                          {(item.product_snapshot as any)?.is_combo &&
-                            Array.isArray((item.product_snapshot as any)?.components) &&
-                            (item.product_snapshot as any).components.length > 0 && (
-                              <div className="mt-1.5 p-2 bg-[#FAF8F5] rounded border border-[#DCCFB9]/50 text-[10.5px] space-y-0.5">
-                                <span className="font-bold text-[#183D2B] block">Includes per combo:</span>
-                                <ul className="space-y-0.5 text-[#5C6460]">
-                                  {(item.product_snapshot as any).components.map((comp: any, cIdx: number) => {
-                                    const totalCompUnits = (comp.quantity || 1) * item.quantity;
-                                    return (
-                                      <li key={cIdx} className="flex items-center justify-between gap-2">
-                                        <span>• {comp.name} × {comp.quantity}</span>
-                                        <span className="text-[#183D2B] font-semibold">({totalCompUnits} total units)</span>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </div>
-                            )}
                         </div>
                       </div>
 
@@ -313,7 +469,7 @@ export default function OrderDetailsModal({
                         </p>
                         {item.price && (
                           <p className="text-[10px] text-[#5C6460]">
-                            AED {item.price.toFixed(2)} / rate
+                            AED {item.price.toFixed(2)} / unit
                           </p>
                         )}
                       </div>
@@ -321,7 +477,7 @@ export default function OrderDetailsModal({
                   );
                 })
               ) : (
-                <div className="p-4 text-center text-xs text-[#5C6460]">
+                <div className="p-4 text-center text-xs text-[#5C6460] border border-[#DCCFB9]/60 rounded-lg">
                   No item details recorded for this order.
                 </div>
               )}
@@ -338,8 +494,14 @@ export default function OrderDetailsModal({
             </div>
             {order.discount_amount ? (
               <div className="flex justify-between text-xs text-emerald-700">
-                <span>Discount:</span>
+                <span>Discount / Promo:</span>
                 <span>- AED {order.discount_amount.toFixed(2)}</span>
+              </div>
+            ) : null}
+            {order.total_savings && order.total_savings > 0 ? (
+              <div className="flex justify-between text-xs text-[#996515] bg-[#FAF3E0] px-2 py-1 rounded">
+                <span className="font-semibold">Total Customer Savings:</span>
+                <span className="font-bold">AED {order.total_savings.toFixed(2)}</span>
               </div>
             ) : null}
             <div className="flex justify-between text-xs text-[#5C6460]">

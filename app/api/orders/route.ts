@@ -272,6 +272,10 @@ export async function POST(request: NextRequest) {
       lineSubtotal: number;
       lineTax: number;
       lineTotal: number;
+      originalPrice?: number;
+      compareAtPrice?: number | null;
+      savingsAmount?: number;
+      savingsPercentage?: number;
       components?: Array<{
         product_id: string;
         name: string;
@@ -354,6 +358,15 @@ export async function POST(request: NextRequest) {
         }
 
         const verifiedPrice = Number(dbCombo.price) || 0;
+        const originalCombinedPrice = componentsSnapshot.reduce(
+          (sum: number, c: any) => sum + (Number(c.retail_price) || 0) * (c.quantity || 1),
+          0
+        );
+        const compareAtPrice = Number(dbCombo.compare_at_price) || (originalCombinedPrice > 0 ? originalCombinedPrice : null);
+        const originalPriceVal = originalCombinedPrice > 0 ? originalCombinedPrice : (Number(dbCombo.compare_at_price) || verifiedPrice);
+        const savingsAmount = originalPriceVal > verifiedPrice ? originalPriceVal - verifiedPrice : 0;
+        const savingsPercentage = originalPriceVal > 0 && savingsAmount > 0 ? Math.round((savingsAmount / originalPriceVal) * 100) : 0;
+
         const isTaxable = dbCombo.tax_enabled !== false;
         const lineSubtotal = Math.round(verifiedPrice * qty * 100) / 100;
         const lineTax = isTaxable ? Math.round(lineSubtotal * RETAIL_TAX_RATE * 100) / 100 : 0;
@@ -372,6 +385,10 @@ export async function POST(request: NextRequest) {
           lineSubtotal,
           lineTax,
           lineTotal: lineSubtotal,
+          originalPrice: originalPriceVal,
+          compareAtPrice,
+          savingsAmount,
+          savingsPercentage,
           components: componentsSnapshot,
         });
       } else {
@@ -519,6 +536,10 @@ export async function POST(request: NextRequest) {
         quantity: it.quantity,
         taxEnabled: it.taxEnabled,
         lineTotal: it.lineSubtotal,
+        original_price: it.originalPrice,
+        compare_at_price: it.compareAtPrice,
+        savings_amount: it.savingsAmount,
+        savings_percentage: it.savingsPercentage,
         components: it.components || [],
       }));
 
@@ -620,6 +641,10 @@ export async function POST(request: NextRequest) {
           tax_enabled: item.taxEnabled,
           is_combo: item.isCombo,
           combo_id: item.comboId,
+          original_price: item.originalPrice,
+          compare_at_price: item.compareAtPrice,
+          savings_amount: item.savingsAmount,
+          savings_percentage: item.savingsPercentage,
           components: item.components || [],
         },
         sku_snapshot: item.sku,

@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
-import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye, ShieldCheck } from "lucide-react";
+import { Search, Package, RefreshCw, Building2, Eye } from "lucide-react";
 import { useAdminData, AdminOrderItem } from "@/context/AdminDataContext";
+import { FulfillmentStatusBadge, PaymentStatusBadge } from "@/components/admin/OrderBadges";
 import { formatPrice } from "@/utils/price";
 
 type OrderItem = AdminOrderItem;
@@ -49,12 +50,35 @@ function WholesaleOrdersContent() {
   }
 
   async function handleStatusChange(id: string, newStatus: OrderItem["order_status"]) {
+    const targetOrd = orders.find((o) => o.id === id);
+    const willBeDelivered = newStatus.toLowerCase() === "delivered";
+    const isPendingPayment = targetOrd?.payment_status?.toLowerCase() === "pending";
+    // Wholesale orders are direct-settlement B2B orders
+    const optimisticPaymentStatus =
+      willBeDelivered && isPendingPayment ? "paid" : targetOrd?.payment_status || "pending";
+
     // Optimistic update
     setOrders((prev) =>
-      prev ? prev.map((o) => (o.id === id ? { ...o, order_status: newStatus } : o)) : null
+      prev
+        ? prev.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  order_status: newStatus,
+                  payment_status: optimisticPaymentStatus,
+                }
+              : o
+          )
+        : null
     );
     setSelectedOrder((prev) =>
-      prev && prev.id === id ? { ...prev, order_status: newStatus } : prev
+      prev && prev.id === id
+        ? {
+            ...prev,
+            order_status: newStatus,
+            payment_status: optimisticPaymentStatus,
+          }
+        : prev
     );
 
     try {
@@ -69,14 +93,50 @@ function WholesaleOrdersContent() {
           type: "error",
           text: `Status update failed: ${data.error || "Server error"}`,
         });
+        loadOrders(true);
       } else {
-        setFeedback({
-          type: "success",
-          text: `Order status updated to ${newStatus}.`,
-        });
+        const confirmedPaymentStatus = data.payment_status || optimisticPaymentStatus;
+        const confirmedOrderStatus = data.status || newStatus;
+
+        setOrders((prev) =>
+          prev
+            ? prev.map((o) =>
+                o.id === id
+                  ? {
+                      ...o,
+                      order_status: confirmedOrderStatus,
+                      payment_status: confirmedPaymentStatus,
+                    }
+                  : o
+              )
+            : null
+        );
+        setSelectedOrder((prev) =>
+          prev && prev.id === id
+            ? {
+                ...prev,
+                order_status: confirmedOrderStatus,
+                payment_status: confirmedPaymentStatus,
+              }
+            : prev
+        );
+
+        if (newStatus.toLowerCase() === "delivered") {
+          const paidMsg = data.paymentStatusUpdated ? " (Payment marked as Paid)" : "";
+          setFeedback({
+            type: "success",
+            text: `Wholesale order marked as Delivered!${paidMsg}`,
+          });
+        } else {
+          setFeedback({
+            type: "success",
+            text: `Wholesale order status updated to ${newStatus}.`,
+          });
+        }
       }
     } catch {
       setFeedback({ type: "error", text: "Network error updating order status." });
+      loadOrders(true);
     }
   }
 
@@ -255,23 +315,24 @@ function WholesaleOrdersContent() {
                       <td className="py-3.5 px-4 text-right font-bold text-[#183D2B]">
                         {formatPrice(ord.total_amount || ord.subtotal || 0)}
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded-xs text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
-                          {ord.payment_status || "Pending B2B Invoice"}
-                        </span>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <PaymentStatusBadge status={ord.payment_status} size="sm" />
                       </td>
-                      <td className="py-3.5 px-4">
-                        <select
-                          value={ord.order_status.toLowerCase()}
-                          onChange={(e) => handleStatusChange(ord.id, e.target.value as any)}
-                          className="h-7 px-2 bg-white border border-[#DCCFB9] rounded-xs text-[11px] font-bold text-[#14231B] outline-none cursor-pointer"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <FulfillmentStatusBadge status={ord.order_status} size="sm" />
+                          <select
+                            value={ord.order_status.toLowerCase()}
+                            onChange={(e) => handleStatusChange(ord.id, e.target.value as any)}
+                            className="h-7 px-2 bg-white border border-[#DCCFB9] rounded-xs text-[11px] font-semibold text-[#14231B] outline-none cursor-pointer hover:border-[#183D2B] transition-colors"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-[11px] text-[#5C6460]">
                         {new Date(ord.created_at).toLocaleDateString("en-US", {

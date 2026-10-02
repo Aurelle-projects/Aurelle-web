@@ -33,6 +33,8 @@ export async function GET() {
         created_at,
         shipping_address,
         notes,
+        stripe_checkout_session_id,
+        stripe_payment_intent_id,
         order_items ( id, product_id, combo_id, product_snapshot, sku_snapshot, price_snapshot, quantity, line_total )
       `)
       .order("created_at", { ascending: false });

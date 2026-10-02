@@ -6,6 +6,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { Search, Package, RefreshCw, Building2, ShoppingBag, Eye, Sparkles } from "lucide-react";
 import { useAdminData, AdminOrderItem } from "@/context/AdminDataContext";
+import { FulfillmentStatusBadge, PaymentStatusBadge } from "@/components/admin/OrderBadges";
 
 type OrderItem = AdminOrderItem;
 
@@ -62,13 +63,40 @@ function OrdersContent() {
   }
 
   async function handleStatusChange(id: string, newStatus: OrderItem["order_status"]) {
+    const targetOrd = orders.find((o) => o.id === id);
+    const willBeDelivered = newStatus.toLowerCase() === "delivered";
+    const isPendingPayment = targetOrd?.payment_status?.toLowerCase() === "pending";
+    const isCodOrWholesale =
+      targetOrd?.customer_type === "wholesale" ||
+      !targetOrd?.stripe_checkout_session_id;
+
+    const optimisticPaymentStatus =
+      willBeDelivered && isPendingPayment && isCodOrWholesale ? "paid" : targetOrd?.payment_status || "pending";
+
     // Optimistic update
     setOrders((prev) =>
-      prev ? prev.map((o) => (o.id === id ? { ...o, order_status: newStatus } : o)) : null
+      prev
+        ? prev.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  order_status: newStatus,
+                  payment_status: optimisticPaymentStatus,
+                }
+              : o
+          )
+        : null
     );
     setSelectedOrder((prev) =>
-      prev && prev.id === id ? { ...prev, order_status: newStatus } : prev
+      prev && prev.id === id
+        ? {
+            ...prev,
+            order_status: newStatus,
+            payment_status: optimisticPaymentStatus,
+          }
+        : prev
     );
+
     try {
       const res = await fetch(`/api/admin/orders/${id}/status`, {
         method: "PATCH",
@@ -82,22 +110,50 @@ function OrdersContent() {
           type: "error",
           text: `Status update failed: ${data.error || "Server error"}`,
         });
+        loadOrders(true);
       } else {
+        const confirmedPaymentStatus = data.payment_status || optimisticPaymentStatus;
+        const confirmedOrderStatus = data.status || newStatus;
+
+        setOrders((prev) =>
+          prev
+            ? prev.map((o) =>
+                o.id === id
+                  ? {
+                      ...o,
+                      order_status: confirmedOrderStatus,
+                      payment_status: confirmedPaymentStatus,
+                    }
+                  : o
+              )
+            : null
+        );
+        setSelectedOrder((prev) =>
+          prev && prev.id === id
+            ? {
+                ...prev,
+                order_status: confirmedOrderStatus,
+                payment_status: confirmedPaymentStatus,
+              }
+            : prev
+        );
+
         if (newStatus.toLowerCase() === "delivered") {
+          const paidMsg = data.paymentStatusUpdated ? " (Payment automatically marked as Paid)" : "";
           if (data.emailSent) {
             setFeedback({
               type: "success",
-              text: `Order status updated to Delivered! Review email sent to customer.`,
+              text: `Order status updated to Delivered!${paidMsg} Review email sent to customer.`,
             });
           } else if (data.emailError) {
             setFeedback({
               type: "error",
-              text: `Order updated, but email failed: ${data.emailError}`,
+              text: `Order updated to Delivered${paidMsg}, but email failed: ${data.emailError}`,
             });
           } else {
             setFeedback({
               type: "success",
-              text: `Order status updated to Delivered.`,
+              text: `Order status updated to Delivered.${paidMsg}`,
             });
           }
         } else {
@@ -113,6 +169,7 @@ function OrdersContent() {
         type: "error",
         text: "Network error updating order status.",
       });
+      loadOrders(true);
     }
   }
 
@@ -507,35 +564,19 @@ function OrdersContent() {
                           ) : null}
                         </td>
 
-                        <td className="py-2.5 px-3.5">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
-                              ord.payment_status === "paid"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : ord.payment_status === "failed"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {ord.payment_status}
-                          </span>
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
+                          <PaymentStatusBadge status={ord.payment_status} size="sm" />
                         </td>
-                        <td className="py-2.5 px-3.5">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
-                              STATUS_COLORS[ord.order_status] || "bg-neutral-100 text-neutral-700"
-                            }`}
-                          >
-                            {ord.order_status}
-                          </span>
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
+                          <FulfillmentStatusBadge status={ord.order_status} size="sm" />
                         </td>
-                        <td className="py-2.5 px-3.5 text-right">
+                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
                           <select
-                            value={ord.order_status}
+                            value={ord.order_status.toLowerCase()}
                             onChange={(e) =>
                               handleStatusChange(ord.id, e.target.value as OrderItem["order_status"])
                             }
-                            className="text-[11px] bg-[#F7F5EF] border border-[#DCCFB9] rounded px-1.5 py-0.5 text-[#1D211F] font-medium outline-none cursor-pointer hover:bg-white transition-colors"
+                            className="text-[11px] bg-[#F7F5EF] border border-[#DCCFB9] rounded px-2 py-1 text-[#1D211F] font-semibold outline-none cursor-pointer hover:bg-white hover:border-[#183D2B] transition-colors"
                           >
                             <option value="pending">Pending</option>
                             <option value="processing">Processing</option>

@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAdminData } from "@/context/AdminDataContext";
+import { FulfillmentStatusBadge, PaymentStatusBadge } from "@/components/admin/OrderBadges";
 
 interface OrderItemDetail {
   id: string;
@@ -156,13 +157,26 @@ export default function AdminDashboardPage() {
 
   async function handleStatusChange(orderId: string, newStatus: string) {
     setUpdatingOrderId(orderId);
+    const targetOrder = dashboardData?.recentOrders?.find((o: any) => o.id === orderId);
+    const willBeDelivered = newStatus.toLowerCase() === "delivered";
+    const isPendingPayment = targetOrder?.payment_status?.toLowerCase() === "pending";
+    const isCodOrWholesale = targetOrder?.customer_type === "wholesale" || !targetOrder?.stripe_checkout_session_id;
+    const optimisticPaymentStatus =
+      willBeDelivered && isPendingPayment && isCodOrWholesale ? "paid" : targetOrder?.payment_status || "pending";
+
     // Optimistic update
     setDashboardData((prev) => {
       if (!prev) return null;
       return {
         ...prev,
         recentOrders: prev.recentOrders.map((o: any) =>
-          o.id === orderId ? { ...o, order_status: newStatus } : o
+          o.id === orderId
+            ? {
+                ...o,
+                order_status: newStatus,
+                payment_status: optimisticPaymentStatus,
+              }
+            : o
         ),
       };
     });
@@ -180,22 +194,43 @@ export default function AdminDashboardPage() {
           type: "error",
           text: `Status update failed: ${data.error || "Server error"}`,
         });
+        await loadDashboard(true);
       } else {
+        const confirmedPaymentStatus = data.payment_status || optimisticPaymentStatus;
+        const confirmedOrderStatus = data.status || newStatus;
+
+        setDashboardData((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            recentOrders: prev.recentOrders.map((o: any) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    order_status: confirmedOrderStatus,
+                    payment_status: confirmedPaymentStatus,
+                  }
+                : o
+            ),
+          };
+        });
+
         if (newStatus.toLowerCase() === "delivered") {
+          const paidMsg = data.paymentStatusUpdated ? " (Payment marked as Paid)" : "";
           if (data.emailSent) {
             setFeedback({
               type: "success",
-              text: `Order status updated to Delivered! Review email sent to customer.`,
+              text: `Order status updated to Delivered!${paidMsg} Review email sent to customer.`,
             });
           } else if (data.emailError) {
             setFeedback({
               type: "error",
-              text: `Order updated, but email failed: ${data.emailError}`,
+              text: `Order updated to Delivered${paidMsg}, but email failed: ${data.emailError}`,
             });
           } else {
             setFeedback({
               type: "success",
-              text: `Order status updated to Delivered.`,
+              text: `Order status updated to Delivered.${paidMsg}`,
             });
           }
         } else {
@@ -211,6 +246,7 @@ export default function AdminDashboardPage() {
         type: "error",
         text: "Network error updating order status.",
       });
+      await loadDashboard(true);
     } finally {
       setUpdatingOrderId(null);
     }
@@ -813,28 +849,18 @@ export default function AdminDashboardPage() {
                         </td>
 
                         {/* Payment */}
-                        <td className="py-2.5 px-3.5 align-top">
-                          <span
-                            className={`inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${
-                              order.payment_status === "paid"
-                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                : order.payment_status === "failed"
-                                ? "bg-red-50 text-red-800 border border-red-200"
-                                : "bg-amber-50 text-amber-800 border border-amber-200"
-                            }`}
-                          >
-                            {order.payment_status}
-                          </span>
+                        <td className="py-2.5 px-3.5 align-top whitespace-nowrap">
+                          <PaymentStatusBadge status={order.payment_status} size="sm" />
                         </td>
 
                         {/* Order Status (Inline selector) */}
-                        <td className="py-2.5 px-3.5 align-top">
-                          <div className="flex items-center gap-1">
+                        <td className="py-2.5 px-3.5 align-top whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
                             <select
-                              value={order.order_status}
+                              value={order.order_status.toLowerCase()}
                               disabled={updatingOrderId === order.id}
                               onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                              className={`h-6 px-1.5 text-[10px] font-bold rounded border outline-none cursor-pointer ${statusConfig.badge}`}
+                              className="h-6 px-2 text-[10.5px] font-semibold rounded border border-[#DCCFB9] bg-white outline-none cursor-pointer hover:border-[#183D2B] transition-colors"
                             >
                               <option value="pending">Pending</option>
                               <option value="processing">Processing</option>

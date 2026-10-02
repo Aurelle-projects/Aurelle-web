@@ -59,12 +59,12 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 mb-3 sm:mb-6 md:mb-7">
           <div className="max-w-xl">
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-0.5 sm:mb-1.5">
+            <p className="text-[14px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-0.5 sm:mb-1.5">
               Curated Combinations
             </p>
             <h2
               id="curated-combos-heading"
-              className="text-lg sm:text-2xl md:text-3xl font-serif text-[#14231B] leading-tight"
+              className="text-xl sm:text-2xl md:text-3xl font-normal text-[#14231B] leading-tight"
             >
               Thoughtfully paired for better routines.
             </h2>

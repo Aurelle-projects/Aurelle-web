@@ -176,14 +176,14 @@ export default function CombosListingClient({ initialCombos }: CombosListingClie
               </div>
             ) : combos.length === 2 ? (
               /* Two Combos: Centered 2-column layout */
-              <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 justify-center">
+              <div className="max-w-4xl mx-auto grid grid-cols-2 gap-3.5 sm:gap-6 lg:gap-8 justify-center">
                 {combos.map((combo) => (
                   <ComboCard key={combo.id} combo={combo} />
                 ))}
               </div>
             ) : (
-              /* Three or more Combos: Responsive 3-column grid */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              /* Three or more Combos: Responsive grid (2 cols mobile, 2 tablet, 3 desktop) */
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 lg:gap-8">
                 {combos.map((combo) => (
                   <ComboCard key={combo.id} combo={combo} />
                 ))}

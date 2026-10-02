@@ -113,6 +113,9 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
   React.useEffect(() => {
     if (!isOverflowing || paused) return;
 
+    // Only auto-scroll on screens >= 640px where horizontal overflow carousel is active
+    if (typeof window !== "undefined" && window.innerWidth < 640) return;
+
     const timer = setInterval(() => {
       const el = scrollContainerRef.current;
       if (!el) return;
@@ -181,8 +184,8 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
   return (
     <section className="bg-white py-6 md:py-16" aria-labelledby="top-rated-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-7">
-          <h2 id="top-rated-heading" className="text-lg sm:text-xl text-[#1D211F] uppercase font-bold">
+        <div className="flex items-center justify-between mb-4 sm:mb-7">
+          <h2 id="top-rated-heading" className="text-base sm:text-xl text-[#1D211F] uppercase font-bold tracking-wide">
             Top Rated Products
           </h2>
           {isOverflowing && (
@@ -216,10 +219,10 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
           onTouchStart={() => setPaused(true)}
           onTouchEnd={() => setPaused(false)}
           onScroll={updateScrollState}
-          className={`w-full ${
+          className={`w-full grid grid-cols-2 gap-3.5 sm:gap-6 ${
             isOverflowing
-              ? "flex overflow-x-auto scrollbar-hide scroll-smooth gap-4 sm:gap-6 justify-start pb-2"
-              : "flex flex-wrap justify-center items-center gap-4 sm:gap-6"
+              ? "sm:flex sm:overflow-x-auto sm:scrollbar-hide sm:scroll-smooth sm:justify-start sm:pb-2"
+              : "sm:flex sm:flex-wrap sm:justify-center sm:items-center"
           }`}
         >
           {uniqueProducts.map((product) => {
@@ -235,7 +238,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             );
 
             return (
-              <article key={product.id} className="group relative w-[180px] sm:w-[220px] shrink-0">
+              <article key={product.id} className="group relative w-full sm:w-[220px] sm:shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
                   <Link href={`/products/${product.slug}`} className="block w-full h-full">
                     {imageUrl ? (
@@ -243,7 +246,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                         src={imageUrl}
                         alt={image?.alt_text || product.name}
                         fill
-                        sizes="220px"
+                        sizes="(max-width: 640px) 50vw, 220px"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
@@ -255,11 +258,11 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
 
                   {/* Top-Left Badge: Out of Stock or Top Rated */}
                   {product.is_out_of_stock ? (
-                    <span className="absolute top-2.5 left-2.5 bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+                    <span className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 bg-[#1D211F]/90 text-white text-[9px] sm:text-[10px] font-semibold tracking-wider px-1.5 sm:px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
                       Out of Stock
                     </span>
                   ) : (
-                    <span className="absolute top-2.5 left-2.5 bg-yellow-300 text-black text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+                    <span className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 bg-yellow-300 text-black text-[9px] sm:text-[10px] font-bold tracking-wider px-1.5 sm:px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
                       Top Rated
                     </span>
                   )}
@@ -268,11 +271,11 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                   <button
                     type="button"
                     onClick={(e) => handleToggleWishlist(e, product.id)}
-                    className="absolute top-2.5 right-2.5 p-1 text-[#1D211F] hover:text-[#183D2B] transition-colors z-10 cursor-pointer"
+                    className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 p-1 text-[#1D211F] hover:text-[#183D2B] transition-colors z-10 cursor-pointer"
                     aria-label={wishlistIds[product.id] ? "Remove from wishlist" : "Add to wishlist"}
                   >
                     <Heart
-                      size={20}
+                      size={18}
                       strokeWidth={1.5}
                       className={`transition-colors ${
                         wishlistIds[product.id] ? "fill-[#183D2B] text-[#183D2B]" : "text-[#1D211F]"
@@ -314,27 +317,27 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                     <button
                       type="button"
                       onClick={() => addToCart(product)}
-                      className="sm:hidden absolute bottom-2.5 right-2.5 z-10 w-9 h-9 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
+                      className="sm:hidden absolute bottom-2 right-2 z-10 w-8 h-8 rounded-full bg-[#183D2B] text-white shadow-md hover:bg-[#102D20] flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90"
                       aria-label={`Add ${product.name} to cart`}
                     >
                       {addedId === product.id ? (
-                        <Check size={16} className="text-white stroke-[2.5]" />
+                        <Check size={14} className="text-white stroke-[2.5]" />
                       ) : (
-                        <ShoppingBag size={16} className="text-white" />
+                        <ShoppingBag size={14} className="text-white" />
                       )}
                     </button>
                   )}
                 </div>
 
                 {/* Product Info */}
-                <div className="pt-3 flex flex-col text-left">
+                <div className="pt-2.5 sm:pt-3 flex flex-col text-left flex-1">
                   <Link
                     href={`/products/${product.slug}`}
-                    className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-1"
+                    className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-2 min-h-[2.25rem] sm:min-h-0 sm:line-clamp-1"
                   >
                     {product.name}
                   </Link>
-                  <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                  <div className="mt-1 flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
                     <span className="text-[13px] sm:text-[14px] font-semibold text-[#1D211F]">
                       {formatPrice(product.retail_price)}
                     </span>
@@ -352,7 +355,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                       {Array.from({ length: 5 }, (_, starIndex) => (
                         <Star
                           key={starIndex}
-                          size={13}
+                          size={12}
                           fill={starIndex < Math.round(product.rating) ? "currentColor" : "none"}
                         />
                       ))}

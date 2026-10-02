@@ -118,6 +118,8 @@ export interface AdminOrderItem {
   city: string;
   shipping_address?: AdminOrderShippingAddress | null;
   notes?: string | null;
+  stripe_checkout_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
   items?: AdminOrderItemDetail[];
   // Computed combo summary helpers
   has_combo?: boolean;
@@ -475,6 +477,8 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             city,
             shipping_address: addr,
             notes: o.notes || null,
+            stripe_checkout_session_id: o.stripe_checkout_session_id || null,
+            stripe_payment_intent_id: o.stripe_payment_intent_id || null,
             items,
             has_combo: hasCombo,
             is_pure_combo: isPureCombo,

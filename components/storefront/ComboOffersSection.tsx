@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import ComboCard from "@/components/product/ComboCard";
 import { ComboOffer } from "@/types/combo";
 
@@ -57,29 +56,19 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 mb-3 sm:mb-6 md:mb-7">
-          <div className="max-w-xl">
-            <p className="text-[14px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-0.5 sm:mb-1.5">
-              Curated Combinations
-            </p>
-            <h2
-              id="curated-combos-heading"
-              className="text-xl sm:text-2xl md:text-3xl font-normal text-[#14231B] leading-tight"
-            >
-              Thoughtfully paired for better routines.
-            </h2>
-            <p className="hidden sm:block text-xs sm:text-sm text-[#5C6460] mt-1.5 leading-relaxed">
-              Discover carefully selected product combinations designed to complement your everyday beauty routine — with exclusive savings.
-            </p>
-          </div>
-
-          <Link
-            href="/combos"
-            className="inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-semibold text-[#183D2B] hover:text-[#C9A84C] transition-colors group self-start sm:self-end pb-0.5 whitespace-nowrap mt-0.5 sm:mt-0"
+        <div className="mb-5 sm:mb-8 text-left">
+          <p className="text-[14px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-1 sm:mb-1.5">
+            Curated Combinations
+          </p>
+          <h2
+            id="curated-combos-heading"
+            className="text-xl sm:text-2xl md:text-3xl font-normal text-[#14231B] leading-tight"
           >
-            <span>Explore all combos</span>
-            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+            Thoughtfully paired for better routines.
+          </h2>
+          <p className="hidden sm:block text-xs sm:text-sm text-[#5C6460] mt-1.5 leading-relaxed max-w-xl">
+            Discover carefully selected product combinations designed to complement your everyday beauty routine — with exclusive savings.
+          </p>
         </div>
 
         {/* Dynamic Layout Based on Active Combos Count */}
@@ -110,6 +99,16 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
             ))}
           </div>
         )}
+
+        {/* Bottom All Combos Button */}
+        <div className="mt-8 sm:mt-12 text-center">
+          <Link
+            href="/combos"
+            className="inline-flex items-center justify-center px-9 py-3.5 border border-[#1D211F] bg-transparent text-[#1D211F] hover:bg-[#183D2B] hover:text-white hover:border-[#183D2B] text-xs sm:text-[13px] font-medium tracking-wide transition-all duration-200 rounded-none cursor-pointer"
+          >
+            All Combos
+          </Link>
+        </div>
       </div>
     </section>
   );

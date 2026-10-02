@@ -42,15 +42,24 @@ export interface OrderItem {
   id: string;
   product_id?: string | null;
   product_snapshot?: {
+    id?: string;
+    product_id?: string;
     name?: string;
     image?: string;
     slug?: string;
     tax_enabled?: boolean;
+    is_combo?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    components?: any[];
   };
   sku_snapshot?: string;
   price_snapshot: number;
   quantity: number;
   line_total: number;
+  products?: {
+    id?: string;
+    product_images?: Array<{ secure_url?: string; is_primary?: boolean }>;
+  };
 }
 
 export interface Order {
@@ -490,7 +499,18 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
 
   async function handleSubmitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (!reviewTarget || !user) return;
+    if (!user) return;
+
+    if (!reviewTarget || !reviewTarget.productId) {
+      setReviewError("Product information is missing. Please refresh the page and try again.");
+      return;
+    }
+
+    if (!reviewBody.trim()) {
+      setReviewError("Please enter your review message.");
+      return;
+    }
+
     setReviewSubmitting(true);
     setReviewError(null);
     setReviewSuccess(null);
@@ -500,10 +520,12 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          product_id: reviewTarget.productId,
+          order_id: reviewTarget.orderId,
           productId: reviewTarget.productId,
           orderId: reviewTarget.orderId,
           rating: reviewRating,
-          body: reviewBody,
+          body: reviewBody.trim(),
         }),
       });
 
@@ -513,7 +535,7 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
       }
 
       setReviewSuccess("Your review has been submitted successfully!");
-      fetchUserReviews();
+      fetchUserReviews(false);
       setTimeout(() => {
         setReviewModalOpen(false);
       }, 1200);
@@ -1154,7 +1176,11 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
                         ) : (
                           orderItems.map((item) => {
                             const snap = item.product_snapshot || {};
-                            const productId = item.product_id;
+                            const productId =
+                              item.product_id ||
+                              item.products?.id ||
+                              snap.product_id ||
+                              snap.id;
                             const existingReview = productId
                               ? userReviews.find(
                                   (r) => r.product_id === productId && r.order_id === order.id
@@ -1211,28 +1237,35 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
 
                                 <div>
                                   {productId ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openReviewModal({
-                                          orderId: order.id,
-                                          orderNumber: order.order_number,
-                                          productId,
-                                          productName: snap.name || "Product",
-                                          productImage: snap.image,
-                                          existingRating: existingReview?.rating,
-                                          existingBody: existingReview?.body,
-                                        })
-                                      }
-                                      className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer w-full sm:w-auto ${
-                                        existingReview
-                                          ? "border border-[#EDE9DF] text-[#1D211F] hover:bg-[#F7F5EF]"
-                                          : "bg-[#183D2B] text-white hover:bg-[#102D20]"
-                                      }`}
-                                    >
-                                      <Star size={13} className={existingReview ? "fill-amber-400 text-amber-400" : ""} />
-                                      {existingReview ? "Edit Review" : "Write Review"}
-                                    </button>
+                                    isDelivered ? (
+                                      existingReview ? (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200">
+                                          <Check size={13} className="text-emerald-700" />
+                                          Reviewed
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openReviewModal({
+                                              orderId: order.id,
+                                              orderNumber: order.order_number,
+                                              productId,
+                                              productName: snap.name || "Product",
+                                              productImage: snap.image,
+                                            })
+                                          }
+                                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider bg-[#183D2B] text-white hover:bg-[#102D20] transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
+                                        >
+                                          <Star size={13} />
+                                          Write Review
+                                        </button>
+                                      )
+                                    ) : (
+                                      <span className="text-[11px] text-[#8C938F] font-medium">
+                                        Available upon delivery
+                                      </span>
+                                    )
                                   ) : (
                                     <span className="text-[11px] text-[#8C938F] italic">
                                       Review unavailable
@@ -1440,7 +1473,7 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
             <div className="flex items-center justify-between pb-4 border-b border-[#EDE9DF]">
               <div>
                 <h3 className="font-serif text-lg font-bold text-[#1D211F]">
-                  {reviewTarget.existingRating ? "Update Product Review" : "Write a Product Review"}
+                  Write a Product Review
                 </h3>
                 <p className="text-[11px] text-[#5C6460] mt-0.5">
                   Order #{reviewTarget.orderNumber}

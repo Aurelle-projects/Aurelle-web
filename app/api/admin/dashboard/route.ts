@@ -36,6 +36,7 @@ export async function GET() {
         order_items (
           id,
           product_id,
+          combo_id,
           product_snapshot,
           sku_snapshot,
           price_snapshot,
@@ -158,16 +159,70 @@ export async function GET() {
       const items = Array.isArray(o.order_items)
         ? o.order_items.map((it: any) => {
             const snap = it.product_snapshot || {};
+            const isCombo = Boolean(
+              it.combo_id ||
+              snap.is_combo ||
+              snap.combo_id ||
+              (snap.components && Array.isArray(snap.components) && snap.components.length > 0)
+            );
+            const components = Array.isArray(snap.components) ? snap.components : [];
+            const unitPrice =
+              Number(it.price_snapshot) ||
+              (Number(it.line_total) / (it.quantity || 1)) ||
+              0;
+
+            let originalPrice = Number(snap.original_price) || Number(snap.compare_at_price) || 0;
+            if (!originalPrice && isCombo && components.length > 0) {
+              originalPrice = components.reduce(
+                (sum: number, c: any) => sum + (Number(c.retail_price) || 0) * (c.quantity || 1),
+                0
+              );
+            }
+
+            let savingsAmount = Number(snap.savings_amount) || 0;
+            if (!savingsAmount && isCombo && originalPrice > unitPrice) {
+              savingsAmount = Math.max(0, originalPrice - unitPrice);
+            }
+
+            let savingsPct = Number(snap.savings_percentage) || 0;
+            if (!savingsPct && isCombo && originalPrice > 0 && savingsAmount > 0) {
+              savingsPct = Math.round((savingsAmount / originalPrice) * 100);
+            }
+
             return {
               id: it.id,
-              name: snap.name || "Product",
+              product_id: it.product_id || null,
+              combo_id: it.combo_id || snap.combo_id || null,
+              is_combo: isCombo,
+              name: snap.name || (isCombo ? "Combo Offer" : "Product"),
               quantity: it.quantity || 1,
-              price: Number(it.price_snapshot) || 0,
+              price: unitPrice,
               line_total: Number(it.line_total) || 0,
-              image: snap.primary_image_url || null,
+              image: snap.image || snap.image_url || snap.imageUrl || snap.primary_image_url || null,
+              sku: it.sku_snapshot || snap.sku || "",
+              slug: snap.slug || "",
+              original_price: originalPrice > 0 ? originalPrice : undefined,
+              savings_amount: savingsAmount > 0 ? savingsAmount : undefined,
+              savings_percentage: savingsPct > 0 ? savingsPct : undefined,
+              components,
             };
           })
         : [];
+
+      const hasCombo = items.some((it: any) => it.is_combo);
+      const comboItemsCount = items
+        .filter((it: any) => it.is_combo)
+        .reduce((sum: number, it: any) => sum + it.quantity, 0);
+      const regularItemsCount = items
+        .filter((it: any) => !it.is_combo)
+        .reduce((sum: number, it: any) => sum + it.quantity, 0);
+      const isPureCombo = hasCombo && regularItemsCount === 0;
+      const isMixed = hasCombo && regularItemsCount > 0;
+      const totalSavings =
+        items.reduce(
+          (sum: number, it: any) => sum + (it.savings_amount ? it.savings_amount * it.quantity : 0),
+          0
+        ) + (Number(o.discount_amount) || 0);
 
       return {
         id: o.id,
@@ -175,7 +230,7 @@ export async function GET() {
         customer_name,
         customer_email: o.customer_email || "",
         customer_type: (isWholesale ? "wholesale" : "retail") as "retail" | "wholesale",
-        items_count: items.length || 1,
+        items_count: items.reduce((sum: number, it: any) => sum + it.quantity, 0) || items.length || 1,
         total_amount: orderTotal,
         subtotal,
         payment_status: o.payment_status || "pending",
@@ -183,6 +238,12 @@ export async function GET() {
         created_at: o.created_at || new Date().toISOString(),
         city,
         items,
+        has_combo: hasCombo,
+        is_pure_combo: isPureCombo,
+        is_mixed: isMixed,
+        combo_items_count: comboItemsCount,
+        regular_items_count: regularItemsCount,
+        total_savings: totalSavings > 0 ? totalSavings : undefined,
       };
     });
 

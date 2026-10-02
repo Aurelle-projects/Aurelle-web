@@ -16,6 +16,7 @@ import {
   XCircle,
   Building2,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { useAdminData } from "@/context/AdminDataContext";
 
@@ -26,6 +27,20 @@ interface OrderItemDetail {
   price: number;
   line_total: number;
   image: string | null;
+  is_combo?: boolean;
+  combo_id?: string | null;
+  sku?: string;
+  original_price?: number;
+  savings_amount?: number;
+  savings_percentage?: number;
+  components?: Array<{
+    product_id?: string;
+    name: string;
+    sku?: string;
+    quantity: number;
+    image?: string | null;
+    retail_price?: number;
+  }>;
 }
 
 interface OrderRecord {
@@ -42,6 +57,12 @@ interface OrderRecord {
   created_at: string;
   city: string;
   items: OrderItemDetail[];
+  has_combo?: boolean;
+  is_pure_combo?: boolean;
+  is_mixed?: boolean;
+  combo_items_count?: number;
+  regular_items_count?: number;
+  total_savings?: number;
 }
 
 interface WholesaleAppRecord {
@@ -108,7 +129,7 @@ export default function AdminDashboardPage() {
   const wholesaleApps = useMemo(() => (dashboardData?.wholesaleApps ?? []) as WholesaleAppRecord[], [dashboardData]);
 
   // Filtering state for Recent Orders
-  const [channelTab, setChannelTab] = useState<"all" | "retail" | "wholesale">("all");
+  const [channelTab, setChannelTab] = useState<"all" | "retail" | "wholesale" | "combo">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -198,9 +219,10 @@ export default function AdminDashboardPage() {
   // Filtered orders based on selected Channel tab, status, and search
   const filteredOrders = useMemo(() => {
     return recentOrders.filter((order) => {
-      // Channel filter
+      // Channel / combo filter
       if (channelTab === "retail" && order.customer_type !== "retail") return false;
       if (channelTab === "wholesale" && order.customer_type !== "wholesale") return false;
+      if (channelTab === "combo" && !order.has_combo) return false;
 
       // Status filter
       if (statusFilter !== "all" && order.order_status !== statusFilter) return false;
@@ -212,7 +234,10 @@ export default function AdminDashboardPage() {
         const matchesName = order.customer_name?.toLowerCase().includes(query);
         const matchesEmail = order.customer_email?.toLowerCase().includes(query);
         const matchesCity = order.city?.toLowerCase().includes(query);
-        if (!matchesNumber && !matchesName && !matchesEmail && !matchesCity) {
+        const matchesItem = order.items?.some(
+          (it) => it.name?.toLowerCase().includes(query) || it.sku?.toLowerCase().includes(query)
+        );
+        if (!matchesNumber && !matchesName && !matchesEmail && !matchesCity && !matchesItem) {
           return false;
         }
       }
@@ -220,6 +245,10 @@ export default function AdminDashboardPage() {
       return true;
     });
   }, [recentOrders, channelTab, statusFilter, searchTerm]);
+
+  const comboOrdersCount = useMemo(() => {
+    return recentOrders.filter((o) => o.has_combo).length;
+  }, [recentOrders]);
 
   // Show only 10 latest orders
   const displayedOrders = useMemo(() => {
@@ -565,8 +594,8 @@ export default function AdminDashboardPage() {
 
             {/* Filter Row: Tabs + Status + Search */}
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pt-1">
-              {/* Channel Tabs: All, Retail, Wholesale */}
-              <div className="flex items-center p-0.5 bg-[#F7F5EF] rounded-md border border-[#DCCFB9]/60 self-start">
+              {/* Channel Tabs: All, Retail, Wholesale, Combos */}
+              <div className="flex items-center p-0.5 bg-[#F7F5EF] rounded-md border border-[#DCCFB9]/60 self-start flex-wrap">
                 <button
                   type="button"
                   onClick={() => setChannelTab("all")}
@@ -602,6 +631,18 @@ export default function AdminDashboardPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   <span>Wholesale ({summary.wholesaleOrdersCount})</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelTab("combo")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-colors cursor-pointer ${
+                    channelTab === "combo"
+                      ? "bg-[#102D20] text-[#D4AF37] border border-[#D4AF37]/40 shadow-2xs"
+                      : "text-[#5C6460] hover:text-[#102D20]"
+                  }`}
+                >
+                  <Sparkles size={11} className="text-[#D4AF37]" />
+                  <span>Combos ({comboOrdersCount})</span>
+                </button>
               </div>
 
               {/* Status filter and search */}
@@ -613,7 +654,7 @@ export default function AdminDashboardPage() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search order #, customer..."
+                    placeholder="Search order #, customer, combo..."
                     className="w-full h-7 pl-7 pr-2.5 text-[11px] bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B] transition-all"
                   />
                 </div>
@@ -650,6 +691,8 @@ export default function AdminDashboardPage() {
                 <h3 className="text-xs font-bold text-[#1D211F]">
                   {channelTab === "wholesale"
                     ? "No Wholesale Orders Found"
+                    : channelTab === "combo"
+                    ? "No Combo Offer Orders Found"
                     : channelTab === "retail"
                     ? "No Retail Orders Found"
                     : "No Orders Placed Yet"}
@@ -657,6 +700,8 @@ export default function AdminDashboardPage() {
                 <p className="text-[11px] text-[#5C6460] mt-1 max-w-sm mx-auto">
                   {channelTab === "wholesale"
                     ? "When verified B2B partners place bulk wholesale orders, they will appear here."
+                    : channelTab === "combo"
+                    ? "When customers purchase combo offer bundles, they will be listed here."
                     : channelTab === "retail"
                     ? "When retail customers place orders on the storefront, they will be listed here."
                     : "All customer purchases and wholesale trade orders will populate here automatically with live data."}
@@ -679,6 +724,7 @@ export default function AdminDashboardPage() {
                   {displayedOrders.map((order) => {
                     const isWholesale = order.customer_type === "wholesale";
                     const statusConfig = STATUS_STYLES[order.order_status] ?? DEFAULT_STATUS_STYLE;
+                    const comboItem = order.items?.find((i) => i.is_combo);
 
                     return (
                       <tr key={order.id} className="hover:bg-[#F7F5EF]/40 transition-colors">
@@ -707,13 +753,45 @@ export default function AdminDashboardPage() {
                           <div className="text-[10px] text-[#8C938F]">{order.city}</div>
                         </td>
 
-                        {/* Items */}
+                        {/* Items Column - COMBO Recognized */}
                         <td className="py-2.5 px-3.5 align-top">
-                          <div className="font-semibold text-[#1D211F]">{order.items_count} item{order.items_count !== 1 ? "s" : ""}</div>
-                          {order.items && order.items.length > 0 && (
-                            <div className="text-[10px] text-[#5C6460] truncate max-w-[150px]" title={order.items[0]?.name}>
-                              {order.items[0]?.name}
-                              {order.items.length > 1 && ` +${order.items.length - 1} more`}
+                          {order.has_combo && comboItem ? (
+                            <div>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[8.5px] font-extrabold uppercase tracking-widest bg-[#102D20] text-[#D4AF37] border border-[#D4AF37]/30">
+                                  <Sparkles size={7} />
+                                  <span>COMBO</span>
+                                </span>
+                                <span className="font-bold text-[#1D211F] truncate max-w-[140px]" title={comboItem.name}>
+                                  {comboItem.name}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-[#5C6460] mt-0.5 flex items-center gap-1 flex-wrap">
+                                <span>{comboItem.components?.length || 2} products</span>
+                                {comboItem.quantity > 1 && (
+                                  <span>• Qty: <strong>{comboItem.quantity}</strong></span>
+                                )}
+                                {order.is_mixed && (
+                                  <span className="text-[#183D2B] font-semibold bg-[#183D2B]/10 px-1 py-0.2 rounded text-[9px]">
+                                    +{order.regular_items_count} regular
+                                  </span>
+                                )}
+                                {!order.is_mixed && order.items && order.items.length > 1 && (
+                                  <span className="text-[#183D2B] font-semibold bg-[#183D2B]/10 px-1 py-0.2 rounded text-[9px]">
+                                    +{order.items.length - 1} more combos
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="font-semibold text-[#1D211F]">{order.items_count} item{order.items_count !== 1 ? "s" : ""}</div>
+                              {order.items && order.items.length > 0 && (
+                                <div className="text-[10px] text-[#5C6460] truncate max-w-[150px]" title={order.items[0]?.name}>
+                                  {order.items[0]?.name}
+                                  {order.items.length > 1 && ` +${order.items.length - 1} more`}
+                                </div>
+                              )}
                             </div>
                           )}
                         </td>
@@ -723,11 +801,15 @@ export default function AdminDashboardPage() {
                           <div className="font-extrabold text-[#1D211F]">
                             AED {order.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
-                          {order.subtotal > 0 && order.subtotal !== order.total_amount && (
+                          {order.total_savings && order.total_savings > 0 ? (
+                            <div className="text-[9.5px] font-semibold text-emerald-700 whitespace-nowrap">
+                              Saved AED {order.total_savings.toFixed(2)}
+                            </div>
+                          ) : order.subtotal > 0 && order.subtotal !== order.total_amount ? (
                             <div className="text-[9.5px] text-[#8C938F]">
                               Subtotal: AED {order.subtotal.toFixed(2)}
                             </div>
-                          )}
+                          ) : null}
                         </td>
 
                         {/* Payment */}
@@ -769,9 +851,21 @@ export default function AdminDashboardPage() {
                         {/* Action - Redirect to Retail or Wholesale Order Tab */}
                         <td className="py-2.5 px-3.5 align-middle text-center">
                           <Link
-                            href={isWholesale ? "/admin/orders?tab=wholesale" : "/admin/orders?tab=retail"}
+                            href={
+                              order.has_combo
+                                ? "/admin/orders?tab=combo"
+                                : isWholesale
+                                ? "/admin/orders?tab=wholesale"
+                                : "/admin/orders?tab=retail"
+                            }
                             className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-[#F7F5EF] hover:bg-[#183D2B] text-[#5C6460] hover:text-white border border-[#DCCFB9] transition-all cursor-pointer shadow-2xs group"
-                            title={isWholesale ? "Go to Wholesale Orders tab" : "Go to Retail Orders tab"}
+                            title={
+                              order.has_combo
+                                ? "View Combo Orders"
+                                : isWholesale
+                                ? "Go to Wholesale Orders tab"
+                                : "Go to Retail Orders tab"
+                            }
                           >
                             <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
                           </Link>

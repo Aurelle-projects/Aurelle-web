@@ -9,7 +9,7 @@ import ProductSection from "@/components/storefront/ProductSection";
 import PromoBanners from "@/components/storefront/PromoBanners";
 import BrandShowcase from "@/components/storefront/BrandShowcase";
 import HomeBanners from "@/components/storefront/HomeBanners";
-import TopRatedProducts from "@/components/storefront/TopRatedProducts";
+import TopRatedProducts, { type TopRatedProduct } from "@/components/storefront/TopRatedProducts";
 import AllProductsSection from "@/components/storefront/AllProductsSection";
 import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
 import ComboOffersSection from "@/components/storefront/ComboOffersSection";
@@ -48,7 +48,7 @@ export default async function HomePage() {
   let categories: CategoryItem[] = [];
   let newArrivalProducts: unknown[] = [];
   let bestSellingProducts: unknown[] = [];
-  let topRatedProducts: unknown[] = [];
+  let topRatedProducts: TopRatedProduct[] = [];
   let allProducts: unknown[] = [];
   let brands: BrandItem[] = [];
   let siteSettings: SiteSettingsRow[] = [];
@@ -101,9 +101,9 @@ export default async function HomePage() {
         supabase
           .from("products")
           .select(`
-            id, name, slug, retail_price, tax_enabled, is_out_of_stock,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            reviews(rating)
+            reviews(rating, is_published)
           `)
           .eq("status", "published")
           .limit(100),
@@ -163,13 +163,38 @@ export default async function HomePage() {
       bestSellingProducts = (bestSellersResult.data as unknown[]) ?? [];
       topRatedProducts = ((topRatedResult.data as any[]) ?? [])
         .map((product) => {
-          const ratings = (product.reviews ?? []).map((review: { rating: number }) => review.rating);
-          const rating = ratings.length > 0
-            ? ratings.reduce((sum: number, value: number) => sum + value, 0) / ratings.length
-            : 0;
-          return { ...product, rating, reviews_count: ratings.length };
+          const validReviews = (product.reviews ?? []).filter(
+            (review: { rating?: number | null; is_published?: boolean | null }) =>
+              typeof review?.rating === "number" &&
+              review.rating >= 1 &&
+              review.rating <= 5 &&
+              review.is_published !== false,
+          );
+          const ratings = validReviews.map((review: { rating: number }) => Number(review.rating));
+          const rating =
+            ratings.length > 0
+              ? Number(
+                  (
+                    ratings.reduce((sum: number, value: number) => sum + value, 0) /
+                    ratings.length
+                  ).toFixed(1),
+                )
+              : 0;
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            sku: product.sku,
+            retail_price: Number(product.retail_price) || 0,
+            compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : null,
+            tax_enabled: product.tax_enabled !== false,
+            is_out_of_stock: Boolean(product.is_out_of_stock),
+            rating,
+            reviews_count: ratings.length,
+            product_images: product.product_images ?? [],
+          } satisfies TopRatedProduct;
         })
-        .filter((product) => product.rating > 0)
+        .filter((product) => product.rating > 0 && product.reviews_count > 0)
         .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count)
         .slice(0, 10);
 
@@ -277,7 +302,9 @@ export default async function HomePage() {
         images={showcaseSettings.images || []}
       />
 
-      <TopRatedProducts products={topRatedProducts as any[]} />
+      {topRatedProducts.length > 0 && (
+        <TopRatedProducts products={topRatedProducts} />
+      )}
 
  
 

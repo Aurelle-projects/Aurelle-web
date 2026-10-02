@@ -6,13 +6,17 @@ import Link from "next/link";
 import { ShoppingBag, Star, Check, Heart } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toggleWishlist, isWishlisted as checkWishlisted } from "@/components/storefront/WishlistDrawer";
+import { getProductImageUrl } from "@/lib/cloudinary/transforms";
+import { formatPrice } from "@/utils/price";
 import type { ProductItem } from "@/lib/products/mock-products";
 
-interface TopRatedProduct {
+export interface TopRatedProduct {
   id: string;
   name: string;
   slug: string;
+  sku?: string;
   retail_price: number;
+  compare_at_price?: number | null;
   tax_enabled?: boolean;
   is_out_of_stock?: boolean;
   rating: number;
@@ -22,6 +26,7 @@ interface TopRatedProduct {
     cloudinary_public_id?: string;
     alt_text?: string | null;
     is_primary?: boolean;
+    sort_order?: number;
   }>;
 }
 
@@ -56,21 +61,29 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
     setWishlistIds((prev) => ({ ...prev, [productId]: next }));
   };
 
-  if (products.length === 0) return null;
+  if (!products || products.length === 0) return null;
 
   const displayProducts = products.length > 1 ? [...products, ...products] : products;
 
   function addToCart(product: TopRatedProduct) {
     if (product.is_out_of_stock) return;
-    const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
-    const cartProduct = {
+    const images = product.product_images ?? [];
+    const image = images.find((item) => item.is_primary) ?? images[0];
+    const imageUrl =
+      image?.secure_url ||
+      (image?.cloudinary_public_id
+        ? getProductImageUrl(image.cloudinary_public_id, "medium")
+        : null);
+
+    const cartProduct: ProductItem = {
       id: product.id,
       name: product.name,
       slug: product.slug,
-      sku: product.id,
+      sku: product.sku || product.id,
       description: "",
       short_description: "",
       retail_price: product.retail_price,
+      compare_at_price: product.compare_at_price ?? undefined,
       tax_enabled: product.tax_enabled !== false,
       is_out_of_stock: Boolean(product.is_out_of_stock),
       category_id: "",
@@ -81,13 +94,13 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
       is_featured: false,
       is_best_seller: false,
       is_new_arrival: false,
-      images: image?.secure_url ? [{ url: image.secure_url, alt: image.alt_text || product.name, is_primary: true }] : [],
+      images: imageUrl ? [{ url: imageUrl, alt: image?.alt_text || product.name, is_primary: true }] : [],
       wholesale_moq: 1,
       wholesale_price: product.retail_price,
       rating: product.rating,
       reviews_count: product.reviews_count,
       tags: [],
-    } satisfies ProductItem;
+    };
 
     addItem(cartProduct);
     setAddedId(product.id);
@@ -110,18 +123,28 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
         >
           <div className={`flex w-max gap-4 sm:gap-6 ${!paused && products.length > 1 ? "animate-top-rated" : ""}`}>
             {displayProducts.map((product, index) => {
-              const image = product.product_images?.find((item) => item.is_primary) ?? product.product_images?.[0];
+              const images = product.product_images ?? [];
+              const image = images.find((item) => item.is_primary) ?? images[0];
+              const imageUrl =
+                image?.secure_url ||
+                (image?.cloudinary_public_id
+                  ? getProductImageUrl(image.cloudinary_public_id, "medium")
+                  : null);
+              const isOnSale = Boolean(
+                product.compare_at_price && product.compare_at_price > product.retail_price
+              );
+
               return (
                 <article key={`${product.id}-${index}`} className="group relative w-[180px] sm:w-[220px] shrink-0">
                   <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
                     <Link href={`/products/${product.slug}`} className="block w-full h-full">
-                      {image?.secure_url ? (
+                      {imageUrl ? (
                         <Image
-                          src={image.secure_url}
-                          alt={image.alt_text || product.name}
+                          src={imageUrl}
+                          alt={image?.alt_text || product.name}
                           fill
                           sizes="220px"
-                          className="object-cover"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-3xl font-bold text-[#183D2B]/20">
@@ -202,16 +225,45 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                       </button>
                     )}
                   </div>
-                  <Link href={`/products/${product.slug}`} className="mt-3 block text-sm text-[#1D211F] line-clamp-1">
-                    {product.name}
-                  </Link>
-                  <div className="mt-1 flex items-center gap-1 text-xs text-[#1D211F]">
-                    <span className="flex items-center gap-0.5 text-yellow-500" aria-label={`${product.rating} out of 5 stars`}>
-                      {Array.from({ length: 5 }, (_, starIndex) => (
-                        <Star key={starIndex} size={13} fill={starIndex < Math.round(product.rating) ? "currentColor" : "none"} />
-                      ))}
-                    </span>
-                    <span>({product.reviews_count})</span>
+
+                  {/* Product Info */}
+                  <div className="pt-3 flex flex-col text-left">
+                    <Link
+                      href={`/products/${product.slug}`}
+                      className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-1"
+                    >
+                      {product.name}
+                    </Link>
+                    <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                      <span className="text-[13px] sm:text-[14px] font-semibold text-[#1D211F]">
+                        {formatPrice(product.retail_price)}
+                      </span>
+                      {isOnSale && product.compare_at_price && (
+                        <span className="text-xs text-[#8E9590] line-through">
+                          {formatPrice(product.compare_at_price)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-[#1D211F]">
+                      <span
+                        className="flex items-center gap-0.5 text-yellow-500"
+                        aria-label={`${product.rating.toFixed(1)} out of 5 stars`}
+                      >
+                        {Array.from({ length: 5 }, (_, starIndex) => (
+                          <Star
+                            key={starIndex}
+                            size={13}
+                            fill={starIndex < Math.round(product.rating) ? "currentColor" : "none"}
+                          />
+                        ))}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[#1D211F]">
+                        {product.rating.toFixed(1)}
+                      </span>
+                      <span className="text-[11px] text-[#5C6460]">
+                        ({product.reviews_count})
+                      </span>
+                    </div>
                   </div>
                 </article>
               );

@@ -165,8 +165,8 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
             Home
           </Link>
           <ChevronRight size={12} />
-          <Link href="/shop" className="hover:text-[#183D2B] transition-colors">
-            Shop
+          <Link href="/combos" className="hover:text-[#183D2B] transition-colors">
+            Combo Offers
           </Link>
           <ChevronRight size={12} />
           <span className="font-semibold text-[#183D2B] truncate">{combo.name}</span>
@@ -496,7 +496,7 @@ export default function ComboDetailPage({ params }: ComboDetailPageProps) {
                 </p>
               </div>
               <Link
-                href="/shop?category=combos"
+                href="/combos"
                 className="text-xs font-bold text-[#183D2B] hover:text-[#C9A84C] flex items-center gap-1"
               >
                 <span>View all combos</span>

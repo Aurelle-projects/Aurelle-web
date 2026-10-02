@@ -41,12 +41,14 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
     loadFeaturedCombos();
   }, [initialCombos]);
 
+  const homepageCombos = combos.slice(0, 3);
+
   // If loading or no active combos, do not render the section
-  if (loading || combos.length === 0) {
+  if (loading || homepageCombos.length === 0) {
     return null;
   }
 
-  const count = combos.length;
+  const count = homepageCombos.length;
 
   return (
     <section
@@ -72,7 +74,7 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
           </div>
 
           <Link
-            href="/shop?category=combos"
+            href="/combos"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#183D2B] hover:text-[#C9A84C] transition-colors group self-start sm:self-end pb-0.5 whitespace-nowrap"
           >
             <span>Explore all combos</span>
@@ -81,22 +83,22 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
         </div>
 
         {/* Dynamic Layout Based on Active Combos Count */}
-        {count === 1 && combos[0] ? (
+        {count === 1 && homepageCombos[0] ? (
           /* Single Combo: Centered feature card with controlled width */
           <div className="max-w-md sm:max-w-lg mx-auto">
-            <ComboCard combo={combos[0]} />
+            <ComboCard combo={homepageCombos[0]} />
           </div>
         ) : count === 2 ? (
           /* Two Combos: Centered 2-column layout */
           <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 justify-center">
-            {combos.map((combo) => (
+            {homepageCombos.map((combo) => (
               <ComboCard key={combo.id} combo={combo} />
             ))}
           </div>
         ) : (
-          /* Three or more Combos: Refined responsive grid (3 desktop, 2 tablet, 1 mobile) */
+          /* Three Combos (homepage max 3): Refined responsive grid (3 desktop, 2 tablet, 1 mobile) */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {combos.map((combo) => (
+            {homepageCombos.map((combo) => (
               <ComboCard key={combo.id} combo={combo} />
             ))}
           </div>

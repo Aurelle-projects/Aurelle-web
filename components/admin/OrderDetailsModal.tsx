@@ -16,6 +16,7 @@ import {
   FileText,
 } from "lucide-react";
 import { AdminOrderItem, AdminOrderItemDetail, ProductRow } from "@/context/AdminDataContext";
+import { FulfillmentStatusBadge, PaymentStatusBadge } from "@/components/admin/OrderBadges";
 
 interface OrderDetailsModalProps {
   order: AdminOrderItem | null;
@@ -24,14 +25,6 @@ interface OrderDetailsModalProps {
   onStatusChange?: (id: string, newStatus: AdminOrderItem["order_status"]) => void;
   products?: ProductRow[] | null;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  delivered: "bg-emerald-50 text-emerald-800 border border-emerald-200",
-  shipped: "bg-blue-50 text-blue-800 border border-blue-200",
-  processing: "bg-amber-50 text-amber-800 border border-amber-200",
-  pending: "bg-neutral-100 text-neutral-700 border border-neutral-200",
-  cancelled: "bg-red-50 text-red-800 border border-red-200",
-};
 
 export default function OrderDetailsModal({
   order,
@@ -128,33 +121,17 @@ export default function OrderDetailsModal({
           <div className="bg-[#F7F5EF] p-3 rounded-lg border border-[#DCCFB9]/60 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <div>
-                <span className="text-[10px] font-bold text-[#5C6460] uppercase tracking-wider block mb-0.5">
+                <span className="text-[10px] font-bold text-[#5C6460] uppercase tracking-wider block mb-1">
                   Payment Status
                 </span>
-                <span
-                  className={`inline-block px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-wider ${
-                    order.payment_status === "paid"
-                      ? "bg-emerald-100 text-emerald-800"
-                      : order.payment_status === "failed"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  {order.payment_status}
-                </span>
+                <PaymentStatusBadge status={order.payment_status} size="md" />
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-[#5C6460] uppercase tracking-wider block mb-0.5">
-                  Fulfillment
+                <span className="text-[10px] font-bold text-[#5C6460] uppercase tracking-wider block mb-1">
+                  Fulfillment Status
                 </span>
-                <span
-                  className={`inline-block px-2 py-0.5 rounded text-[10.5px] font-bold capitalize ${
-                    STATUS_COLORS[order.order_status] || "bg-neutral-100 text-neutral-700"
-                  }`}
-                >
-                  {order.order_status}
-                </span>
+                <FulfillmentStatusBadge status={order.order_status} size="md" />
               </div>
             </div>
 
@@ -162,7 +139,7 @@ export default function OrderDetailsModal({
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold text-[#5C6460]">Update Status:</span>
                 <select
-                  value={order.order_status}
+                  value={order.order_status.toLowerCase()}
                   onChange={(e) =>
                     onStatusChange(order.id, e.target.value as AdminOrderItem["order_status"])
                   }

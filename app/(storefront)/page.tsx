@@ -161,7 +161,7 @@ export default async function HomePage() {
       categories = (categoriesResult.data as CategoryItem[]) ?? [];
       newArrivalProducts = (newArrivalsResult.data as unknown[]) ?? [];
       bestSellingProducts = (bestSellersResult.data as unknown[]) ?? [];
-      topRatedProducts = ((topRatedResult.data as any[]) ?? [])
+      const rawTopRated = ((topRatedResult.data as any[]) ?? [])
         .map((product) => {
           const validReviews = (product.reviews ?? []).filter(
             (review: { rating?: number | null; is_published?: boolean | null }) =>
@@ -195,8 +195,16 @@ export default async function HomePage() {
           } satisfies TopRatedProduct;
         })
         .filter((product) => product.rating > 0 && product.reviews_count > 0)
-        .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count)
-        .slice(0, 10);
+        .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count);
+
+      // Ensure each product appears strictly once by canonical product ID
+      const uniqueTopRatedMap = new Map<string, TopRatedProduct>();
+      for (const p of rawTopRated) {
+        if (p.id && !uniqueTopRatedMap.has(p.id)) {
+          uniqueTopRatedMap.set(p.id, p);
+        }
+      }
+      topRatedProducts = Array.from(uniqueTopRatedMap.values()).slice(0, 10);
 
       allProducts = (allProductsResult.data as unknown[]) ?? [];
       brands = (brandsResult.data as BrandItem[]) ?? [];
@@ -263,8 +271,10 @@ export default async function HomePage() {
       {/* ─── 4. Shop By Category ─────────────────────────────────── */}
       <CategorySection categories={displayCategories} />
 
-      {/* ─── 4b. Exclusive Combo Offers ───────────────────────────── */}
-      <ComboOffersSection />
+         {topRatedProducts.length > 0 && (
+        <TopRatedProducts products={topRatedProducts} />
+      )}
+
 
       {/* ─── 5. New Arrivals Section — database products only ── */}
       <ProductSection
@@ -302,11 +312,9 @@ export default async function HomePage() {
         images={showcaseSettings.images || []}
       />
 
-      {topRatedProducts.length > 0 && (
-        <TopRatedProducts products={topRatedProducts} />
-      )}
-
- 
+   
+      {/* ─── 4b. Exclusive Combo Offers ───────────────────────────── */}
+      <ComboOffersSection />
 
    
 
@@ -325,8 +333,8 @@ export default async function HomePage() {
         rightImageUrl={promoSettings.right?.image_url || null}
       />
 
-      {/* ─── 8. B2B Wholesale Entry Point ──── */}
-      <B2BHomeCTASection />
+      {/* ─── 8. B2B Wholesale Entry Point ────
+      <B2BHomeCTASection /> */}
 
       <AllProductsSection initialProducts={allProducts as any[]} />
 

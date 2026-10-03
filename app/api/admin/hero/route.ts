@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
 // Keys we store in site_settings
-const SETTINGS_KEYS = ["hero", "family_banner", "promo_banners", "announcement", "trust_badges", "showcase_section", "home_banners"];
+const SETTINGS_KEYS = [
+  "hero",
+  "family_banner",
+  "promo_banners",
+  "announcement",
+  "trust_badges",
+  "showcase_section",
+  "home_banners",
+];
 
 function dbRowsToFlat(rows: { key: string; value: any }[]): Record<string, unknown> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const byKey: Record<string, any> = {};
   for (const row of rows) {
     byKey[row.key] = row.value || {};
@@ -90,10 +98,6 @@ function dbRowsToFlat(rows: { key: string; value: any }[]): Record<string, unkno
   };
 }
 
-/**
- * Split a flat HeroData object back into 5 JSONB rows for site_settings upsert.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function flatToDbRows(flat: Record<string, any>) {
   return [
     {
@@ -194,22 +198,64 @@ function flatToDbRows(flat: Record<string, any>) {
 
 export async function GET() {
   try {
-    if (!await verifyAdminSession()) {
+    if (!(await verifyAdminSession())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
-    const { data: rows, error } = await supabase
+
+    // 1. Fetch site_settings
+    const { data: rows, error: settingsError } = await supabase
       .from("site_settings")
       .select("key, value")
       .in("key", SETTINGS_KEYS);
 
-    if (error) throw error;
+    if (settingsError) throw settingsError;
 
     const flat = dbRowsToFlat(rows || []);
-    return NextResponse.json({ success: true, hero: flat });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+    // 2. Fetch banners for hero position
+    let bannersList: any[] = [];
+    try {
+      const { data: bannerRows, error: bannersError } = await supabase
+        .from("banners")
+        .select("*")
+        .eq("position", "hero")
+        .order("sort_order", { ascending: true });
+
+      if (!bannersError && Array.isArray(bannerRows)) {
+        bannersList = bannerRows;
+      }
+    } catch {
+      // Table might not have custom columns yet or empty
+    }
+
+    // If banners is empty but site_settings.hero exists, construct initial slide
+    if (bannersList.length === 0 && (flat.hero_title || flat.background_image_url || flat.product_image_url)) {
+      bannersList = [
+        {
+          id: "initial-hero-1",
+          title: (flat.hero_title as string) || "EVERYDAY ESSENTIALS. ELEVATED",
+          subtitle: (flat.hero_subtitle as string) || "",
+          overline: (flat.hero_tagline as string) || "",
+          link_text: (flat.cta_primary_text as string) || "SHOP COLLECTION",
+          link_url: (flat.cta_primary_href as string) || "/shop",
+          image_url: (flat.background_image_url as string) || (flat.product_image_url as string) || null,
+          image_public_id: (flat.background_image_public_id as string) || (flat.product_image_public_id as string) || null,
+          mobile_image_url: (flat.mobile_image_url as string) || null,
+          mobile_image_public_id: (flat.mobile_image_public_id as string) || null,
+          product_image_url: (flat.product_image_url as string) || null,
+          product_image_public_id: (flat.product_image_public_id as string) || null,
+          position: "hero",
+          sort_order: 0,
+          is_active: true,
+          starts_at: null,
+          ends_at: null,
+        },
+      ];
+    }
+
+    return NextResponse.json({ success: true, hero: flat, banners: bannersList });
   } catch (err: any) {
     console.error("[API hero GET error]:", err);
     return NextResponse.json({ error: err?.message || "Failed to read hero data" }, { status: 500 });
@@ -218,24 +264,110 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!await verifyAdminSession()) {
+    if (!(await verifyAdminSession())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createAdminClient() as any;
     const body = await req.json();
 
-    // First, read existing data to merge with incoming updates
+    const { banners: incomingBanners, ...formFields } = body;
+
+    // 1. If banners list is provided, update banners table
+    let savedBanners: any[] = [];
+    if (Array.isArray(incomingBanners)) {
+      try {
+        // Fetch existing hero banner IDs to identify deletions
+        const { data: existingBanners } = await supabase
+          .from("banners")
+          .select("id")
+          .eq("position", "hero");
+
+        const existingIds = new Set((existingBanners || []).map((b: any) => b.id));
+        const incomingIds = new Set(
+          incomingBanners
+            .map((b: any) => b.id)
+            .filter((id: any) => id && !String(id).startsWith("initial-") && !String(id).startsWith("temp-"))
+        );
+
+        // Delete removed banners
+        const toDelete = Array.from(existingIds).filter((id) => !incomingIds.has(id));
+        if (toDelete.length > 0) {
+          await supabase.from("banners").delete().in("id", toDelete);
+        }
+
+        // Upsert all incoming banners with updated sort_orders
+        for (let i = 0; i < incomingBanners.length; i++) {
+          const banner = incomingBanners[i];
+          const isTempId = !banner.id || String(banner.id).startsWith("initial-") || String(banner.id).startsWith("temp-");
+
+          const bannerRecord: Record<string, any> = {
+            title: banner.title || "EVERYDAY ESSENTIALS. ELEVATED",
+            subtitle: banner.subtitle || null,
+            overline: banner.overline || banner.hero_tagline || null,
+            link_text: banner.link_text || banner.cta_primary_text || "SHOP COLLECTION",
+            link_url: banner.link_url || banner.cta_primary_href || "/shop",
+            image_url: banner.image_url || banner.background_image_url || banner.product_image_url || null,
+            image_public_id: banner.image_public_id || banner.background_image_public_id || banner.product_image_public_id || null,
+            mobile_image_url: banner.mobile_image_url || null,
+            mobile_image_public_id: banner.mobile_image_public_id || null,
+            product_image_url: banner.product_image_url || banner.image_url || null,
+            product_image_public_id: banner.product_image_public_id || banner.image_public_id || null,
+            position: "hero",
+            sort_order: typeof banner.sort_order === "number" ? banner.sort_order : i,
+            is_active: banner.is_active !== false,
+            starts_at: banner.starts_at || null,
+            ends_at: banner.ends_at || null,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (!isTempId) {
+            bannerRecord.id = banner.id;
+          }
+
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("banners")
+            .upsert(bannerRecord)
+            .select()
+            .single();
+
+          if (!upsertErr && upserted) {
+            savedBanners.push(upserted);
+          } else if (upsertErr) {
+            console.error("[API hero banners upsert warning]:", upsertErr);
+          }
+        }
+
+        // Also sync Slide #1 to formFields / site_settings.hero for fallback compatibility
+        if (incomingBanners.length > 0) {
+          const first = incomingBanners[0];
+          formFields.hero_title = first.title || formFields.hero_title;
+          formFields.hero_subtitle = first.subtitle || formFields.hero_subtitle;
+          formFields.hero_tagline = first.overline || formFields.hero_tagline;
+          formFields.cta_primary_text = first.link_text || formFields.cta_primary_text;
+          formFields.cta_primary_href = first.link_url || formFields.cta_primary_href;
+          formFields.background_image_url = first.image_url || formFields.background_image_url;
+          formFields.background_image_public_id = first.image_public_id || formFields.background_image_public_id;
+          formFields.mobile_image_url = first.mobile_image_url || formFields.mobile_image_url;
+          formFields.mobile_image_public_id = first.mobile_image_public_id || formFields.mobile_image_public_id;
+          formFields.product_image_url = first.product_image_url || first.image_url || formFields.product_image_url;
+          formFields.product_image_public_id = first.product_image_public_id || first.image_public_id || formFields.product_image_public_id;
+        }
+      } catch (bErr) {
+        console.error("[API hero banners batch processing warning]:", bErr);
+      }
+    }
+
+    // 2. Read existing site_settings to merge
     const { data: existingRows } = await supabase
       .from("site_settings")
       .select("key, value")
       .in("key", SETTINGS_KEYS);
 
     const existing = dbRowsToFlat(existingRows || []);
-    const merged = { ...existing, ...body };
+    const merged = { ...existing, ...formFields };
 
-    // Split into 5 JSONB rows and upsert each
+    // 3. Split into JSONB rows and upsert each to site_settings
     const rows = flatToDbRows(merged);
     for (const row of rows) {
       const { error } = await supabase
@@ -247,11 +379,19 @@ export async function POST(req: NextRequest) {
       if (error) throw error;
     }
 
-    return NextResponse.json({ success: true, hero: merged });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // 4. Invalidate storefront cache
+    try {
+      revalidatePath("/");
+      revalidatePath("/(storefront)");
+    } catch {}
+
+    return NextResponse.json({
+      success: true,
+      hero: merged,
+      banners: savedBanners.length > 0 ? savedBanners : incomingBanners,
+    });
   } catch (err: any) {
     console.error("[API hero POST error]:", err);
     return NextResponse.json({ error: err?.message || "Failed to save hero data" }, { status: 500 });
   }
 }
-

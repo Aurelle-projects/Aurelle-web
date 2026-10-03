@@ -22,9 +22,20 @@ export async function POST(request: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // 1. Check configured admin credentials (from .env.local or defaults)
-    const configuredAdminEmail = (process.env.ADMIN_EMAIL || "admin@aurelle.ae").toLowerCase().trim();
-    const configuredAdminPassword = (process.env.ADMIN_PASSWORD || "admin123").trim();
+    // 1. Check configured admin credentials (from .env.local)
+    const envAdminEmail = process.env.ADMIN_EMAIL?.trim();
+    const envAdminPassword = process.env.ADMIN_PASSWORD?.trim();
+
+    if (!envAdminEmail || !envAdminPassword) {
+      console.error("[Admin Auth Login Error]: ADMIN_EMAIL or ADMIN_PASSWORD environment variable is not configured.");
+      return NextResponse.json(
+        { success: false, error: "Admin authentication is not configured." },
+        { status: 500 }
+      );
+    }
+
+    const configuredAdminEmail = envAdminEmail.toLowerCase();
+    const configuredAdminPassword = envAdminPassword;
 
     let isAuthenticated = false;
 

@@ -22,7 +22,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Email address is required." }, { status: 400 });
     }
 
-    const configuredAdminEmail = (process.env.ADMIN_EMAIL || "admin@aurelle.ae").trim().toLowerCase();
+    const envAdminEmail = process.env.ADMIN_EMAIL?.trim();
+
+    if (!envAdminEmail) {
+      console.error("[Admin Forgot Password Error]: ADMIN_EMAIL environment variable is not configured.");
+      return NextResponse.json(
+        { success: false, error: "Admin authentication is not configured." },
+        { status: 500 }
+      );
+    }
+
+    const configuredAdminEmail = envAdminEmail.toLowerCase();
 
     // Verify the email matches the configured admin email
     if (!safeCompare(email, configuredAdminEmail)) {

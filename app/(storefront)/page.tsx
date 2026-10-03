@@ -52,6 +52,7 @@ export default async function HomePage() {
   let allProducts: unknown[] = [];
   let brands: BrandItem[] = [];
   let siteSettings: SiteSettingsRow[] = [];
+  let heroBanners: any[] = [];
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +72,7 @@ export default async function HomePage() {
         allProductsResult,
         brandsResult,
         settingsResult,
+        heroBannersResult,
       ] = await Promise.all([
         supabase
           .from("categories")
@@ -156,6 +158,13 @@ export default async function HomePage() {
             "showcase_section",
             "home_banners",
           ]),
+
+        supabase
+          .from("banners")
+          .select("*")
+          .eq("position", "hero")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
       ]);
 
       categories = (categoriesResult.data as CategoryItem[]) ?? [];
@@ -209,6 +218,15 @@ export default async function HomePage() {
       allProducts = (allProductsResult.data as unknown[]) ?? [];
       brands = (brandsResult.data as BrandItem[]) ?? [];
       siteSettings = (settingsResult.data as SiteSettingsRow[]) ?? [];
+
+      const rawBanners = (heroBannersResult?.data as any[]) ?? [];
+      const now = new Date();
+      heroBanners = rawBanners.filter((b: any) => {
+        if (!b || b.is_active === false) return false;
+        if (b.starts_at && new Date(b.starts_at) > now) return false;
+        if (b.ends_at && new Date(b.ends_at) < now) return false;
+        return true;
+      });
     } catch {
       // Graceful degradation — show layout without DB data
     }
@@ -260,6 +278,7 @@ export default async function HomePage() {
         title={heroData.hero_title}
         subtitle={heroData.hero_subtitle}
         heroData={heroData}
+        banners={heroBanners.length > 0 ? heroBanners : undefined}
       />
 
       {/* ─── 2. Trust Badges ─────────────────────────────────────── */}

@@ -711,8 +711,13 @@ export type Database = {
           id: string;
           title: string;
           subtitle: string | null;
+          overline: string | null;
           image_url: string | null;
           image_public_id: string | null;
+          mobile_image_url: string | null;
+          mobile_image_public_id: string | null;
+          product_image_url: string | null;
+          product_image_public_id: string | null;
           link_url: string | null;
           link_text: string | null;
           position: string;
@@ -727,8 +732,13 @@ export type Database = {
           id?: string;
           title: string;
           subtitle?: string | null;
+          overline?: string | null;
           image_url?: string | null;
           image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          product_image_url?: string | null;
+          product_image_public_id?: string | null;
           link_url?: string | null;
           link_text?: string | null;
           position?: string;
@@ -742,8 +752,13 @@ export type Database = {
         Update: {
           title?: string;
           subtitle?: string | null;
+          overline?: string | null;
           image_url?: string | null;
           image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          product_image_url?: string | null;
+          product_image_public_id?: string | null;
           link_url?: string | null;
           link_text?: string | null;
           position?: string;

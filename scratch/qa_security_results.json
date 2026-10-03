@@ -1,0 +1,34 @@
+[
+  {
+    "id": "REV-TOK-01",
+    "scenario": "Order review magic token generates & verifies matching order/email with HMAC-SHA256",
+    "expected": "valid=true, mismatchEmail=false, mismatchOrder=false",
+    "actual": "valid=true, mismatchEmail=false, mismatchOrder=false",
+    "status": "VERIFIED",
+    "evidence": "{\"tokenPreview\":\"eyJvcmRlcklkIjoi...\"}"
+  },
+  {
+    "id": "REV-TOK-02",
+    "scenario": "Tampered order review magic token is cryptographically rejected via timingSafeEqual",
+    "expected": "tamperedValid=false",
+    "actual": "tamperedValid=false",
+    "status": "VERIFIED",
+    "evidence": "{\"tamperedVerification\":false}"
+  },
+  {
+    "id": "STP-SIG-01",
+    "scenario": "Stripe webhook HMAC-SHA256 signature construction and timingSafeEqual verification",
+    "expected": "isSignatureValid=true",
+    "actual": "isSignatureValid=true",
+    "status": "VERIFIED",
+    "evidence": "{\"timestamp\":1791010402,\"validSignature\":\"51239b65...\"}"
+  },
+  {
+    "id": "STP-SIG-02",
+    "scenario": "Modified/tampered Stripe webhook payload signature mismatch detected",
+    "expected": "isTamperedMatched=false",
+    "actual": "isTamperedMatched=false",
+    "status": "VERIFIED",
+    "evidence": "{}"
+  }
+]

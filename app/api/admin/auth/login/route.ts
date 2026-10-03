@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import {
+  createAdminSessionToken,
+  ADMIN_COOKIE_NAME,
+  getAdminCookieOptions,
+} from "@/lib/auth/adminSession";
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,15 +88,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set secure admin session cookie
+    // Set cryptographically signed secure admin session cookie
+    const sessionToken = createAdminSessionToken(cleanEmail, "admin");
     const response = NextResponse.json({ success: true });
-    response.cookies.set("aurelle_admin_session", "authenticated", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    });
+    response.cookies.set(ADMIN_COOKIE_NAME, sessionToken, getAdminCookieOptions());
 
     return response;
   } catch (error) {

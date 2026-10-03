@@ -4,6 +4,8 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminLoginPanel from "@/components/admin/AdminLoginPanel";
 import { AdminDataProvider } from "@/context/AdminDataContext";
 
+import { verifyAdminSessionToken, ADMIN_COOKIE_NAME } from "@/lib/auth/adminSession";
+
 export const metadata = {
   title: "Admin Console | Aurelle Cosmetics Trading FZ-LLC",
   description: "Administrative console for managing products, categories, media, and orders.",
@@ -19,10 +21,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const adminSession = cookieStore.get("aurelle_admin_session");
+  const adminSession = cookieStore.get(ADMIN_COOKIE_NAME);
+  const sessionCheck = verifyAdminSessionToken(adminSession?.value);
 
-  // If not authenticated as admin, display the dedicated Admin Login Panel
-  if (!adminSession || adminSession.value !== "authenticated") {
+  // If not authenticated with a valid signed session token, display the Admin Login Panel
+  if (!sessionCheck.valid) {
     return <AdminLoginPanel />;
   }
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 // GET /api/admin/products — Lightweight list for dropdowns (id, name, slug)
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,9 +29,7 @@ export async function GET() {
 // POST /api/admin/products — Create a new product (bypasses RLS via service role)
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -180,9 +176,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/products — Update an existing product (bypasses RLS via service role)
 export async function PATCH(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -363,9 +357,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/products?id=<uuid> — Delete a product and its related data
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

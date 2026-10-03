@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import {
+  createAdminSessionToken,
+  ADMIN_COOKIE_NAME,
+  getAdminCookieOptions,
+} from "@/lib/auth/adminSession";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,9 +22,20 @@ export async function POST(request: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // 1. Check configured admin credentials (from .env.local or defaults)
-    const configuredAdminEmail = (process.env.ADMIN_EMAIL || "admin@aurelle.ae").toLowerCase().trim();
-    const configuredAdminPassword = (process.env.ADMIN_PASSWORD || "admin123").trim();
+    // 1. Check configured admin credentials (from .env.local)
+    const envAdminEmail = process.env.ADMIN_EMAIL?.trim();
+    const envAdminPassword = process.env.ADMIN_PASSWORD?.trim();
+
+    if (!envAdminEmail || !envAdminPassword) {
+      console.error("[Admin Auth Login Error]: ADMIN_EMAIL or ADMIN_PASSWORD environment variable is not configured.");
+      return NextResponse.json(
+        { success: false, error: "Admin authentication is not configured." },
+        { status: 500 }
+      );
+    }
+
+    const configuredAdminEmail = envAdminEmail.toLowerCase();
+    const configuredAdminPassword = envAdminPassword;
 
     let isAuthenticated = false;
 
@@ -83,15 +99,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set secure admin session cookie
+    // Set cryptographically signed secure admin session cookie
+    const sessionToken = createAdminSessionToken(cleanEmail, "admin");
     const response = NextResponse.json({ success: true });
-    response.cookies.set("aurelle_admin_session", "authenticated", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    });
+    response.cookies.set(ADMIN_COOKIE_NAME, sessionToken, getAdminCookieOptions());
 
     return response;
   } catch (error) {

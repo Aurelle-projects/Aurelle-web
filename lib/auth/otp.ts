@@ -1,6 +1,17 @@
 import crypto from "crypto";
 
-const SECRET = process.env.SUPABASE_SECRET_KEY || "aurelle-secure-otp-secret";
+export function getOtpSecret(): string {
+  const secret = process.env.SUPABASE_SECRET_KEY || process.env.AUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "FATAL SECURITY CONFIGURATION ERROR: SUPABASE_SECRET_KEY must be configured for OTP tokens in production."
+      );
+    }
+    return "aurelle-dev-ephemeral-otp-secret";
+  }
+  return secret;
+}
 
 /**
  * Generate a 6-digit numeric OTP string
@@ -13,10 +24,11 @@ export function generateOtp(): string {
  * Create a signed HMAC token containing the email, OTP hash, and expiration timestamp.
  */
 export function createOtpToken(email: string, otp: string, expiresInMs = 10 * 60 * 1000): string {
+  const secret = getOtpSecret();
   const normalizedEmail = email.trim().toLowerCase();
   const expiresAt = Date.now() + expiresInMs;
   const hash = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", secret)
     .update(`${normalizedEmail}:${otp.trim()}:${expiresAt}`)
     .digest("hex");
 
@@ -34,6 +46,7 @@ export function createOtpToken(email: string, otp: string, expiresInMs = 10 * 60
  */
 export function verifyOtpToken(email: string, otp: string, token: string): boolean {
   try {
+    const secret = getOtpSecret();
     const normalizedEmail = email.trim().toLowerCase();
     const payload = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
 
@@ -50,7 +63,7 @@ export function verifyOtpToken(email: string, otp: string, token: string): boole
     }
 
     const expectedHash = crypto
-      .createHmac("sha256", SECRET)
+      .createHmac("sha256", secret)
       .update(`${normalizedEmail}:${otp.trim()}:${payload.expiresAt}`)
       .digest("hex");
 
@@ -64,10 +77,11 @@ export function verifyOtpToken(email: string, otp: string, token: string): boole
  * Create a short-lived token allowing the user to reset their password after verifying OTP.
  */
 export function createResetToken(email: string, expiresInMs = 15 * 60 * 1000): string {
+  const secret = getOtpSecret();
   const normalizedEmail = email.trim().toLowerCase();
   const expiresAt = Date.now() + expiresInMs;
   const hash = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", secret)
     .update(`reset:${normalizedEmail}:${expiresAt}`)
     .digest("hex");
 
@@ -85,6 +99,7 @@ export function createResetToken(email: string, expiresInMs = 15 * 60 * 1000): s
  */
 export function verifyResetToken(email: string, token: string): boolean {
   try {
+    const secret = getOtpSecret();
     const normalizedEmail = email.trim().toLowerCase();
     const payload = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
 
@@ -101,7 +116,7 @@ export function verifyResetToken(email: string, token: string): boolean {
     }
 
     const expectedHash = crypto
-      .createHmac("sha256", SECRET)
+      .createHmac("sha256", secret)
       .update(`reset:${normalizedEmail}:${payload.expiresAt}`)
       .digest("hex");
 

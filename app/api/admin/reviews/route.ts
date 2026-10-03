@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
 // ── GET: List all reviews (admin) ────────────────────────────────────
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -69,9 +67,7 @@ export async function GET() {
 // ── DELETE: Remove a review by id ─────────────────────────────────────
 export async function DELETE(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

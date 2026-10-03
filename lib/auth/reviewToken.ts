@@ -1,18 +1,27 @@
 import crypto from "crypto";
 
-const SECRET =
-  process.env.SUPABASE_SECRET_KEY ||
-  process.env.BREVO_API_KEY ||
-  "aurelle-secure-delivery-review-token-key-2026";
+export function getReviewSecret(): string {
+  const secret = process.env.SUPABASE_SECRET_KEY || process.env.BREVO_API_KEY;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "FATAL SECURITY CONFIGURATION ERROR: SUPABASE_SECRET_KEY or BREVO_API_KEY must be configured for review tokens in production."
+      );
+    }
+    return "aurelle-dev-ephemeral-review-token-key";
+  }
+  return secret;
+}
 
 /**
  * Generate a URL-safe signed HMAC token representing an email review invitation
  * for a specific order and customer.
  */
 export function createReviewToken(orderId: string, email: string): string {
+  const secret = getReviewSecret();
   const normalizedEmail = (email || "").trim().toLowerCase();
   const hash = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", secret)
     .update(`${orderId}:${normalizedEmail}`)
     .digest("hex");
 
@@ -35,6 +44,7 @@ export function verifyReviewToken(
 ): boolean {
   try {
     if (!token) return false;
+    const secret = getReviewSecret();
     const normalizedEmail = (email || "").trim().toLowerCase();
     const raw = Buffer.from(token, "base64url").toString("utf-8");
     const payload = JSON.parse(raw);
@@ -43,7 +53,7 @@ export function verifyReviewToken(
     if (payload.email !== normalizedEmail) return false;
 
     const expectedHash = crypto
-      .createHmac("sha256", SECRET)
+      .createHmac("sha256", secret)
       .update(`${orderId}:${normalizedEmail}`)
       .digest("hex");
 

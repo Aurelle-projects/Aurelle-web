@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { uploadToCloudinary } from "@/lib/cloudinary/server";
 import { compressImageForUpload } from "@/lib/images/compress";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

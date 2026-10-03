@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AURELLE_CATEGORIES } from "@/lib/categories/data";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Check if categories table exists
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

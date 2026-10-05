@@ -58,9 +58,9 @@ export default async function HomePage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let supabase: any;
     try {
-      supabase = createAdminClient();
-    } catch {
       supabase = await createClient();
+    } catch {
+      supabase = createAdminClient();
     }
 
     try {

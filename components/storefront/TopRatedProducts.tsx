@@ -109,12 +109,9 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
     });
   };
 
-  // Auto-scroll: Only active when products actually overflow and user is not hovering/touching
+  // Auto-scroll: Active when products overflow and user is not hovering/touching
   React.useEffect(() => {
     if (!isOverflowing || paused) return;
-
-    // Only auto-scroll on screens >= 640px where horizontal overflow carousel is active
-    if (typeof window !== "undefined" && window.innerWidth < 640) return;
 
     const timer = setInterval(() => {
       const el = scrollContainerRef.current;
@@ -123,9 +120,13 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
       if (el.scrollLeft >= maxScroll - 10) {
         el.scrollTo({ left: 0, behavior: "smooth" });
       } else {
-        el.scrollBy({ left: 240, behavior: "smooth" });
+        const firstCard = el.firstElementChild as HTMLElement | null;
+        const cardWidth = firstCard ? firstCard.offsetWidth : 200;
+        const gap = window.innerWidth < 640 ? 14 : 24;
+        const scrollStep = cardWidth + gap;
+        el.scrollBy({ left: scrollStep, behavior: "smooth" });
       }
-    }, 4000);
+    }, 3500);
 
     return () => clearInterval(timer);
   }, [isOverflowing, paused]);
@@ -219,11 +220,10 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
           onTouchStart={() => setPaused(true)}
           onTouchEnd={() => setPaused(false)}
           onScroll={updateScrollState}
-          className={`w-full grid grid-cols-2 gap-3.5 sm:gap-6 ${
-            isOverflowing
-              ? "sm:flex sm:overflow-x-auto sm:scrollbar-hide sm:scroll-smooth sm:justify-start sm:pb-2"
-              : "sm:flex sm:flex-wrap sm:justify-center sm:items-center"
+          className={`w-auto -mx-4 px-4 sm:mx-0 sm:px-0 flex overflow-x-auto scroll-smooth pb-3 pt-1 gap-3.5 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+            isOverflowing ? "justify-start" : "justify-start sm:justify-center"
           }`}
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           {uniqueProducts.map((product) => {
             const images = product.product_images ?? [];
@@ -238,7 +238,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             );
 
             return (
-              <article key={product.id} className="group relative w-full sm:w-[220px] sm:shrink-0 flex flex-col">
+              <article key={product.id} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
                   <Link href={`/products/${product.slug}`} className="block w-full h-full">
                     {imageUrl ? (
@@ -246,7 +246,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                         src={imageUrl}
                         alt={image?.alt_text || product.name}
                         fill
-                        sizes="(max-width: 640px) 50vw, 220px"
+                        sizes="(max-width: 640px) 170px, 220px"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (

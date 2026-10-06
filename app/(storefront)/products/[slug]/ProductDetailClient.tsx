@@ -392,32 +392,41 @@ export default function ProductDetailClient({
             {product.name}
           </h1>
 
-          {/* Rating & Reviews Aggregate (Matching standard reference) */}
+          {/* Rating & Reviews Aggregate (Only show stars if reviews exist, otherwise show badge) */}
           <div className="flex items-center gap-2 pt-0.5">
-            <div className="flex items-center text-amber-500">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star
-                  key={s}
-                  size={14}
-                  className={
-                    reviewSummary.totalReviews > 0 &&
-                    s <= Math.round(reviewSummary.averageRating)
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-gray-300"
-                  }
-                />
-              ))}
-            </div>
             {reviewSummary.totalReviews > 0 ? (
-              <span className="text-xs text-[#5C6460]">
-                <span className="font-semibold text-[#1D211F]">
-                  {reviewSummary.averageRating.toFixed(1)}
-                </span>{" "}
-                ({reviewSummary.totalReviews}{" "}
-                {reviewSummary.totalReviews === 1 ? "review" : "reviews"})
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center text-amber-500">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      size={14}
+                      className={
+                        s <= Math.round(reviewSummary.averageRating)
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-gray-300"
+                      }
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-[#5C6460]">
+                  <span className="font-semibold text-[#1D211F]">
+                    {reviewSummary.averageRating.toFixed(1)}
+                  </span>{" "}
+                  ({reviewSummary.totalReviews}{" "}
+                  {reviewSummary.totalReviews === 1 ? "review" : "reviews"})
+                </span>
+              </div>
+            ) : product.is_out_of_stock ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-[10px] font-semibold tracking-wide border border-neutral-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+                <span>Out of Stock</span>
               </span>
             ) : (
-              <span className="text-xs text-[#8E9590]">No reviews yet</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-semibold tracking-wide border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>In Stock — Ready to Dispatch</span>
+              </span>
             )}
             {product.sku && (
               <>
@@ -548,32 +557,41 @@ export default function ProductDetailClient({
                 {product.name}
               </h1>
 
-              {/* Rating & Reviews Aggregate (Real DB ratings only) */}
+              {/* Rating & Reviews Aggregate (Only show stars if reviews exist, otherwise show badge) */}
               <div className="mt-2.5 flex items-center gap-2">
-                <div className="flex items-center text-amber-500">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      size={14}
-                      className={
-                        reviewSummary.totalReviews > 0 &&
-                        s <= Math.round(reviewSummary.averageRating)
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-gray-300"
-                      }
-                    />
-                  ))}
-                </div>
                 {reviewSummary.totalReviews > 0 ? (
-                  <span className="text-xs text-[#5C6460]">
-                    <span className="font-semibold text-[#1D211F]">
-                      {reviewSummary.averageRating.toFixed(1)}
-                    </span>{" "}
-                    ({reviewSummary.totalReviews}{" "}
-                    {reviewSummary.totalReviews === 1 ? "review" : "reviews"})
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center text-amber-500">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          size={14}
+                          className={
+                            s <= Math.round(reviewSummary.averageRating)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-gray-300"
+                          }
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-[#5C6460]">
+                      <span className="font-semibold text-[#1D211F]">
+                        {reviewSummary.averageRating.toFixed(1)}
+                      </span>{" "}
+                      ({reviewSummary.totalReviews}{" "}
+                      {reviewSummary.totalReviews === 1 ? "review" : "reviews"})
+                    </span>
+                  </div>
+                ) : product.is_out_of_stock ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-[10px] font-semibold tracking-wide border border-neutral-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+                    <span>Out of Stock</span>
                   </span>
                 ) : (
-                  <span className="text-xs text-[#8E9590]">No reviews yet</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-semibold tracking-wide border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>In Stock — Ready to Dispatch</span>
+                  </span>
                 )}
               </div>
 

@@ -55,6 +55,14 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
     return Array.from(map.values());
   }, [products]);
 
+  // Seamless infinite repetition when 2 or more products exist
+  const displayProducts = React.useMemo(() => {
+    if (uniqueProducts.length >= 2) {
+      return [...uniqueProducts, ...uniqueProducts, ...uniqueProducts];
+    }
+    return uniqueProducts;
+  }, [uniqueProducts]);
+
   // Sync wishlist state
   React.useEffect(() => {
     const updateWishlist = () => {
@@ -98,38 +106,127 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
     };
   }, [uniqueProducts, updateScrollState]);
 
+  // Resume timer ref for responsive touch & mouse auto-resume
+  const resumeTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const pauseAutoScroll = React.useCallback(() => {
+    setPaused(true);
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    // Auto-resume after 3.5s of user inactivity
+    resumeTimerRef.current = setTimeout(() => {
+      setPaused(false);
+    }, 3500);
+  }, []);
+
+  const resumeAutoScroll = React.useCallback(() => {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setPaused(false);
+    }, 1200);
+  }, []);
+
+  const getStep = React.useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return 0;
+    const first = el.children[0] as HTMLElement | null;
+    const second = el.children[1] as HTMLElement | null;
+    if (first && second) {
+      return second.offsetLeft - first.offsetLeft;
+    }
+    return (first?.offsetWidth || 170) + 14;
+  }, []);
+
+  const getSingleSetWidth = React.useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || uniqueProducts.length === 0) return 0;
+    const first = el.children[0] as HTMLElement | null;
+    const nth = el.children[uniqueProducts.length] as HTMLElement | null;
+    if (first && nth) {
+      return nth.offsetLeft - first.offsetLeft;
+    }
+    return 0;
+  }, [uniqueProducts.length]);
+
   // Navigation handlers
   const handleScroll = (direction: "left" | "right") => {
+    pauseAutoScroll();
     const el = scrollContainerRef.current;
     if (!el) return;
-    const scrollAmount = el.clientWidth * 0.75;
+    const stepWidth = getStep() || el.clientWidth * 0.75;
+    const setWidth = getSingleSetWidth();
+    if (direction === "left" && el.scrollLeft <= 10 && setWidth > 0) {
+      el.scrollLeft += setWidth;
+    }
     el.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
+      left: direction === "left" ? -stepWidth : stepWidth,
       behavior: "smooth",
     });
   };
 
-  // Auto-scroll: Active when products overflow and user is not hovering/touching
+  // Seamless Infinite Auto-Scroll: Slides forward smoothly every 2.8s
   React.useEffect(() => {
-    if (!isOverflowing || paused) return;
+    if (paused || uniqueProducts.length <= 1) return;
 
-    const timer = setInterval(() => {
+    const interval = setInterval(() => {
       const el = scrollContainerRef.current;
       if (!el) return;
-      const maxScroll = el.scrollWidth - el.clientWidth;
-      if (el.scrollLeft >= maxScroll - 10) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        const firstCard = el.firstElementChild as HTMLElement | null;
-        const cardWidth = firstCard ? firstCard.offsetWidth : 200;
-        const gap = window.innerWidth < 640 ? 14 : 24;
-        const scrollStep = cardWidth + gap;
-        el.scrollBy({ left: scrollStep, behavior: "smooth" });
-      }
-    }, 3500);
 
-    return () => clearInterval(timer);
-  }, [isOverflowing, paused]);
+      const setWidth = getSingleSetWidth();
+      const stepWidth = getStep();
+
+      if (setWidth > 0 && el.scrollLeft >= setWidth - 10) {
+        // Silently reset back by one set width so the scroll continues seamlessly forever
+        el.scrollLeft -= setWidth;
+      }
+
+      el.scrollBy({ left: stepWidth, behavior: "smooth" });
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [paused, uniqueProducts.length, getSingleSetWidth, getStep]);
+
+  // Mouse drag support
+  const isDraggingRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftStartRef = React.useRef(0);
+  const hasDraggedRef = React.useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX - el.offsetLeft;
+    scrollLeftStartRef.current = el.scrollLeft;
+    pauseAutoScroll();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startXRef.current) * 1.2;
+    if (Math.abs(walk) > 5) {
+      hasDraggedRef.current = true;
+    }
+    el.scrollLeft = scrollLeftStartRef.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      resumeAutoScroll();
+    }
+  };
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (hasDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      hasDraggedRef.current = false;
+    }
+  };
 
   const handleToggleWishlist = (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
@@ -217,15 +314,21 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
           ref={scrollContainerRef}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
-          onTouchStart={() => setPaused(true)}
-          onTouchEnd={() => setPaused(false)}
-          onScroll={updateScrollState}
-          className={`w-auto -mx-4 px-4 sm:mx-0 sm:px-0 flex overflow-x-auto scroll-smooth pb-3 pt-1 gap-3.5 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
-            isOverflowing ? "justify-start" : "justify-start sm:justify-center"
-          }`}
+          onTouchStart={pauseAutoScroll}
+          onTouchEnd={resumeAutoScroll}
+          onTouchCancel={resumeAutoScroll}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onClickCapture={handleClickCapture}
+          onScroll={() => {
+            updateScrollState();
+            pauseAutoScroll();
+          }}
+          className="w-auto -mx-4 px-4 sm:mx-0 sm:px-0 flex overflow-x-auto scroll-smooth pb-3 pt-1 gap-3.5 sm:gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] justify-start select-none cursor-grab active:cursor-grabbing"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {uniqueProducts.map((product) => {
+          {displayProducts.map((product, idx) => {
             const images = product.product_images ?? [];
             const image = images.find((item) => item.is_primary) ?? images[0];
             const imageUrl =
@@ -238,7 +341,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             );
 
             return (
-              <article key={product.id} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
+              <article key={`${product.id}-${idx}`} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
                   <Link href={`/products/${product.slug}`} prefetch={true} className="relative block w-full h-full">
                     {imageUrl ? (

@@ -189,12 +189,23 @@ export default function Footer({ settings = {} }: FooterProps) {
         </div>
 
         {/* ── Bottom Bar ───────────────────────────────────────────────── */}
-        <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-[11px] text-white/65">
+        <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-2.5 text-[11px] text-white/65">
           <p>
             &copy; {new Date().getFullYear()} Aurelle Cosmetics Trading FZ-LLC. All rights reserved.
           </p>
-          <p className="text-white/45 text-[10px] tracking-wide">
+          <p className="text-white/45 text-[10px] tracking-wide hidden sm:block">
             100% Authentic Products • UAE Delivery • Secure Checkout
+          </p>
+          <p className="text-white/55 text-[10px] tracking-wide">
+            Crafted by{" "}
+            <a
+              href="https://ekodrix.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/85 hover:text-white font-medium transition-colors hover:underline underline-offset-2"
+            >
+              Ekodrix
+            </a>
           </p>
         </div>
       </div>

@@ -240,7 +240,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             return (
               <article key={product.id} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
-                  <Link href={`/products/${product.slug}`} className="block w-full h-full">
+                  <Link href={`/products/${product.slug}`} prefetch={true} className="block w-full h-full">
                     {imageUrl ? (
                       <Image
                         src={imageUrl}
@@ -333,6 +333,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                 <div className="pt-2.5 sm:pt-3 flex flex-col text-left flex-1">
                   <Link
                     href={`/products/${product.slug}`}
+                    prefetch={true}
                     className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-2 min-h-[2.25rem] sm:min-h-0 sm:line-clamp-1"
                   >
                     {product.name}

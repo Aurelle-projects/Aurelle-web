@@ -126,7 +126,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                   return (
                     <div key={item.id} className="flex gap-3 pb-4 border-b border-[#EDE9DF] last:border-0 last:pb-0">
                       {/* Image */}
-                      <Link href={itemLink} onClick={onClose} className="shrink-0">
+                      <Link href={itemLink} prefetch={true} onClick={onClose} className="shrink-0">
                         <div className="w-[76px] h-[90px] bg-[#F5F5F5] rounded-sm overflow-hidden relative">
                           {image?.url ? (
                             <Image
@@ -154,6 +154,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                           )}
                           <Link
                             href={itemLink}
+                            prefetch={true}
                             onClick={onClose}
                             className="text-[13px] font-semibold text-[#1D211F] line-clamp-2 hover:text-[#183D2B] transition-colors leading-snug"
                           >

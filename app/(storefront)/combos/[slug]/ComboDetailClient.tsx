@@ -199,6 +199,17 @@ export default function ComboDetailClient({
           </ol>
         </nav>
 
+        {/* ── Mobile-Only Header: Combo Name at Top of Product ── */}
+        <div className="block lg:hidden mb-4 space-y-1">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
+            Curated Value Bundle
+          </span>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1D211F] leading-snug tracking-tight">
+            {combo.name}
+          </h1>
+          {combo.sku && <p className="text-[11px] text-[#8E9590]">SKU: {combo.sku}</p>}
+        </div>
+
         {/* ── Main Combo Section ────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Gallery (Col 7) */}
@@ -257,7 +268,7 @@ export default function ComboDetailClient({
 
           {/* Buy Box (Col 5) */}
           <div className="lg:col-span-5 space-y-6">
-            <div>
+            <div className="hidden lg:block">
               <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
                 Curated Value Bundle
               </span>

@@ -18,7 +18,10 @@ import {
   Plus,
   Star,
   Edit3,
+  Heart,
+  Share2,
 } from "lucide-react";
+import { toggleWishlist, isWishlisted as checkWishlisted } from "@/components/storefront/WishlistDrawer";
 
 interface ProductDetailClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,6 +78,40 @@ export default function ProductDetailClient({
   const [notEligibleMessage, setNotEligibleMessage] = useState<string | null>(null);
   const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
   const [visibleReviewsCount, setVisibleReviewsCount] = useState(5);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  useEffect(() => {
+    if (product?.id) {
+      setIsWishlisted(checkWishlisted(product.id));
+    }
+  }, [product?.id]);
+
+  const handleToggleWishlist = () => {
+    if (!product?.id) return;
+    const next = toggleWishlist(product.id);
+    setIsWishlisted(next);
+  };
+
+  const handleShare = async () => {
+    if (typeof window === "undefined") return;
+    const shareData = {
+      title: product.name,
+      text: `${product.name} | Aurelle UAE`,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled
+      }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
 
   // Progressive background loading (reviews + auth) - does NOT block product view
   useEffect(() => {
@@ -344,6 +381,53 @@ export default function ProductDetailClient({
           </ol>
         </nav>
 
+        {/* ── Mobile-Only Header: Brand, Product Name & Rating at Top of Product (Reference UX) ── */}
+        <div className="block lg:hidden mb-4 space-y-2">
+          {brandName && (
+            <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
+              {brandName}
+            </span>
+          )}
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1D211F] leading-snug tracking-tight">
+            {product.name}
+          </h1>
+
+          {/* Rating & Reviews Aggregate (Matching standard reference) */}
+          <div className="flex items-center gap-2 pt-0.5">
+            <div className="flex items-center text-amber-500">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star
+                  key={s}
+                  size={14}
+                  className={
+                    reviewSummary.totalReviews > 0 &&
+                    s <= Math.round(reviewSummary.averageRating)
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-gray-300"
+                  }
+                />
+              ))}
+            </div>
+            {reviewSummary.totalReviews > 0 ? (
+              <span className="text-xs text-[#5C6460]">
+                <span className="font-semibold text-[#1D211F]">
+                  {reviewSummary.averageRating.toFixed(1)}
+                </span>{" "}
+                ({reviewSummary.totalReviews}{" "}
+                {reviewSummary.totalReviews === 1 ? "review" : "reviews"})
+              </span>
+            ) : (
+              <span className="text-xs text-[#8E9590]">No reviews yet</span>
+            )}
+            {product.sku && (
+              <>
+                <span className="text-xs text-[#8E9590]">•</span>
+                <span className="text-[11px] text-[#8E9590]">SKU: {product.sku}</span>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* ── Main Product Section ────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Left: Gallery (Col 7) */}
@@ -389,7 +473,7 @@ export default function ProductDetailClient({
               )}
 
               {/* Status Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
                 {product.is_out_of_stock && (
                   <span className="bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2.5 py-1 uppercase rounded-none">
                     Out of Stock
@@ -406,12 +490,55 @@ export default function ProductDetailClient({
                   </span>
                 )}
               </div>
+
+              {/* Top-Right Wishlist & Share Action Buttons (Reference UX) */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                <button
+                  type="button"
+                  onClick={handleToggleWishlist}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
+                  aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  <Heart
+                    size={17}
+                    strokeWidth={1.8}
+                    className={isWishlisted ? "fill-[#183D2B] text-[#183D2B]" : "text-[#1D211F]"}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
+                  aria-label="Share product"
+                >
+                  <Share2 size={15} strokeWidth={1.8} />
+                  {copiedShare && (
+                    <span className="absolute -bottom-7 right-0 bg-[#1D211F] text-white text-[10px] py-0.5 px-1.5 rounded-xs whitespace-nowrap shadow-md">
+                      Link copied!
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Mobile Pagination Dots (Reference UX) */}
+              {productImages.length > 1 && (
+                <div className="md:hidden absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 z-10 pointer-events-none">
+                  {productImages.map((_: string, idx: number) => (
+                    <span
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        selectedImageIdx === idx ? "w-5 bg-[#183D2B]" : "w-1.5 bg-[#183D2B]/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right: Product Buy Box (Col 5) */}
           <div className="lg:col-span-5 space-y-6">
-            <div>
+            <div className="hidden lg:block">
               {brandName && (
                 <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
                   {brandName}

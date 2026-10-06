@@ -207,6 +207,22 @@ export default function WholesaleProductDetailClient({
           </ol>
         </nav>
 
+        {/* ── Mobile-Only Header: Brand & Product Name at Top of Product ── */}
+        <div className="block lg:hidden mb-4 space-y-1.5">
+          <div className="flex items-center gap-2">
+            {brandName && (
+              <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
+                {brandName}
+              </span>
+            )}
+            <span className="text-xs text-[#8E9590]">•</span>
+            <span className="text-xs font-semibold text-[#8E9590]">SKU: {product.sku || "N/A"}</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1D211F] leading-snug tracking-tight">
+            {product.name}
+          </h1>
+        </div>
+
         {/* ── Main Product Section ────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Left: Gallery (Col 7) */}
@@ -256,7 +272,7 @@ export default function WholesaleProductDetailClient({
 
           {/* Right: Buy Box (Col 5) */}
           <div className="lg:col-span-5 space-y-6">
-            <div>
+            <div className="hidden lg:block">
               <div className="flex items-center gap-2">
                 {brandName && (
                   <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">

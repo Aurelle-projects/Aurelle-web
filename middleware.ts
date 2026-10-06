@@ -14,8 +14,8 @@ import type { Database } from "@/types/database";
 // Routes that require authentication
 const PROTECTED_ROUTES = ["/account"];
 
-// Routes that require admin role
-const ADMIN_ROUTES = ["/admin"];
+// Routes that require admin session (protected in app/admin/layout.tsx via signed HMAC cookie)
+// const ADMIN_ROUTES = ["/admin"];
 
 // Routes that require wholesale approval
 const WHOLESALE_PORTAL_ROUTES = ["/wholesale/portal", "/wholesale/account"];

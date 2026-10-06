@@ -7,9 +7,19 @@ import {
   ADMIN_COOKIE_NAME,
   getAdminCookieOptions,
 } from "@/lib/auth/adminSession";
+import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`admin-login:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });
+    if (!rl.success) {
+      return NextResponse.json(
+        { success: false, error: "Too many login attempts. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {

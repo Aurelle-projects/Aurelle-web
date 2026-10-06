@@ -9,6 +9,7 @@ import {
   sendOtpEmail,
 } from "@/lib/auth/otp";
 import { hashAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,15 @@ export async function POST(request: NextRequest) {
     // STEP 1: SEND OTP
     // ─────────────────────────────────────────────────────────────
     if (action === "send-otp") {
+      const ip = getClientIp(request);
+      const rl = checkRateLimit(`admin-otp:${ip}`, { limit: 3, windowMs: 15 * 60 * 1000 });
+      if (!rl.success) {
+        return NextResponse.json(
+          { success: false, error: "Too many reset code requests. Please wait 15 minutes before requesting a new code." },
+          { status: 429 }
+        );
+      }
+
       const otp = generateOtp();
       const otpToken = createOtpToken(email, otp);
 

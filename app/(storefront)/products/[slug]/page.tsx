@@ -79,7 +79,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           .from("products")
           .select(`
             id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
-            retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
+            retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_published, is_featured, is_best_seller, is_new_arrival,
             brand:brands(name),
             category:categories(name, slug),

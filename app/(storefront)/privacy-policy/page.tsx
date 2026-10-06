@@ -1,8 +1,11 @@
 import React from "react";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
   title: "Privacy Policy | Aurelle Cosmetics Trading FZ-LLC",
-  description: "Privacy policy and data protection terms for Aurelle Cosmetics Trading FZ-LLC.",
+  description: "Privacy policy and data protection terms for Aurelle Cosmetics Trading FZ-LLC in UAE.",
+  alternates: { canonical: `${SITE_URL}/privacy-policy` },
 };
 
 export default function PrivacyPolicyPage() {

@@ -232,7 +232,7 @@ export default function ComboDetailClient({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="text-6xl font-serif text-[#183D2B]/10 font-bold">Aurelle</div>
+                <div className="text-6xl text-[#183D2B]/10 font-bold">Aurelle</div>
               )}
 
               {/* Badges */}
@@ -261,7 +261,7 @@ export default function ComboDetailClient({
               <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
                 Curated Value Bundle
               </span>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F] mt-1 leading-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
                 {combo.name}
               </h1>
 
@@ -271,11 +271,11 @@ export default function ComboDetailClient({
             {/* Price Box */}
             <div className="border-y border-[#DCCFB9]/40 py-4 space-y-1">
               <div className="flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F]">
+                <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
                   AED {Number(combo.price).toFixed(2)}
                 </span>
                 {originalPrice && originalPrice > Number(combo.price) && (
-                  <span className="text-base text-[#8E9590] line-through font-serif">
+                  <span className="text-base text-[#8E9590] line-through font-medium">
                     AED {Number(originalPrice).toFixed(2)}
                   </span>
                 )}
@@ -389,7 +389,7 @@ export default function ComboDetailClient({
         {combo.items && combo.items.length > 0 && (
           <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs space-y-6">
             <div>
-              <h2 className="text-xl font-serif font-bold text-[#1D211F]">
+              <h2 className="text-xl font-bold text-[#1D211F] tracking-tight">
                 Included in This Bundle ({combo.items.length}{" "}
                 {combo.items.length === 1 ? "Product" : "Products"})
               </h2>
@@ -443,7 +443,7 @@ export default function ComboDetailClient({
         {otherCombos.length > 0 && (
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-serif font-bold text-[#1D211F]">More Curated Bundles</h3>
+              <h3 className="text-xl font-bold text-[#1D211F] tracking-tight">More Curated Bundles</h3>
               <Link
                 href="/combos"
                 className="text-xs font-bold text-[#183D2B] hover:underline uppercase tracking-wider flex items-center gap-1"

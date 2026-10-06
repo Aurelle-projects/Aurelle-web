@@ -266,7 +266,7 @@ export default function WholesaleProductDetailClient({
                 <span className="text-xs text-[#8E9590]">•</span>
                 <span className="text-xs font-semibold text-[#8E9590]">SKU: {product.sku || "N/A"}</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F] mt-1 leading-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
                 {product.name}
               </h1>
             </div>
@@ -276,7 +276,7 @@ export default function WholesaleProductDetailClient({
               <div className="flex items-baseline justify-between">
                 <div>
                   <span className="text-xs text-[#8E9590] uppercase tracking-wider block">Wholesale Rate</span>
-                  <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F]">
+                  <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
                     {pricingResult ? formatPrice(pricingResult.effectiveUnitPrice) : formatPrice(product.wholesale_price || 0)}
                     <span className="text-xs font-normal text-[#5C6460] font-sans ml-1">/ unit</span>
                   </span>
@@ -513,7 +513,7 @@ export default function WholesaleProductDetailClient({
         {/* ── Related Wholesale Products ──────────────────────────────────── */}
         {relatedProducts.length > 0 && (
           <div className="space-y-6 pt-4">
-            <h3 className="text-xl font-serif font-bold text-[#1D211F]">Related Commercial SKUs</h3>
+            <h3 className="text-xl font-bold text-[#1D211F] tracking-tight">Related Commercial SKUs</h3>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((rel) => (
                 <ProductCard key={rel.id} product={rel} isWholesaleUser={true} />

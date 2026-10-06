@@ -417,7 +417,7 @@ export default function ProductDetailClient({
                   {brandName}
                 </span>
               )}
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F] mt-1 leading-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
                 {product.name}
               </h1>
 
@@ -458,11 +458,11 @@ export default function ProductDetailClient({
             {/* Price Box */}
             <div className="border-y border-[#DCCFB9]/40 py-4 space-y-1">
               <div className="flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1D211F]">
+                <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
                   AED {currentPrice.toFixed(2)}
                 </span>
                 {originalPrice && originalPrice > currentPrice && (
-                  <span className="text-base text-[#8E9590] line-through font-serif">
+                  <span className="text-base text-[#8E9590] line-through font-medium">
                     AED {originalPrice.toFixed(2)}
                   </span>
                 )}
@@ -666,7 +666,7 @@ export default function ProductDetailClient({
         <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#DCCFB9]/40 pb-4">
             <div>
-              <h3 className="text-lg font-serif font-bold text-[#1D211F]">Customer Reviews</h3>
+              <h3 className="text-lg font-bold text-[#1D211F] tracking-tight">Customer Reviews</h3>
               <p className="text-xs text-[#8E9590]">
                 Verified reviews from verified Aurelle purchasers only.
               </p>
@@ -812,7 +812,7 @@ export default function ProductDetailClient({
         {relatedProducts.length > 0 && (
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-serif font-bold text-[#1D211F]">You May Also Like</h3>
+              <h3 className="text-xl font-bold text-[#1D211F] tracking-tight">You May Also Like</h3>
               <Link
                 href={`/categories/${categorySlug || "all"}`}
                 className="text-xs font-bold text-[#183D2B] hover:underline uppercase tracking-wider"

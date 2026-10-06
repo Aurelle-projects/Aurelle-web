@@ -18,6 +18,7 @@ import {
   MessageSquare,
   LogOut,
   RotateCw,
+  Sparkles,
 } from "lucide-react";
 
 interface NavItem {
@@ -44,13 +45,21 @@ const NAV_GROUPS: NavGroup[] = [
     title: "SALES & ORDERS",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-      { href: "/admin/wholesale", label: "B2B Wholesale", icon: Briefcase },
+    ],
+  },
+  {
+    title: "B2B WHOLESALE",
+    items: [
+      { href: "/admin/wholesale", label: "Account Applications", icon: Briefcase, smallFont: true },
+      { href: "/admin/wholesale/enquiries", label: "Enquiries", icon: MessageSquare, smallFont: true },
+      { href: "/admin/wholesale/orders", label: "Wholesale Orders", icon: ShoppingBag, smallFont: true },
     ],
   },
   {
     title: "CATALOG & STORE",
     items: [
       { href: "/admin/products", label: "Products Catalog", icon: Package, smallFont: true },
+      { href: "/admin/combos", label: "Combo Offers", icon: Sparkles, smallFont: true },
       { href: "/admin/categories", label: "Category & Subcategory", icon: Layers, smallFont: true },
       { href: "/admin/brands", label: "Brands", icon: Tag, smallFont: true },
       { href: "/admin/hero", label: "Home Management", icon: Sliders, smallFont: true },
@@ -120,6 +129,8 @@ export default function AdminSidebar() {
                 const isActive =
                   item.href === "/admin"
                     ? pathname === "/admin"
+                    : item.href === "/admin/wholesale"
+                    ? pathname === "/admin/wholesale"
                     : item.href === "/admin/categories"
                     ? pathname.startsWith("/admin/categories") || pathname.startsWith("/admin/subcategories")
                     : pathname.startsWith(item.href);

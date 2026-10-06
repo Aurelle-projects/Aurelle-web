@@ -255,18 +255,28 @@ export default function AdminWholesalePage() {
   }
 
   async function updateStatus(id: string, newStatus: WholesaleApp["status"]) {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
-    );
-
     try {
-      await fetch("/api/admin/wholesale", {
+      const res = await fetch("/api/admin/wholesale", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: newStatus }),
       });
+      const data = await res.json();
+      if (data.success) {
+        setApplications((prev) =>
+          prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
+        );
+        if (viewingApp?.id === id) {
+          setViewingApp((prev) => (prev ? { ...prev, status: newStatus } : null));
+        }
+        setSaveMessage(data.message || `Application status updated to ${newStatus}.`);
+        setTimeout(() => setSaveMessage(null), 4000);
+      } else {
+        alert(data.error || "Failed to update application status.");
+        loadData();
+      }
     } catch {
-      // Local state fallback
+      loadData();
     }
   }
 
@@ -380,8 +390,8 @@ export default function AdminWholesalePage() {
   return (
     <div className="flex flex-col pb-16">
       <AdminHeader
-        title="B2B Wholesale Portal Management"
-        subtitle="Manage wholesale applications, review partner credentials, and configure independent wholesale banners & headlines."
+        title="Wholesale Account Applications"
+        subtitle="Review and approve B2B partner account applications, assign wholesale customer privileges, and configure wholesale portal content."
       />
 
       <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">

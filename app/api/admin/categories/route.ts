@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 import {
   getWholesaleCatalogSettings,
   setWholesaleCategoryAvailability,
@@ -20,9 +20,7 @@ function slugify(str: string) {
 // GET /api/admin/categories — Fetch all categories and subcategories from DB
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -82,9 +80,7 @@ export async function GET() {
 // POST /api/admin/categories — Create a category or subcategory
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -170,9 +166,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/categories — Update a category or subcategory
 export async function PATCH(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -274,9 +268,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/categories?id=<uuid> — Delete a category or subcategory
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("aurelle_admin_session");
-    if (!adminSession || adminSession.value !== "authenticated") {
+    if (!await verifyAdminSession()) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

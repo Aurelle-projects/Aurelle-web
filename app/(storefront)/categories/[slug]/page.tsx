@@ -55,19 +55,30 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any;
-    const { data, error } = await supabase
+    const { data: dbCat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    let query = supabase
       .from("products")
       .select(`
-        id, name, slug, sku, retail_price, compare_at_price,
+        id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
         is_new_arrival, is_featured, is_best_seller,
         brand:brands(name),
         category:categories(name, slug),
-        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-        inventory(stock_status)
+        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
       `)
-      .eq("status", "published")
-      .eq("category.slug", slug)
-      .order("created_at", { ascending: false });
+      .eq("status", "published");
+
+    if (dbCat?.id) {
+      query = query.eq("category_id", dbCat.id);
+    } else {
+      query = query.eq("category.slug", slug);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (!error && data) {
       products = data;

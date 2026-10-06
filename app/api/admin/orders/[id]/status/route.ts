@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOrderDeliveredReviewEmail } from "@/lib/email/brevo";
+import { calculateOrderStatusTransition } from "@/lib/orders/status";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +21,39 @@ export async function PATCH(
       );
     }
 
-    const status = String(rawStatus).trim().toLowerCase();
-
     const admin = createAdminClient();
 
-    // 1. Update order status
+    // 1. Fetch current order to check current status, payment_status, payment method, customer_type, notes, etc.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingOrder, error: fetchCurrentErr } = await (admin as any)
+      .from("orders")
+      .select("id, order_number, customer_type, status, payment_status, shipping_address, notes, stripe_checkout_session_id, stripe_payment_intent_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchCurrentErr || !existingOrder) {
+      return NextResponse.json(
+        { error: "Order not found." },
+        { status: 404 }
+      );
+    }
+
+    // 2. Authoritative server-side status & payment transition calculation
+    const transition = calculateOrderStatusTransition(existingOrder, rawStatus);
+    const updatePayload: Record<string, unknown> = {
+      status: transition.newFulfillmentStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (transition.paymentStatusUpdated) {
+      updatePayload.payment_status = transition.newPaymentStatus;
+    }
+
+    // 3. Update order status and payment status atomically in a single server-side operation
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: updateError } = await (admin as any)
       .from("orders")
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", id);
 
     if (updateError) {
@@ -42,17 +64,15 @@ export async function PATCH(
       );
     }
 
+    const status = transition.newFulfillmentStatus;
+    const payment_status = transition.paymentStatusUpdated
+      ? transition.newPaymentStatus
+      : existingOrder.payment_status;
+
     // Sync wholesale application status if this is a linked wholesale order
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: ordNotes } = await (admin as any)
-        .from("orders")
-        .select("notes")
-        .eq("id", id)
-        .single();
-
-      if (ordNotes?.notes) {
-        const match = ordNotes.notes.match(/\[Wholesale Application ID:\s*([a-f0-9\-]+)\]/i);
+      if (existingOrder.notes) {
+        const match = existingOrder.notes.match(/\[Wholesale Application ID:\s*([a-f0-9\-]+)\]/i);
         if (match && match[1]) {
           const appId = match[1];
           const appStatus = status === "delivered" ? "approved" : status === "cancelled" ? "rejected" : "pending";
@@ -91,6 +111,9 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         message: `Order status updated to ${status}.`,
+        status,
+        payment_status,
+        paymentStatusUpdated: transition.paymentStatusUpdated,
       });
     }
 
@@ -174,6 +197,9 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       message: `Order status updated to ${status}.`,
+      status,
+      payment_status,
+      paymentStatusUpdated: transition.paymentStatusUpdated,
       emailSent,
       emailError,
     });

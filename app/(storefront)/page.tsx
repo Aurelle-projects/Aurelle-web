@@ -9,8 +9,10 @@ import ProductSection from "@/components/storefront/ProductSection";
 import PromoBanners from "@/components/storefront/PromoBanners";
 import BrandShowcase from "@/components/storefront/BrandShowcase";
 import HomeBanners from "@/components/storefront/HomeBanners";
-import TopRatedProducts from "@/components/storefront/TopRatedProducts";
+import TopRatedProducts, { type TopRatedProduct } from "@/components/storefront/TopRatedProducts";
 import AllProductsSection from "@/components/storefront/AllProductsSection";
+import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
+import ComboOffersSection from "@/components/storefront/ComboOffersSection";
 
 export const metadata: Metadata = {
   title: "Aurelle — Everyday Essentials. Elevated.",
@@ -46,10 +48,11 @@ export default async function HomePage() {
   let categories: CategoryItem[] = [];
   let newArrivalProducts: unknown[] = [];
   let bestSellingProducts: unknown[] = [];
-  let topRatedProducts: unknown[] = [];
+  let topRatedProducts: TopRatedProduct[] = [];
   let allProducts: unknown[] = [];
   let brands: BrandItem[] = [];
   let siteSettings: SiteSettingsRow[] = [];
+  let heroBanners: any[] = [];
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +72,7 @@ export default async function HomePage() {
         allProductsResult,
         brandsResult,
         settingsResult,
+        heroBannersResult,
       ] = await Promise.all([
         supabase
           .from("categories")
@@ -84,12 +88,11 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
           .eq("status", "published")
@@ -100,24 +103,22 @@ export default async function HomePage() {
         supabase
           .from("products")
           .select(`
-            id, name, slug, retail_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            reviews(rating)
+            reviews(rating, is_published)
           `)
           .eq("status", "published")
-          .eq("reviews.is_published", true)
           .limit(100),
 
         supabase
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
             brand:brands(name),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
           .eq("status", "published")
@@ -129,13 +130,11 @@ export default async function HomePage() {
           .from("products")
           .select(
             `
-            id, name, slug, sku, retail_price, compare_at_price,
+            id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
             is_new_arrival, is_featured, is_best_seller,
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `,
           )
-          .eq("is_published", true)
           .eq("status", "published")
           .order("created_at", { ascending: false })
           .limit(12),
@@ -159,26 +158,75 @@ export default async function HomePage() {
             "showcase_section",
             "home_banners",
           ]),
+
+        supabase
+          .from("banners")
+          .select("*")
+          .eq("position", "hero")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
       ]);
 
       categories = (categoriesResult.data as CategoryItem[]) ?? [];
       newArrivalProducts = (newArrivalsResult.data as unknown[]) ?? [];
       bestSellingProducts = (bestSellersResult.data as unknown[]) ?? [];
-      topRatedProducts = ((topRatedResult.data as any[]) ?? [])
+      const rawTopRated = ((topRatedResult.data as any[]) ?? [])
         .map((product) => {
-          const ratings = (product.reviews ?? []).map((review: { rating: number }) => review.rating);
-          const rating = ratings.length > 0
-            ? ratings.reduce((sum: number, value: number) => sum + value, 0) / ratings.length
-            : 0;
-          return { ...product, rating, reviews_count: ratings.length };
+          const validReviews = (product.reviews ?? []).filter(
+            (review: { rating?: number | null; is_published?: boolean | null }) =>
+              typeof review?.rating === "number" &&
+              review.rating >= 1 &&
+              review.rating <= 5 &&
+              review.is_published !== false,
+          );
+          const ratings = validReviews.map((review: { rating: number }) => Number(review.rating));
+          const rating =
+            ratings.length > 0
+              ? Number(
+                  (
+                    ratings.reduce((sum: number, value: number) => sum + value, 0) /
+                    ratings.length
+                  ).toFixed(1),
+                )
+              : 0;
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            sku: product.sku,
+            retail_price: Number(product.retail_price) || 0,
+            compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : null,
+            tax_enabled: product.tax_enabled !== false,
+            is_out_of_stock: Boolean(product.is_out_of_stock),
+            rating,
+            reviews_count: ratings.length,
+            product_images: product.product_images ?? [],
+          } satisfies TopRatedProduct;
         })
-        .filter((product) => product.rating > 0)
-        .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count)
-        .slice(0, 10);
+        .filter((product) => product.rating > 0 && product.reviews_count > 0)
+        .sort((a, b) => b.rating - a.rating || b.reviews_count - a.reviews_count);
+
+      // Ensure each product appears strictly once by canonical product ID
+      const uniqueTopRatedMap = new Map<string, TopRatedProduct>();
+      for (const p of rawTopRated) {
+        if (p.id && !uniqueTopRatedMap.has(p.id)) {
+          uniqueTopRatedMap.set(p.id, p);
+        }
+      }
+      topRatedProducts = Array.from(uniqueTopRatedMap.values()).slice(0, 10);
 
       allProducts = (allProductsResult.data as unknown[]) ?? [];
       brands = (brandsResult.data as BrandItem[]) ?? [];
       siteSettings = (settingsResult.data as SiteSettingsRow[]) ?? [];
+
+      const rawBanners = (heroBannersResult?.data as any[]) ?? [];
+      const now = new Date();
+      heroBanners = rawBanners.filter((b: any) => {
+        if (!b || b.is_active === false) return false;
+        if (b.starts_at && new Date(b.starts_at) > now) return false;
+        if (b.ends_at && new Date(b.ends_at) < now) return false;
+        return true;
+      });
     } catch {
       // Graceful degradation — show layout without DB data
     }
@@ -230,6 +278,7 @@ export default async function HomePage() {
         title={heroData.hero_title}
         subtitle={heroData.hero_subtitle}
         heroData={heroData}
+        banners={heroBanners.length > 0 ? heroBanners : undefined}
       />
 
       {/* ─── 2. Trust Badges ─────────────────────────────────────── */}
@@ -240,6 +289,11 @@ export default async function HomePage() {
 
       {/* ─── 4. Shop By Category ─────────────────────────────────── */}
       <CategorySection categories={displayCategories} />
+
+         {topRatedProducts.length > 0 && (
+        <TopRatedProducts products={topRatedProducts} />
+      )}
+
 
       {/* ─── 5. New Arrivals Section — database products only ── */}
       <ProductSection
@@ -277,13 +331,12 @@ export default async function HomePage() {
         images={showcaseSettings.images || []}
       />
 
-      <TopRatedProducts products={topRatedProducts as any[]} />
-
- 
+   
+      {/* ─── 4b. Exclusive Combo Offers ───────────────────────────── */}
+      <ComboOffersSection />
 
    
 
-      {/* ─── 7. Promotional Dual Banners ──── */}
       <PromoBanners
         leftTagline={promoSettings.left?.tagline}
         leftTitle={promoSettings.left?.title}
@@ -298,6 +351,9 @@ export default async function HomePage() {
         rightBtnLink={promoSettings.right?.btn_link}
         rightImageUrl={promoSettings.right?.image_url || null}
       />
+
+      {/* ─── 8. B2B Wholesale Entry Point ────
+      <B2BHomeCTASection /> */}
 
       <AllProductsSection initialProducts={allProducts as any[]} />
 

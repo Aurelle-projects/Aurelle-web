@@ -11,14 +11,35 @@ export type CartRow = Database["public"]["Tables"]["carts"]["Row"];
 export type CartItemRow = Database["public"]["Tables"]["cart_items"]["Row"];
 
 // ─── Product snapshot stored in order_items ───────────────────────────────────
-export interface ProductSnapshot {
-  id: string;
+export interface ComboComponentSnapshot {
+  product_id?: string;
   name: string;
-  slug: string;
-  sku: string;
-  brand_name: string | null;
-  category_name: string | null;
-  primary_image_url: string | null;
+  sku?: string;
+  quantity: number;
+  image?: string | null;
+  retail_price?: number;
+}
+
+export interface ProductSnapshot {
+  id?: string;
+  name: string;
+  slug?: string;
+  sku?: string;
+  brand_name?: string | null;
+  category_name?: string | null;
+  primary_image_url?: string | null;
+  image?: string | null;
+  tax_enabled?: boolean;
+  is_combo?: boolean;
+  combo_id?: string | null;
+  original_price?: number;
+  compare_at_price?: number | null;
+  savings_amount?: number;
+  savings_percentage?: number;
+  components?: ComboComponentSnapshot[];
+  purchase_mode?: string;
+  units_per_box?: number;
+  total_units?: number;
 }
 
 // ─── Cart (client-facing, computed) ──────────────────────────────────────────

@@ -267,7 +267,7 @@ export default function Header({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentProfile, setCurrentProfile] = useState<{ full_name?: string | null; email?: string | null } | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<{ full_name?: string | null; email?: string | null; role?: string | null } | null>(null);
 
   // Sync wishlist from localStorage on open/close events
   const [wishlistCount2, setWishlistCount2] = useState(0);
@@ -295,7 +295,7 @@ export default function Header({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("profiles")
-          .select("full_name, email")
+          .select("full_name, email, role")
           .eq("id", user.id)
           .single()
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -313,7 +313,7 @@ export default function Header({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("profiles")
-          .select("full_name, email")
+          .select("full_name, email, role")
           .eq("id", session.user.id)
           .single()
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -330,7 +330,10 @@ export default function Header({
     };
   }, []);
 
-  const isAuthenticated = Boolean(currentUser || userRole);
+  // Strict Retail Portal Authentication: ONLY profile.role === 'customer' is treated as authenticated on Retail storefront
+  const isRetailAuthenticated = Boolean(
+    currentUser && (currentProfile?.role === "customer" || (!currentProfile?.role && userRole === "customer"))
+  );
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -720,7 +723,7 @@ export default function Header({
                       onMouseEnter={openAccount}
                       onMouseLeave={closeAccount}
                       className="relative flex flex-col items-center gap-0.5 text-[#1D211F] hover:text-[#183D2B] transition-colors p-1"
-                      aria-label={isAuthenticated ? "My account" : "Sign in"}
+                      aria-label={isRetailAuthenticated ? "My account" : "Sign in"}
                     >
                       <User size={19} strokeWidth={1.6} />
                       <span className="text-[11px] font-semibold tracking-tight">Account</span>
@@ -730,7 +733,7 @@ export default function Header({
                           onMouseLeave={closeAccount}
                           className="absolute right-0 top-full z-50 mt-2 w-48 rounded-sm bg-white p-2 text-left shadow-2xl border border-[#EDE9DF]/80"
                         >
-                          {isAuthenticated ? (
+                          {isRetailAuthenticated ? (
                             <>
                               <div className="px-3 py-2 border-b border-[#EDE9DF]/60 mb-1">
                                 <p className="text-[10px] uppercase font-bold text-[#8C938F] tracking-wider">Signed In As</p>
@@ -1274,7 +1277,7 @@ export default function Header({
 
               {/* Account & Sign Out footer (ALWAYS PINNED AND VISIBLE) */}
               <div className="p-4 border-t border-[#EDE9DF] bg-[#FAF8F5]/80 space-y-2 shrink-0">
-                {isAuthenticated ? (
+                {isRetailAuthenticated ? (
                   <>
                     {currentProfile?.full_name && (
                       <p className="text-xs text-[#8C938F] px-1 truncate">

@@ -17,6 +17,7 @@ interface ProductCardProps {
     sku?: string;
     retail_price: number;
     compare_at_price?: number | null;
+    tax_enabled?: boolean;
     is_new_arrival?: boolean;
     is_best_seller?: boolean;
     is_featured?: boolean;
@@ -34,10 +35,9 @@ interface ProductCardProps {
       alt?: string;
       is_primary?: boolean;
     }>;
-    inventory?: { stock_status: string } | null;
-    stock_status?: string;
     wholesale_price?: number | null;
     wholesale_moq?: number | null;
+    is_out_of_stock?: boolean;
   };
   isWholesaleUser?: boolean;
   badge?: string;
@@ -52,9 +52,12 @@ export default function ProductCard({
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
+  const isOutOfStock = Boolean(product.is_out_of_stock);
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (isOutOfStock) return;
 
     addItem({
@@ -66,6 +69,8 @@ export default function ProductCard({
       short_description: "",
       retail_price: product.retail_price,
       compare_at_price: product.compare_at_price || undefined,
+      tax_enabled: product.tax_enabled !== false,
+      is_out_of_stock: isOutOfStock,
       category_id: "",
       category_slug: product.category?.slug || "",
       category_name: product.category?.name || "",
@@ -75,8 +80,6 @@ export default function ProductCard({
       is_best_seller: Boolean(product.is_best_seller),
       is_new_arrival: Boolean(product.is_new_arrival),
       images: imageUrl ? [{ url: imageUrl, alt: imageAlt, is_primary: true }] : [],
-      stock_quantity: 1,
-      stock_status: isOutOfStock ? "out_of_stock" : "in_stock",
       wholesale_moq: product.wholesale_moq || 1,
       wholesale_price: product.wholesale_price || product.retail_price,
       rating: 0,
@@ -118,8 +121,6 @@ export default function ProductCard({
   const imageAlt =
     primaryImage?.alt_text ?? primaryLegacyImage?.alt ?? `${product.name} product image`;
 
-  const stockStatus = product.inventory?.stock_status ?? product.stock_status ?? "in_stock";
-  const isOutOfStock = stockStatus === "out_of_stock";
   const isOnSale =
     Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
 
@@ -155,10 +156,10 @@ export default function ProductCard({
           )}
         </Link>
 
-        {/* Top-Left Badge: Sold Out, or MOQ Badge for Wholesale, or Custom/Sale Badge for Retail */}
+        {/* Top-Left Badge: Out of Stock, MOQ Badge for Wholesale, or Custom/Sale Badge for Retail */}
         {isOutOfStock ? (
-          <span className="absolute top-3 left-3 bg-[#8E9590] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
-            Sold out
+          <span className="absolute top-3 left-3 bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
+            Out of Stock
           </span>
         ) : isWholesaleUser ? (
           <span className="absolute top-3 left-3 bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase rounded-none pointer-events-none z-10">
@@ -195,29 +196,40 @@ export default function ProductCard({
         </button>
 
         {/* Desktop View: Slide-up Hover Add to Cart Button (retail only) */}
-        {!isOutOfStock && !isWholesaleUser && (
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#183D2B] hover:bg-[#102D20] px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 cursor-pointer shadow-md z-10"
-            aria-label={`Add ${product.name} to cart`}
-          >
-            {isAdded ? (
-              <>
-                <Check size={14} className="stroke-[2.5]" />
-                <span>Added</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>Add to Cart</span>
-              </>
-            )}
-          </button>
+        {!isWholesaleUser && (
+          isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#8E9590] cursor-not-allowed px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 shadow-md z-10"
+              aria-label={`${product.name} is out of stock`}
+            >
+              <span>Out of Stock</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="hidden sm:flex absolute bottom-3 left-3 right-3 translate-y-2 bg-[#183D2B] hover:bg-[#102D20] px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 items-center justify-center gap-2 cursor-pointer shadow-md z-10"
+              aria-label={`Add ${product.name} to cart`}
+            >
+              {isAdded ? (
+                <>
+                  <Check size={14} className="stroke-[2.5]" />
+                  <span>Added</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={14} />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
+          )
         )}
 
         {/* Mobile View: Bottom-Right Round Add to Cart Button (Icon Only - retail only) */}
-        {!isOutOfStock && !isWholesaleUser && (
+        {!isWholesaleUser && !isOutOfStock && (
           <button
             type="button"
             onClick={handleAddToCart}

@@ -1,0 +1,154 @@
+[
+  {
+    "id": "RET-PRC-01",
+    "scenario": "Standard taxable retail line item (100 AED x 2 @ 5% VAT)",
+    "expected": "lineSubtotal=200, lineTax=10, lineTotal=210",
+    "actual": "lineSubtotal=200, lineTax=10, lineTotal=210",
+    "status": "VERIFIED",
+    "evidence": "{\"lineSubtotal\":200,\"lineTax\":10,\"lineTotal\":210}"
+  },
+  {
+    "id": "RET-PRC-02",
+    "scenario": "Tax-exempt retail line item (tax_enabled: false)",
+    "expected": "lineSubtotal=200, lineTax=0, lineTotal=200",
+    "actual": "lineSubtotal=200, lineTax=0, lineTotal=200",
+    "status": "VERIFIED",
+    "evidence": "{\"lineSubtotal\":200,\"lineTax\":0,\"lineTotal\":200}"
+  },
+  {
+    "id": "RET-PRC-03",
+    "scenario": "Fractional currency 49.95 AED x 3 rounding precision",
+    "expected": "lineSubtotal=149.85, lineTax=7.49, lineTotal=157.34",
+    "actual": "lineSubtotal=149.85, lineTax=7.49, lineTotal=157.34",
+    "status": "VERIFIED",
+    "evidence": "{\"lineSubtotal\":149.85,\"lineTax\":7.49,\"lineTotal\":157.34}"
+  },
+  {
+    "id": "RET-SHP-01",
+    "scenario": "Order subtotal < 199 AED incurs 20 AED shipping fee",
+    "expected": "subtotal=100, shipping=20, tax=5, total=125",
+    "actual": "subtotal=100, shipping=20, tax=5, total=125",
+    "status": "VERIFIED",
+    "evidence": "{\"subtotal\":100,\"taxableAmount\":100,\"taxExemptAmount\":0,\"taxAmount\":5,\"taxRate\":0.05,\"hasTaxableItems\":true,\"discountAmount\":0,\"shippingAmount\":20,\"total\":125}"
+  },
+  {
+    "id": "RET-SHP-02",
+    "scenario": "Order subtotal exactly 199 AED receives Free Shipping (0 AED)",
+    "expected": "subtotal=199, shipping=0, tax=9.95, total=208.95",
+    "actual": "subtotal=199, shipping=0, tax=9.95, total=208.95",
+    "status": "VERIFIED",
+    "evidence": "{\"subtotal\":199,\"taxableAmount\":199,\"taxExemptAmount\":0,\"taxAmount\":9.95,\"taxRate\":0.05,\"hasTaxableItems\":true,\"discountAmount\":0,\"shippingAmount\":0,\"total\":208.95}"
+  },
+  {
+    "id": "RET-PRC-04",
+    "scenario": "Mixed taxable/exempt order with 25 AED coupon discount",
+    "expected": "subtotal=250, taxable=100, taxExempt=150, tax=5, discount=25, total=230",
+    "actual": "subtotal=250, taxable=100, taxExempt=150, tax=5, total=230",
+    "status": "VERIFIED",
+    "evidence": "{\"subtotal\":250,\"taxableAmount\":100,\"taxExemptAmount\":150,\"taxAmount\":5,\"taxRate\":0.05,\"hasTaxableItems\":true,\"discountAmount\":25,\"shippingAmount\":0,\"total\":230}"
+  },
+  {
+    "id": "SEC-TMP-01",
+    "scenario": "Negative quantity clamped to 0 in pricing calculation",
+    "expected": "lineSubtotal=0, lineTax=0, lineTotal=0",
+    "actual": "lineSubtotal=0, lineTax=0, lineTotal=0",
+    "status": "VERIFIED",
+    "evidence": "{\"lineSubtotal\":0,\"lineTax\":0,\"lineTotal\":0}"
+  },
+  {
+    "id": "SEC-TMP-02",
+    "scenario": "Negative unit price clamped to 0 in pricing calculation",
+    "expected": "lineSubtotal=0, lineTax=0, lineTotal=0",
+    "actual": "lineSubtotal=0, lineTax=0, lineTotal=0",
+    "status": "VERIFIED",
+    "evidence": "{\"lineSubtotal\":0,\"lineTax\":0,\"lineTotal\":0}"
+  },
+  {
+    "id": "WHS-MOQ-01",
+    "scenario": "Wholesale unit purchase below MOQ (qty 5 < MOQ 10) throws Error",
+    "expected": "Throws 'below product MOQ'",
+    "actual": "Error correctly thrown",
+    "status": "VERIFIED",
+    "evidence": "{\"qty\":5,\"moq\":10}"
+  },
+  {
+    "id": "WHS-PRC-01",
+    "scenario": "Wholesale unit purchase at exact MOQ (10 units @ 50 AED)",
+    "expected": "quantity=10, effectiveUnitPrice=50, subtotal=500",
+    "actual": "quantity=10, effectiveUnitPrice=50, subtotal=500",
+    "status": "VERIFIED",
+    "evidence": "{\"purchaseMode\":\"unit\",\"quantity\":10,\"totalUnits\":10,\"unitsPerBox\":12,\"unitPrice\":50,\"boxPrice\":540,\"tierPriceApplied\":50,\"effectiveUnitPrice\":50,\"subtotal\":500}"
+  },
+  {
+    "id": "WHS-PRC-02",
+    "scenario": "Wholesale volume tier matching (50 units @ Tier 2: 45 AED)",
+    "expected": "quantity=50, effectiveUnitPrice=45, subtotal=2250",
+    "actual": "quantity=50, effectiveUnitPrice=45, subtotal=2250",
+    "status": "VERIFIED",
+    "evidence": "{\"purchaseMode\":\"unit\",\"quantity\":50,\"totalUnits\":50,\"unitsPerBox\":12,\"unitPrice\":50,\"boxPrice\":540,\"tierPriceApplied\":45,\"effectiveUnitPrice\":45,\"subtotal\":2250}"
+  },
+  {
+    "id": "WHS-BOX-01",
+    "scenario": "Wholesale Full Box calculation (2 boxes of 12 units @ 540 AED/box)",
+    "expected": "quantity=2, totalUnits=24, effectiveUnitPrice=540, subtotal=1080",
+    "actual": "quantity=2, totalUnits=24, effectiveUnitPrice=540, subtotal=1080",
+    "status": "VERIFIED",
+    "evidence": "{\"purchaseMode\":\"box\",\"quantity\":2,\"totalUnits\":24,\"unitsPerBox\":12,\"unitPrice\":50,\"boxPrice\":540,\"tierPriceApplied\":null,\"effectiveUnitPrice\":540,\"subtotal\":1080}"
+  },
+  {
+    "id": "WHS-BOX-02",
+    "scenario": "Full box mode rejected when wholesale_box_enabled is false",
+    "expected": "Throws 'Full box purchase mode is disabled'",
+    "actual": "Error correctly thrown",
+    "status": "VERIFIED",
+    "evidence": "{}"
+  },
+  {
+    "id": "WHS-ORD-01",
+    "scenario": "Wholesale multi-item aggregate order subtotal calculation",
+    "expected": "subtotal=3830, totalPayable=3830",
+    "actual": "subtotal=3830, totalPayable=3830",
+    "status": "VERIFIED",
+    "evidence": "{\"subtotal\":3830,\"totalPayable\":3830}"
+  },
+  {
+    "id": "ADM-BOX-01",
+    "scenario": "Admin box pricing comparison helper (12 units @ 50 = 600 vs 540 box = 10% lower)",
+    "expected": "calculatedValue=600, diff=60, percentage=10, isLower=true",
+    "actual": "calculatedValue=600, diff=60, percentage=10, isLower=true",
+    "status": "VERIFIED",
+    "evidence": "{\"calculatedValue\":600,\"diff\":60,\"percentage\":10,\"isHigher\":false,\"isEqual\":false,\"isLower\":true}"
+  },
+  {
+    "id": "AUT-SCR-01",
+    "scenario": "Admin password scrypt hash and constant-time verification",
+    "expected": "valid=true, invalid=false",
+    "actual": "valid=true, invalid=false",
+    "status": "VERIFIED",
+    "evidence": "{\"saltLength\":32,\"hashLength\":128}"
+  },
+  {
+    "id": "AUT-CMP-01",
+    "scenario": "safeCompare constant-time string comparison",
+    "expected": "match=true, mismatch=false",
+    "actual": "match=true, mismatch=false",
+    "status": "VERIFIED",
+    "evidence": "{}"
+  },
+  {
+    "id": "SEC-HDR-01",
+    "scenario": "next.config.ts security headers declaration (nosniff, frame DENY, HSTS, Permissions)",
+    "expected": "All 5 headers configured",
+    "actual": "All 5 headers present",
+    "status": "VERIFIED",
+    "evidence": "{\"hasNosniff\":true,\"hasFrameDeny\":true,\"hasHSTS\":true,\"hasPermPolicy\":true,\"hasXSS\":true}"
+  },
+  {
+    "id": "SEC-LEAK-01",
+    "scenario": "Source code scan for hardcoded live Stripe secrets",
+    "expected": "NOT FOUND",
+    "actual": "NOT FOUND",
+    "status": "VERIFIED",
+    "evidence": "{}"
+  }
+]

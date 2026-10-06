@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import BannerLinkPicker from "@/components/admin/BannerLinkPicker";
-import { createClient } from "@/lib/supabase/client";
 import {
   Check,
   AlertCircle,
@@ -12,10 +11,36 @@ import {
   Truck,
   ShieldCheck,
   CreditCard,
-  Headphones,
   RotateCcw,
-  Sparkles,
+  Plus,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Layers,
+  ChevronRight,
 } from "lucide-react";
+
+export interface AdminHeroBanner {
+  id: string;
+  title: string;
+  subtitle: string;
+  overline: string;
+  link_text: string;
+  link_url: string;
+  image_url: string | null;
+  image_public_id: string | null;
+  mobile_image_url: string | null;
+  mobile_image_public_id: string | null;
+  product_image_url: string | null;
+  product_image_public_id: string | null;
+  position: string;
+  sort_order: number;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+}
 
 interface HeroData {
   top_announcement: string;
@@ -165,13 +190,11 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
   const [loaded, setLoaded] = React.useState(false);
   const [productCategoryId, setProductCategoryId] = React.useState("");
 
-    // Derive type from saved value on first render
   React.useEffect(() => {
     if (!value || value === "/shop") { setType("shop"); return; }
     if (value.startsWith("/shop?category=")) { setType("category"); return; }
     if (value.startsWith("/shop?subcategory=")) { setType("subcategory"); return; }
     if (value.startsWith("/products/")) { setType("product"); return; }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
@@ -179,7 +202,6 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
     if (selectedProduct) setProductCategoryId(selectedProduct.category_id ?? "");
   }, [products, value]);
 
-  // Fetch from admin APIs (service-role key, bypasses RLS)
   React.useEffect(() => {
     async function load() {
       try {
@@ -201,12 +223,10 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
   }, []);
 
   const filteredProducts = products.filter((product) => product.category_id === productCategoryId);
-
   const selectClass = "w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded text-xs text-[#1D211F] outline-none focus:border-[#183D2B]";
 
   return (
     <div className="space-y-2">
-      {/* Type picker */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
         {(["shop", "category", "subcategory", "product"] as LinkType[]).map((t) => (
           <button
@@ -227,7 +247,6 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
         ))}
       </div>
 
-      {/* Dropdown for category / subcategory / product */}
       {type === "category" && (
         <select
           className={selectClass}
@@ -289,15 +308,14 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
           </select>
         </div>
       )}
-
     </div>
   );
 }
 
-
-
 export default function AdminHeroPage() {
   const [formData, setFormData] = useState<HeroData>(DEFAULT_HERO_DATA);
+  const [heroBanners, setHeroBanners] = useState<AdminHeroBanner[]>([]);
+  const [expandedBannerId, setExpandedBannerId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -306,8 +324,35 @@ export default function AdminHeroPage() {
       try {
         const res = await fetch("/api/admin/hero");
         const data = await res.json();
-        if (data.success && data.hero) {
-          setFormData((prev) => ({ ...prev, ...data.hero }));
+        if (data.success) {
+          if (data.hero) {
+            setFormData((prev) => ({ ...prev, ...data.hero }));
+          }
+          if (Array.isArray(data.banners) && data.banners.length > 0) {
+            const formatted: AdminHeroBanner[] = data.banners.map((b: any, index: number) => ({
+              id: b.id || `temp-${index}`,
+              title: b.title || "EVERYDAY ESSENTIALS. ELEVATED",
+              subtitle: b.subtitle || "",
+              overline: b.overline || b.hero_tagline || "",
+              link_text: b.link_text || b.cta_primary_text || "SHOP COLLECTION",
+              link_url: b.link_url || b.cta_primary_href || "/shop",
+              image_url: b.image_url || b.background_image_url || b.product_image_url || null,
+              image_public_id: b.image_public_id || b.background_image_public_id || b.product_image_public_id || null,
+              mobile_image_url: b.mobile_image_url || null,
+              mobile_image_public_id: b.mobile_image_public_id || null,
+              product_image_url: b.product_image_url || null,
+              product_image_public_id: b.product_image_public_id || null,
+              position: "hero",
+              sort_order: typeof b.sort_order === "number" ? b.sort_order : index,
+              is_active: b.is_active !== false,
+              starts_at: b.starts_at || null,
+              ends_at: b.ends_at || null,
+            }));
+            setHeroBanners(formatted);
+            if (formatted.length > 0 && formatted[0]) {
+              setExpandedBannerId(formatted[0].id);
+            }
+          }
         }
       } catch {}
     }
@@ -316,6 +361,69 @@ export default function AdminHeroPage() {
 
   function handleChange(field: keyof HeroData, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  }
+
+  // Banner Actions
+  function handleAddBanner() {
+    const newBanner: AdminHeroBanner = {
+      id: `temp-${Date.now()}`,
+      title: "NEW COLLECTION TITLE",
+      subtitle: "Discover newly curated beauty and lifestyle products.",
+      overline: "SUMMER ESSENTIALS",
+      link_text: "EXPLORE NOW",
+      link_url: "/shop",
+      image_url: null,
+      image_public_id: null,
+      mobile_image_url: null,
+      mobile_image_public_id: null,
+      product_image_url: null,
+      product_image_public_id: null,
+      position: "hero",
+      sort_order: heroBanners.length,
+      is_active: true,
+      starts_at: null,
+      ends_at: null,
+    };
+    const updated = [...heroBanners, newBanner];
+    setHeroBanners(updated);
+    setExpandedBannerId(newBanner.id);
+  }
+
+  function handleUpdateBanner(id: string, updates: Partial<AdminHeroBanner>) {
+    setHeroBanners((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...updates } : b))
+    );
+  }
+
+  function handleDeleteBanner(id: string) {
+    if (heroBanners.length <= 1) {
+      alert("At least one hero banner is required.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this hero slide?")) return;
+    const updated = heroBanners
+      .filter((b) => b.id !== id)
+      .map((b, idx) => ({ ...b, sort_order: idx }));
+    setHeroBanners(updated);
+    if (expandedBannerId === id) {
+      setExpandedBannerId(updated[0]?.id || null);
+    }
+  }
+
+  function handleMoveBanner(index: number, direction: "up" | "down") {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= heroBanners.length) return;
+
+    const itemA = heroBanners[index];
+    const itemB = heroBanners[targetIndex];
+    if (!itemA || !itemB) return;
+
+    const updated = [...heroBanners];
+    updated[index] = itemB;
+    updated[targetIndex] = itemA;
+
+    const reordered = updated.map((b, idx) => ({ ...b, sort_order: idx }));
+    setHeroBanners(reordered);
   }
 
   async function handleSave(e?: React.FormEvent) {
@@ -327,11 +435,39 @@ export default function AdminHeroPage() {
       const res = await fetch("/api/admin/hero", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          banners: heroBanners,
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Save failed");
-      setMessage({ text: "All changes saved successfully!", type: "success" });
+
+      if (Array.isArray(data.banners)) {
+        setHeroBanners(
+          data.banners.map((b: any, index: number) => ({
+            id: b.id || `temp-${index}`,
+            title: b.title || "EVERYDAY ESSENTIALS. ELEVATED",
+            subtitle: b.subtitle || "",
+            overline: b.overline || b.hero_tagline || "",
+            link_text: b.link_text || b.cta_primary_text || "SHOP COLLECTION",
+            link_url: b.link_url || b.cta_primary_href || "/shop",
+            image_url: b.image_url || b.background_image_url || b.product_image_url || null,
+            image_public_id: b.image_public_id || b.background_image_public_id || b.product_image_public_id || null,
+            mobile_image_url: b.mobile_image_url || null,
+            mobile_image_public_id: b.mobile_image_public_id || null,
+            product_image_url: b.product_image_url || null,
+            product_image_public_id: b.product_image_public_id || null,
+            position: "hero",
+            sort_order: typeof b.sort_order === "number" ? b.sort_order : index,
+            is_active: b.is_active !== false,
+            starts_at: b.starts_at || null,
+            ends_at: b.ends_at || null,
+          }))
+        );
+      }
+
+      setMessage({ text: "All changes and hero banners saved successfully!", type: "success" });
     } catch (err) {
       setMessage({
         text: err instanceof Error ? err.message : "Failed to save changes.",
@@ -346,20 +482,21 @@ export default function AdminHeroPage() {
     <div className="flex flex-col pb-16">
       <AdminHeader
         title="Home Management"
-        subtitle="Customize announcement bar, hero banners, trust badges, and the family collection banner."
+        subtitle="Customize announcement bar, hero slider banners, trust badges, and promotional sections."
       />
 
       <div className="p-4 md:p-6 max-w-5xl mx-auto w-full space-y-4">
         {/* Top Quick Bar */}
         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#DCCFB9]/60 shadow-xs">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#183D2B]">
+            <Layers size={15} />
             <span>Storefront Visual Customizer</span>
           </div>
           <button
             type="button"
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             <Save size={13} />
             <span>{isSaving ? "Saving..." : "Save All Changes"}</span>
@@ -419,142 +556,301 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          {/* 2. Main Hero Section */}
+          {/* 2. Main Hero Section — MULTI-BANNER SLIDER CMS */}
           <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
-            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
-              2. Main Hero Section
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Top Tagline / Overline (Small text above headline)
-                </label>
-                <input
-                  type="text"
-                  value={formData.hero_tagline}
-                  onChange={(e) => handleChange("hero_tagline", e.target.value)}
-                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
-                  placeholder="e.g. NATURAL CARE FOR A BRIGHTER YOU"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Hero Headline
-                </label>
-                <input
-                  type="text"
-                  value={formData.hero_title}
-                  onChange={(e) => handleChange("hero_title", e.target.value)}
-                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
-                  placeholder="Enter hero headline"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Hero Subtitle
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.hero_subtitle}
-                  onChange={(e) => handleChange("hero_subtitle", e.target.value)}
-                  className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
-                  placeholder="Enter hero subtitle"
-                />
-              </div>
-
+            <div className="flex items-center justify-between border-b border-[#DCCFB9]/30 pb-2">
               <div>
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Call-to-Action Text
-                </label>
-                <input
-                  type="text"
-                  value={formData.cta_primary_text}
-                  onChange={(e) => handleChange("cta_primary_text", e.target.value)}
-                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
-                  placeholder="Enter button text (e.g. SHOP COLLECTION)"
-                />
+                <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider">
+                  2. Hero Slider Banners ({heroBanners.length} Slide{heroBanners.length === 1 ? "" : "s"})
+                </h2>
+                <p className="text-[11px] text-[#5C6460] mt-0.5">
+                  Manage multiple hero slides with autoplay and mobile swipe. When multiple slides are active, they slide automatically on the storefront.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={handleAddBanner}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-[11px] font-bold uppercase tracking-wider rounded-md shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Add Slide</span>
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Call-to-Action Link
-                </label>
-                <input
-                  type="text"
-                  value={formData.cta_primary_href}
-                  onChange={(e) => handleChange("cta_primary_href", e.target.value)}
-                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
-                  placeholder="Enter button link (e.g. /shop)"
-                />
-              </div>
+            {/* Banners List */}
+            <div className="space-y-3">
+              {heroBanners.map((banner, index) => {
+                const isExpanded = expandedBannerId === banner.id;
+                const desktopImg = banner.image_url;
+                const mobileImg = banner.mobile_image_url;
 
-              {/* Hero Banner Images — 2-column: Desktop | Mobile */}
-              <div className="md:col-span-2 pt-1">
-                <p className="text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-2">Hero Banner Images</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Desktop Banner */}
-                  <div>
-                    <CloudinaryUploader
-                      label="Desktop Banner"
-                      description="Shown on tablet & desktop (≥768px). Recommended: 1920×1080 landscape."
-                      folder="aurelle/hero"
-                      aspectRatio="hero"
-                      value={formData.background_image_url || formData.product_image_url}
-                      publicId={formData.background_image_public_id || formData.product_image_public_id}
-                      onUploadSuccess={(asset: CloudinaryAsset) => {
-                        const updated = {
-                          ...formData,
-                          background_image_url: asset.secure_url,
-                          background_image_public_id: asset.public_id,
-                          product_image_url: asset.secure_url,
-                          product_image_public_id: asset.public_id,
-                        };
-                        setFormData(updated);
-                        setMessage({ text: "Desktop banner uploaded & active!", type: "success" });
-                      }}
-                      onRemove={() => {
-                        setFormData({
-                          ...formData,
-                          background_image_url: null,
-                          background_image_public_id: null,
-                          product_image_url: null,
-                          product_image_public_id: null,
-                        });
-                      }}
-                    />
+                return (
+                  <div
+                    key={banner.id}
+                    className={`border rounded-lg transition-all ${
+                      banner.is_active
+                        ? isExpanded
+                          ? "border-[#183D2B] bg-white shadow-xs"
+                          : "border-[#DCCFB9] bg-[#FAFAF8]"
+                        : "border-dashed border-[#DCCFB9] bg-gray-50/70 opacity-80"
+                    }`}
+                  >
+                    {/* Slide Header Bar */}
+                    <div className="flex items-center justify-between p-3 gap-3">
+                      {/* Left: Reorder & Thumbnail & Info */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex flex-col gap-0.5 text-gray-400">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveBanner(index, "up")}
+                            disabled={index === 0}
+                            className="hover:text-[#183D2B] disabled:opacity-20 cursor-pointer"
+                            title="Move Up"
+                          >
+                            <ChevronUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveBanner(index, "down")}
+                            disabled={index === heroBanners.length - 1}
+                            className="hover:text-[#183D2B] disabled:opacity-20 cursor-pointer"
+                            title="Move Down"
+                          >
+                            <ChevronDown size={14} />
+                          </button>
+                        </div>
+
+                        {/* Slide Badge */}
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-[#183D2B]/10 text-[#183D2B] rounded">
+                          Slide #{index + 1}
+                        </span>
+
+                        {/* Miniature Preview */}
+                        {desktopImg ? (
+                          <div className="w-12 h-7 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-300 relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={desktopImg}
+                              alt="Thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-7 rounded bg-gray-200 border border-gray-300 flex items-center justify-center text-[9px] text-gray-400 shrink-0">
+                            No Img
+                          </div>
+                        )}
+
+                        {/* Title & Overline */}
+                        <div className="min-w-0 truncate">
+                          <p className="text-xs font-bold text-[#1D211F] truncate">
+                            {banner.title || "Untitled Slide"}
+                          </p>
+                          {banner.overline && (
+                            <p className="text-[10px] text-[#5C6460] uppercase tracking-wider truncate">
+                              {banner.overline}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Active Toggle & Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Active status button */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateBanner(banner.id, { is_active: !banner.is_active })
+                          }
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                            banner.is_active
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                          }`}
+                        >
+                          {banner.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{banner.is_active ? "Active" : "Hidden"}</span>
+                        </button>
+
+                        {/* Expand / Collapse */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedBannerId(isExpanded ? null : banner.id)
+                          }
+                          className="px-2.5 py-1 bg-white border border-[#DCCFB9] hover:border-[#183D2B] text-xs font-semibold rounded text-[#1D211F] cursor-pointer"
+                        >
+                          {isExpanded ? "Collapse" : "Edit Slide"}
+                        </button>
+
+                        {/* Delete Slide */}
+                        {heroBanners.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBanner(banner.id)}
+                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                            title="Delete slide"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Slide Expanded Editing Panel */}
+                    {isExpanded && (
+                      <div className="p-4 border-t border-[#DCCFB9]/50 bg-white space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                          {/* Overline */}
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                              Top Tagline / Overline (Small text above headline)
+                            </label>
+                            <input
+                              type="text"
+                              value={banner.overline}
+                              onChange={(e) =>
+                                handleUpdateBanner(banner.id, { overline: e.target.value })
+                              }
+                              className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                              placeholder="e.g. NATURAL CARE FOR A BRIGHTER YOU"
+                            />
+                          </div>
+
+                          {/* Headline */}
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                              Hero Headline (Line breaks will format across lines)
+                            </label>
+                            <input
+                              type="text"
+                              value={banner.title}
+                              onChange={(e) =>
+                                handleUpdateBanner(banner.id, { title: e.target.value })
+                              }
+                              className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                              placeholder="Enter hero headline"
+                            />
+                          </div>
+
+                          {/* Subtitle */}
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                              Hero Subtitle
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={banner.subtitle}
+                              onChange={(e) =>
+                                handleUpdateBanner(banner.id, { subtitle: e.target.value })
+                              }
+                              className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
+                              placeholder="Enter hero subtitle"
+                            />
+                          </div>
+
+                          {/* CTA Text */}
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                              Call-to-Action Text
+                            </label>
+                            <input
+                              type="text"
+                              value={banner.link_text}
+                              onChange={(e) =>
+                                handleUpdateBanner(banner.id, { link_text: e.target.value })
+                              }
+                              className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
+                              placeholder="Enter button text (e.g. SHOP COLLECTION)"
+                            />
+                          </div>
+
+                          {/* CTA Link */}
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                              Call-to-Action Link
+                            </label>
+                            <LinkPicker
+                              value={banner.link_url}
+                              onChange={(val) =>
+                                handleUpdateBanner(banner.id, { link_url: val })
+                              }
+                            />
+                          </div>
+
+                          {/* Hero Banner Images — 2-column: Desktop | Mobile */}
+                          <div className="md:col-span-2 pt-1 border-t border-[#DCCFB9]/40">
+                            <p className="text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-2">
+                              Hero Slide Banner Images
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                              {/* Desktop Banner */}
+                              <div>
+                                <CloudinaryUploader
+                                  label="Desktop Banner"
+                                  description="Shown on tablet & desktop (≥768px). Recommended: 1920×1080 landscape."
+                                  folder="aurelle/hero"
+                                  aspectRatio="hero"
+                                  value={banner.image_url}
+                                  publicId={banner.image_public_id}
+                                  onUploadSuccess={(asset: CloudinaryAsset) => {
+                                    handleUpdateBanner(banner.id, {
+                                      image_url: asset.secure_url,
+                                      image_public_id: asset.public_id,
+                                      product_image_url: asset.secure_url,
+                                      product_image_public_id: asset.public_id,
+                                    });
+                                    setMessage({
+                                      text: `Desktop banner for Slide #${index + 1} uploaded!`,
+                                      type: "success",
+                                    });
+                                  }}
+                                  onRemove={() => {
+                                    handleUpdateBanner(banner.id, {
+                                      image_url: null,
+                                      image_public_id: null,
+                                      product_image_url: null,
+                                      product_image_public_id: null,
+                                    });
+                                  }}
+                                />
+                              </div>
+
+                              {/* Mobile Banner */}
+                              <div>
+                                <CloudinaryUploader
+                                  label="Mobile Banner"
+                                  description="Shown on mobile only (<768px). Recommended: 9×16 portrait."
+                                  folder="aurelle/hero"
+                                  aspectRatio="hero"
+                                  value={banner.mobile_image_url}
+                                  publicId={banner.mobile_image_public_id}
+                                  onUploadSuccess={(asset: CloudinaryAsset) => {
+                                    handleUpdateBanner(banner.id, {
+                                      mobile_image_url: asset.secure_url,
+                                      mobile_image_public_id: asset.public_id,
+                                    });
+                                    setMessage({
+                                      text: `Mobile banner for Slide #${index + 1} uploaded!`,
+                                      type: "success",
+                                    });
+                                  }}
+                                  onRemove={() => {
+                                    handleUpdateBanner(banner.id, {
+                                      mobile_image_url: null,
+                                      mobile_image_public_id: null,
+                                    });
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Mobile Banner */}
-                  <div>
-                    <CloudinaryUploader
-                      label="Mobile Banner"
-                      description="Shown on mobile only (<768px). Recommended: 9×16 portrait for best fit."
-                      folder="aurelle/hero"
-                      aspectRatio="hero"
-                      value={formData.mobile_image_url}
-                      publicId={formData.mobile_image_public_id}
-                      onUploadSuccess={(asset: CloudinaryAsset) => {
-                        const updated = {
-                          ...formData,
-                          mobile_image_url: asset.secure_url,
-                          mobile_image_public_id: asset.public_id,
-                        };
-                        setFormData(updated);
-                        setMessage({ text: "Mobile banner uploaded & active!", type: "success" });
-                      }}
-                      onRemove={() => {
-                        setFormData({
-                          ...formData,
-                          mobile_image_url: null,
-                          mobile_image_public_id: null,
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 
@@ -842,7 +1138,7 @@ export default function AdminHeroPage() {
               <div className="p-4 bg-[#F9F8F5] rounded-xl border border-[#DCCFB9]/50 space-y-3">
                 <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-1.5">
                   <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#183D2B]">
-                    Secondary Banner 
+                    Secondary Banner
                   </h3>
                 </div>
 
@@ -909,7 +1205,6 @@ export default function AdminHeroPage() {
                     onChange={(val) => handleChange("promo_right_btn_link", val)}
                   />
                 </div>
-
               </div>
             </div>
           </div>
@@ -1003,7 +1298,7 @@ export default function AdminHeroPage() {
                   value={formData.showcase_description}
                   onChange={(e) => handleChange("showcase_description", e.target.value)}
                   className="w-full p-2 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none resize-none placeholder:text-[#8C938F]"
-                  placeholder="Enter Decription"
+                  placeholder="Enter Description"
                 />
               </div>
             </div>
@@ -1060,7 +1355,7 @@ export default function AdminHeroPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#183D2B] hover:bg-[#102D20] text-white text-xs font-semibold rounded-md shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
               <Save size={14} />
               <span>{isSaving ? "Saving..." : "Save All Changes"}</span>

@@ -134,19 +134,19 @@ export default function WholesaleHeroSection({
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link
-              href="/wholesale/shop"
-              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer bg-[#183D2B] text-white hover:bg-[#102D20]"
+              href="/wholesale/register"
+              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer bg-[#183D2B] text-white hover:bg-[#102D20] border border-emerald-600/40"
             >
-              <Package size={15} className="text-white" />
-              <span>Explore Products</span>
+              <span>Apply for B2B Account</span>
+              <ArrowRight size={15} />
             </Link>
 
             <Link
-              href="/wholesale/contact"
-              className="hidden sm:flex px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all items-center gap-2 shadow-xs cursor-pointer bg-black/40 hover:bg-black/60 text-white border border-white/25 backdrop-blur-xs"
+              href="/wholesale/shop"
+              className="px-6 py-3.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-xs"
             >
-              <span>Contact Us</span>
-              <ArrowRight size={14} />
+              <Package size={15} className="text-white" />
+              <span>Explore Products</span>
             </Link>
           </div>
         </div>

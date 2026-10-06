@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check, X, ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
@@ -23,6 +24,9 @@ export default function AccountAuthModal({
   defaultFullName = "",
   onSuccess,
 }: AccountAuthModalProps) {
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams ? (searchParams.get("redirect") || searchParams.get("next")) : null;
+
   const [mode, setMode] = useState<AuthMode>("login");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -109,24 +113,48 @@ export default function AccountAuthModal({
           }, 800);
         }
       } else {
-        // Standard Sign In
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        // Standard Sign In (Strictly Retail Customer)
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (signInError) throw signInError;
+        if (signInError) {
+          throw new Error("Invalid credentials.");
+        }
+
+        if (authData?.user) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: profile } = await (supabase as any)
+            .from("profiles")
+            .select("role")
+            .eq("id", authData.user.id)
+            .maybeSingle();
+
+          // Reject non-retail roles from retail login
+          if (profile?.role !== "customer") {
+            await supabase.auth.signOut();
+            throw new Error("Invalid credentials.");
+          }
+        }
 
         onClose();
         if (onSuccess) {
           onSuccess();
         } else {
-          window.location.assign("/");
+          const target =
+            redirectParam &&
+            redirectParam.startsWith("/") &&
+            !redirectParam.startsWith("//") &&
+            !redirectParam.startsWith("/wholesale")
+              ? redirectParam
+              : "/account";
+          window.location.assign(target);
         }
       }
     } catch (authError) {
       setError(
-        authError instanceof Error ? authError.message : "Unable to complete authentication."
+        authError instanceof Error ? authError.message : "Invalid credentials."
       );
     } finally {
       setLoading(false);

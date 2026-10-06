@@ -8,18 +8,24 @@ export const dynamic = "force-dynamic";
 // ── Ensure a profile row exists for the auth user (FK guard) ──────
 async function ensureProfile(admin: ReturnType<typeof createAdminClient>, user: User) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin as any)
+  const { data: existing } = await (admin as any)
     .from("profiles")
-    .upsert(
-      {
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any)
+      .from("profiles")
+      .insert({
         id: user.id,
         email: user.email ?? "",
         full_name: (user.user_metadata?.full_name as string) ?? null,
         phone: (user.user_metadata?.phone as string) ?? null,
         role: "customer",
-      },
-      { onConflict: "id" }
-    );
+      });
+  }
 }
 
 // ── GET: List user's saved addresses ──────────────────────────────

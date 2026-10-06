@@ -139,8 +139,16 @@ export type Database = {
           specifications: Json | null;
           retail_price: number;
           compare_at_price: number | null;
+          tax_enabled: boolean;
+          is_out_of_stock: boolean;
           wholesale_price: number | null;
           wholesale_moq: number | null;
+          wholesale_unit_enabled: boolean;
+          wholesale_unit_price: number | null;
+          wholesale_box_enabled: boolean;
+          wholesale_units_per_box: number | null;
+          wholesale_box_price: number | null;
+          wholesale_custom_quantity_enabled: boolean;
           is_retail_available: boolean;
           is_wholesale_available: boolean;
           is_published: boolean;
@@ -167,8 +175,16 @@ export type Database = {
           specifications?: Json | null;
           retail_price: number;
           compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_out_of_stock?: boolean;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
+          wholesale_unit_enabled?: boolean;
+          wholesale_unit_price?: number | null;
+          wholesale_box_enabled?: boolean;
+          wholesale_units_per_box?: number | null;
+          wholesale_box_price?: number | null;
+          wholesale_custom_quantity_enabled?: boolean;
           is_retail_available?: boolean;
           is_wholesale_available?: boolean;
           is_published?: boolean;
@@ -194,8 +210,16 @@ export type Database = {
           specifications?: Json | null;
           retail_price?: number;
           compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_out_of_stock?: boolean;
           wholesale_price?: number | null;
           wholesale_moq?: number | null;
+          wholesale_unit_enabled?: boolean;
+          wholesale_unit_price?: number | null;
+          wholesale_box_enabled?: boolean;
+          wholesale_units_per_box?: number | null;
+          wholesale_box_price?: number | null;
+          wholesale_custom_quantity_enabled?: boolean;
           is_retail_available?: boolean;
           is_wholesale_available?: boolean;
           is_published?: boolean;
@@ -309,6 +333,7 @@ export type Database = {
           id: string;
           user_id: string | null;
           session_id: string | null;
+          cart_type: CustomerType;
           created_at: string;
           updated_at: string;
         };
@@ -316,12 +341,14 @@ export type Database = {
           id?: string;
           user_id?: string | null;
           session_id?: string | null;
+          cart_type?: CustomerType;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           user_id?: string | null;
           session_id?: string | null;
+          cart_type?: CustomerType;
           updated_at?: string;
         };
       };
@@ -331,6 +358,8 @@ export type Database = {
           cart_id: string;
           product_id: string;
           quantity: number;
+          purchase_mode: "unit" | "box" | "custom";
+          units_per_box: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -339,11 +368,15 @@ export type Database = {
           cart_id: string;
           product_id: string;
           quantity: number;
+          purchase_mode?: "unit" | "box" | "custom";
+          units_per_box?: number | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           quantity?: number;
+          purchase_mode?: "unit" | "box" | "custom";
+          units_per_box?: number | null;
           updated_at?: string;
         };
       };
@@ -450,9 +483,87 @@ export type Database = {
           price_snapshot: number;
           quantity: number;
           line_total: number;
+          combo_id?: string | null;
           created_at?: string;
         };
         Update: Record<string, never>;
+      };
+      combo_offers: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          sku: string;
+          description: string | null;
+          features: Json;
+          price: number;
+          compare_at_price: number | null;
+          tax_enabled: boolean;
+          is_active: boolean;
+          is_featured: boolean;
+          primary_image_url: string | null;
+          primary_image_public_id: string | null;
+          images: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          sku: string;
+          description?: string | null;
+          features?: Json;
+          price: number;
+          compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_active?: boolean;
+          is_featured?: boolean;
+          primary_image_url?: string | null;
+          primary_image_public_id?: string | null;
+          images?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          sku?: string;
+          description?: string | null;
+          features?: Json;
+          price?: number;
+          compare_at_price?: number | null;
+          tax_enabled?: boolean;
+          is_active?: boolean;
+          is_featured?: boolean;
+          primary_image_url?: string | null;
+          primary_image_public_id?: string | null;
+          images?: Json;
+          updated_at?: string;
+        };
+      };
+      combo_offer_items: {
+        Row: {
+          id: string;
+          combo_id: string;
+          product_id: string;
+          quantity: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          combo_id: string;
+          product_id: string;
+          quantity: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          quantity?: number;
+          sort_order?: number;
+        };
       };
       addresses: {
         Row: {
@@ -547,13 +658,66 @@ export type Database = {
           updated_at?: string;
         };
       };
+      wholesale_enquiries: {
+        Row: {
+          id: string;
+          company_name: string;
+          contact_person: string;
+          phone: string;
+          email: string | null;
+          whatsapp: string | null;
+          category_name: string | null;
+          product_name: string | null;
+          quantity: string | null;
+          message: string | null;
+          notes: string | null;
+          status: "pending" | "under_review" | "approved" | "rejected";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_name: string;
+          contact_person: string;
+          phone: string;
+          email?: string | null;
+          whatsapp?: string | null;
+          category_name?: string | null;
+          product_name?: string | null;
+          quantity?: string | null;
+          message?: string | null;
+          notes?: string | null;
+          status?: "pending" | "under_review" | "approved" | "rejected";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          company_name?: string;
+          contact_person?: string;
+          phone?: string;
+          email?: string | null;
+          whatsapp?: string | null;
+          category_name?: string | null;
+          product_name?: string | null;
+          quantity?: string | null;
+          message?: string | null;
+          notes?: string | null;
+          status?: "pending" | "under_review" | "approved" | "rejected";
+          updated_at?: string;
+        };
+      };
       banners: {
         Row: {
           id: string;
           title: string;
           subtitle: string | null;
+          overline: string | null;
           image_url: string | null;
           image_public_id: string | null;
+          mobile_image_url: string | null;
+          mobile_image_public_id: string | null;
+          product_image_url: string | null;
+          product_image_public_id: string | null;
           link_url: string | null;
           link_text: string | null;
           position: string;
@@ -568,8 +732,13 @@ export type Database = {
           id?: string;
           title: string;
           subtitle?: string | null;
+          overline?: string | null;
           image_url?: string | null;
           image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          product_image_url?: string | null;
+          product_image_public_id?: string | null;
           link_url?: string | null;
           link_text?: string | null;
           position?: string;
@@ -583,8 +752,13 @@ export type Database = {
         Update: {
           title?: string;
           subtitle?: string | null;
+          overline?: string | null;
           image_url?: string | null;
           image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          product_image_url?: string | null;
+          product_image_public_id?: string | null;
           link_url?: string | null;
           link_text?: string | null;
           position?: string;

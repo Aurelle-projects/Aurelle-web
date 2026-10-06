@@ -79,12 +79,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           .from("products")
           .select(`
             id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
-            retail_price, compare_at_price, wholesale_price, wholesale_moq,
+            retail_price, compare_at_price, tax_enabled, is_out_of_stock, wholesale_price, wholesale_moq,
             is_published, is_featured, is_best_seller, is_new_arrival,
             brand:brands(name),
             category:categories(name, slug),
-            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-            inventory(stock_status, stock_quantity)
+            product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
           `)
           .eq("slug", slug)
           .eq("status", "published")
@@ -112,12 +111,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             const { data: related } = await supabase
               .from("products")
               .select(`
-                id, name, slug, sku, retail_price, compare_at_price,
+                id, name, slug, sku, retail_price, compare_at_price, tax_enabled, is_out_of_stock,
                 is_new_arrival, is_featured, is_best_seller,
                 brand:brands(name),
                 category:categories(name, slug),
-                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order),
-                inventory(stock_status)
+                product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
               `)
               .eq("status", "published")
               .eq("category_id", p.category_id)
@@ -242,6 +240,8 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       (product as any).product_images?.[0]?.secure_url;
     return {
       ...product,
+      tax_enabled: (product as any).tax_enabled !== false,
+      is_out_of_stock: Boolean((product as any).is_out_of_stock),
       images:
         (product as any).images?.length > 0
           ? (product as any).images
@@ -252,6 +252,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   }
 
   function handleAddToCart() {
+    if (product?.is_out_of_stock) return;
     const p = getCartReadyProduct();
     if (!p) return;
     cart.addItem(p as any, quantity);
@@ -260,6 +261,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   }
 
   function handleBuyNow() {
+    if (product?.is_out_of_stock) return;
     const p = getCartReadyProduct();
     if (!p) return;
     cart.addItem(p as any, quantity);
@@ -422,7 +424,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               </span>
             </a>
 
-            <div className="mt-4 flex items-baseline gap-3">
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
               <span className="text-lg font-semibold text-[#14231B]">
                 AED {Number(product.retail_price).toFixed(2)}
               </span>
@@ -431,7 +433,13 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   AED {Number(product.compare_at_price).toFixed(2)}
                 </span>
               )}
-              <span className="text-xs text-[#8E9590]">incl. 5% VAT</span>
+              {product.is_out_of_stock ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-[#1D211F]/90 text-white text-[11px] font-bold uppercase tracking-wider">
+                  Out of Stock
+                </span>
+              ) : (
+                <span className="text-xs text-[#8E9590]">incl. 5% VAT</span>
+              )}
             </div>
 
             {(product.benefits || product.description) && (
@@ -441,57 +449,71 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             )}
 
             {/* Quantity + Actions */}
-            <div className="mt-8 flex items-center gap-4">
-              <div className="flex items-center">
+            {product.is_out_of_stock ? (
+              <div className="mt-8">
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="w-8 h-9 flex items-center justify-center text-[#14231B] hover:text-[#183D2B] cursor-pointer"
-                  aria-label="Decrease quantity"
+                  disabled
+                  className="w-full py-3.5 px-6 rounded-sm font-bold text-xs sm:text-sm bg-[#8E9590] text-white cursor-not-allowed flex items-center justify-center uppercase tracking-wider shadow-xs"
                 >
-                  <Minus size={14} />
-                </button>
-                <span className="w-8 text-center text-sm font-semibold text-[#14231B]">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-8 h-9 flex items-center justify-center text-[#14231B] hover:text-[#183D2B] cursor-pointer"
-                  aria-label="Increase quantity"
-                >
-                  <Plus size={14} />
+                  Out of Stock
                 </button>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="mt-8 flex items-center gap-4">
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="w-8 h-9 flex items-center justify-center text-[#14231B] hover:text-[#183D2B] cursor-pointer"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-8 text-center text-sm font-semibold text-[#14231B]">{quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => q + 1)}
+                      className="w-8 h-9 flex items-center justify-center text-[#14231B] hover:text-[#183D2B] cursor-pointer"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className={`w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
-                  added ? "bg-emerald-600 text-white" : "bg-[#183D2B] hover:bg-[#102D20] text-white"
-                }`}
-              >
-                {added ? (
-                  <>
-                    <Check size={16} strokeWidth={2.5} />
-                    <span>Added to bag</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag size={16} strokeWidth={2} />
-                    <span>Add to bag</span>
-                  </>
-                )}
-              </button>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className={`w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
+                      added ? "bg-emerald-600 text-white" : "bg-[#183D2B] hover:bg-[#102D20] text-white"
+                    }`}
+                  >
+                    {added ? (
+                      <>
+                        <Check size={16} strokeWidth={2.5} />
+                        <span>Added to bag</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag size={16} strokeWidth={2} />
+                        <span>Add to bag</span>
+                      </>
+                    )}
+                  </button>
 
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                className="w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm bg-[#C9A84C] hover:bg-[#b0923e] text-[#14231B] transition-colors cursor-pointer flex items-center justify-center"
-              >
-                Buy now
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleBuyNow}
+                    className="w-full py-3.5 px-3 sm:px-6 rounded-sm font-bold text-xs sm:text-sm bg-[#C9A84C] hover:bg-[#b0923e] text-[#14231B] transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    Buy now
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Trust row */}
             <div className="mt-8 pt-6 border-t border-[#EFEAE0] grid grid-cols-3 gap-3">

@@ -69,10 +69,16 @@ export default function NewProductPage() {
     usage_instructions: "",
     retail_price: "",
     compare_at_price: "",
+    tax_enabled: true,
+    is_out_of_stock: false,
     wholesale_price: "",
+    wholesale_unit_price: "",
+    wholesale_unit_enabled: true,
+    wholesale_box_enabled: false,
+    wholesale_units_per_box: "24",
+    wholesale_box_price: "",
+    wholesale_custom_quantity_enabled: true,
     wholesale_moq: "12",
-    stock_quantity: "50",
-    low_stock_threshold: "5",
     is_published: true,
     is_featured: false,
     is_best_seller: false,
@@ -196,15 +202,19 @@ export default function NewProductPage() {
         setMessage({ text: result.error || "Failed to save product. Check server logs.", type: "error" });
         return;
       }
-      setMessage({ text: "Product published successfully to catalog!", type: "success" });
-      setTimeout(() => router.push("/admin/products"), 1200);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setMessage({ text: err?.message || "Network error. Could not reach the server.", type: "error" });
     } finally {
       setIsSaving(false);
     }
   }
+
+  const boxUnitsPerBox = parseInt(formData.wholesale_units_per_box, 10) || 0;
+  const boxUnitPrice = parseFloat(formData.wholesale_unit_price || formData.wholesale_price) || 0;
+  const boxConfiguredPrice = parseFloat(formData.wholesale_box_price) || 0;
+  const boxCalcValue = boxUnitsPerBox > 0 && boxUnitPrice > 0 ? boxUnitsPerBox * boxUnitPrice : 0;
+  const boxCalcDiff = Math.abs(boxConfiguredPrice - boxCalcValue);
+  const boxCalcPct = boxCalcValue > 0 ? Math.round((boxCalcDiff / boxCalcValue) * 100) : 0;
 
   return (
     <div className="flex flex-col">
@@ -390,36 +400,238 @@ export default function NewProductPage() {
                     className="w-full h-10 pl-14 pr-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#5C6460] outline-none" />
                 </div>
               </div>
-              <div className="pt-3 border-t border-[#DCCFB9]/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#C9A84C]">B2B Wholesale</span>
-                  <span className="text-[10px] text-[#5C6460]">For licensed trade</span>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase mb-1">Wholesale Price (AED)</label>
-                  <input type="number" step="0.01" name="wholesale_price" value={formData.wholesale_price} onChange={handleChange} placeholder="65.00"
-                    className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#C9A84C] outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase mb-1">Wholesale MOQ</label>
-                  <input type="number" name="wholesale_moq" value={formData.wholesale_moq} onChange={handleChange}
-                    className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none" />
+
+              {/* Retail Tax Toggle */}
+              <div className="pt-2 border-t border-[#DCCFB9]/40">
+                <div className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0]">
+                  <div>
+                    <label htmlFor="tax_enabled_toggle" className="text-xs font-bold text-[#1D211F] block cursor-pointer">Retail Tax (5% VAT)</label>
+                    <p className="text-[11px] text-[#5C6460] mt-0.5">
+                      {formData.tax_enabled
+                        ? "5% retail tax applies to this product."
+                        : "This product is tax-exempt for retail."}
+                    </p>
+                    <p className="text-[10px] text-[#8E9590] mt-0.5 italic">
+                      Applies to RETAIL only. Does not affect wholesale pricing.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                    <input
+                      id="tax_enabled_toggle"
+                      type="checkbox"
+                      name="tax_enabled"
+                      checked={formData.tax_enabled}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#DCCFB9] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#183D2B]"></div>
+                  </label>
                 </div>
               </div>
             </div>
 
-            {/* Inventory */}
+            {/* Wholesale Selling Configuration */}
             <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">Inventory</h2>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Stock Units</label>
-                <input type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
+              <div className="flex items-center justify-between border-b border-[#DCCFB9]/30 pb-2">
+                <h2 className="text-sm font-bold text-[#183D2B] uppercase tracking-wider">Wholesale Selling Configuration</h2>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#183D2B]">
+                  <input
+                    type="checkbox"
+                    name="is_wholesale_available"
+                    checked={formData.is_wholesale_available}
+                    onChange={handleChange}
+                    className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                  />
+                  <span>Enable B2B Wholesale</span>
+                </label>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Low Stock Alert Level</label>
-                <input type="number" name="low_stock_threshold" value={formData.low_stock_threshold} onChange={handleChange}
-                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] outline-none" />
+
+              {formData.is_wholesale_available ? (
+                <div className="space-y-4 pt-1">
+                  {/* Single Unit Option */}
+                  <div className="p-3.5 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0] space-y-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#14231B]">
+                      <input
+                        type="checkbox"
+                        name="wholesale_unit_enabled"
+                        checked={formData.wholesale_unit_enabled}
+                        onChange={handleChange}
+                        className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Sell by Single Unit / Piece</span>
+                    </label>
+
+                    {formData.wholesale_unit_enabled && (
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Wholesale Unit Price (AED)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8E9590]">AED</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            name="wholesale_unit_price"
+                            value={formData.wholesale_unit_price || formData.wholesale_price}
+                            onChange={(e) => {
+                              handleChange(e);
+                              setFormData((prev) => ({ ...prev, wholesale_price: e.target.value }));
+                            }}
+                            placeholder="15.00"
+                            className="w-full h-9 pl-12 pr-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#183D2B] outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Full Box Option */}
+                  <div className="p-3.5 bg-[#FAF8F5] rounded-lg border border-[#EFEAE0] space-y-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#14231B]">
+                      <input
+                        type="checkbox"
+                        name="wholesale_box_enabled"
+                        checked={formData.wholesale_box_enabled}
+                        onChange={handleChange}
+                        className="w-4 h-4 rounded text-[#183D2B] focus:ring-[#183D2B]"
+                      />
+                      <span>Sell by Full Box / Carton</span>
+                    </label>
+
+                    {formData.wholesale_box_enabled && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Units Per Box</label>
+                            <input
+                              type="number"
+                              min="1"
+                              name="wholesale_units_per_box"
+                              value={formData.wholesale_units_per_box}
+                              onChange={handleChange}
+                              placeholder="24"
+                              className="w-full h-9 px-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#14231B] outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#5C6460] uppercase mb-1">Wholesale Box Price (AED)</label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8E9590]">AED</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                name="wholesale_box_price"
+                                value={formData.wholesale_box_price}
+                                onChange={handleChange}
+                                placeholder="320.00"
+                                className="w-full h-9 pl-12 pr-3 bg-white border border-[#DCCFB9] rounded-md text-xs font-bold text-[#183D2B] outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Box Pricing Calculation UX Helper */}
+                        {boxCalcValue > 0 && (
+                          <div className="mt-3 p-3 bg-white border border-[#DCCFB9] rounded-md space-y-2 text-xs">
+                            <div className="flex items-center justify-between text-[#5C6460]">
+                              <span>Calculated Unit Value (1 Box):</span>
+                              <span className="font-bold text-[#14231B]">
+                                {boxUnitsPerBox} pcs × AED {boxUnitPrice} = AED {boxCalcValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            {boxConfiguredPrice > 0 && (
+                              <div className="text-[11px] font-semibold">
+                                {boxConfiguredPrice < boxCalcValue && (
+                                  <p className="text-emerald-700">
+                                    Box saving: AED {boxCalcDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })} ({boxCalcPct}% lower than unit-value pricing)
+                                  </p>
+                                )}
+                                {boxConfiguredPrice === boxCalcValue && (
+                                  <p className="text-[#5C6460]">Same as unit-value pricing</p>
+                                )}
+                                {boxConfiguredPrice > boxCalcValue && (
+                                  <p className="text-amber-700">
+                                    AED {boxCalcDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })} higher than unit-value pricing
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  wholesale_box_price: boxCalcValue.toFixed(2),
+                                }));
+                              }}
+                              className="text-[11px] font-bold text-[#183D2B] underline hover:text-[#102D20] cursor-pointer"
+                            >
+                              Use Calculated Price (AED {boxCalcValue.toFixed(2)})
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* MOQ */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1">Default Wholesale Minimum Order Qty (MOQ)</label>
+                    <input
+                      type="number"
+                      name="wholesale_moq"
+                      value={formData.wholesale_moq}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-bold text-[#1D211F] outline-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[#8E9590] italic">Wholesale ordering is disabled for this product.</p>
+              )}
+            </div>
+
+            {/* Product Availability */}
+            <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-3">
+              <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-2">
+                Product Availability
+              </h2>
+              <div className="space-y-2">
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  !formData.is_out_of_stock
+                    ? "border-emerald-500 bg-emerald-50/50 text-emerald-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={!formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: false }))}
+                    className="w-4 h-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Available</p>
+                    <p className="text-[11px] text-[#5C6460]">Customers can add this product to their cart and checkout.</p>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  formData.is_out_of_stock
+                    ? "border-amber-500 bg-amber-50/50 text-amber-900"
+                    : "border-[#DCCFB9]/60 hover:bg-[#F7F5EF] text-[#1D211F]"
+                }`}>
+                  <input
+                    type="radio"
+                    name="is_out_of_stock"
+                    checked={formData.is_out_of_stock}
+                    onChange={() => setFormData((prev) => ({ ...prev, is_out_of_stock: true }))}
+                    className="w-4 h-4 mt-0.5 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold">Mark as Out of Stock</p>
+                    <p className="text-[11px] text-[#5C6460]">Product shows as &quot;Out of Stock&quot; and purchasing is disabled.</p>
+                  </div>
+                </label>
               </div>
             </div>
 

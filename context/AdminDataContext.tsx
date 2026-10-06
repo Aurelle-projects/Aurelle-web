@@ -12,8 +12,8 @@ export interface ProductRow {
   wholesale_price: number | null;
   category_name: string;
   status: string;
+  is_out_of_stock?: boolean;
   image_url?: string;
-  stock_quantity: number;
 }
 
 export interface AdminCategory {
@@ -52,9 +52,20 @@ export interface AdminBrand {
   created_at?: string;
 }
 
+export interface AdminComboComponent {
+  product_id?: string;
+  name: string;
+  sku?: string;
+  quantity: number;
+  image?: string | null;
+  retail_price?: number;
+}
+
 export interface AdminOrderItemDetail {
   id: string;
   product_id?: string | null;
+  combo_id?: string | null;
+  is_combo?: boolean;
   name: string;
   image?: string | null;
   quantity: number;
@@ -62,6 +73,12 @@ export interface AdminOrderItemDetail {
   price?: number;
   sku?: string;
   slug?: string;
+  original_price?: number;
+  compare_at_price?: number | null;
+  savings_amount?: number;
+  savings_percentage?: number;
+  components?: AdminComboComponent[];
+  product_snapshot?: any;
 }
 
 export interface AdminOrderShippingAddress {
@@ -93,6 +110,7 @@ export interface AdminOrderItem {
   total_amount: number;
   subtotal?: number;
   discount_amount?: number;
+  tax_amount?: number;
   shipping_amount?: number;
   payment_status: "paid" | "pending" | "failed" | string;
   order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
@@ -100,7 +118,16 @@ export interface AdminOrderItem {
   city: string;
   shipping_address?: AdminOrderShippingAddress | null;
   notes?: string | null;
+  stripe_checkout_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
   items?: AdminOrderItemDetail[];
+  // Computed combo summary helpers
+  has_combo?: boolean;
+  is_pure_combo?: boolean;
+  is_mixed?: boolean;
+  combo_items_count?: number;
+  regular_items_count?: number;
+  total_savings?: number;
 }
 
 export interface AdminReviewItem {
@@ -232,10 +259,9 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await (supabase as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, wholesale_price, status,
+          id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock,
           category:categories(name),
-          product_images(secure_url, is_primary),
-          inventory(stock_quantity)
+          product_images(secure_url, is_primary)
         `)
         .order("created_at", { ascending: false });
 
@@ -254,8 +280,8 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             wholesale_price: p.wholesale_price,
             category_name: p.category?.name || "Unassigned",
             status: p.status || "published",
+            is_out_of_stock: p.is_out_of_stock ?? false,
             image_url: primaryImg,
-            stock_quantity: p.inventory?.[0]?.stock_quantity ?? 10,
           };
         });
         setProducts(mapped);
@@ -364,21 +390,74 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const items: AdminOrderItemDetail[] = rawItems.map((it: any) => {
             const snap = it.product_snapshot || {};
+            const isCombo = Boolean(
+              it.combo_id ||
+              snap.is_combo ||
+              snap.combo_id ||
+              (snap.components && Array.isArray(snap.components) && snap.components.length > 0)
+            );
+            const comboId = it.combo_id || snap.combo_id || null;
+            const components: AdminComboComponent[] = Array.isArray(snap.components) ? snap.components : [];
+
+            const unitPrice =
+              Number(it.price_snapshot) ||
+              (Number(it.line_total) / (it.quantity || 1)) ||
+              0;
+
+            // Calculate authoritative original combined value of included components if combo
+            let originalPrice = Number(snap.original_price) || Number(snap.compare_at_price) || 0;
+            if (!originalPrice && isCombo && components.length > 0) {
+              originalPrice = components.reduce(
+                (sum, c) => sum + (Number(c.retail_price) || 0) * (c.quantity || 1),
+                0
+              );
+            }
+
+            let savingsAmount = Number(snap.savings_amount) || 0;
+            if (!savingsAmount && isCombo && originalPrice > unitPrice) {
+              savingsAmount = Math.max(0, originalPrice - unitPrice);
+            }
+
+            let savingsPct = Number(snap.savings_percentage) || 0;
+            if (!savingsPct && isCombo && originalPrice > 0 && savingsAmount > 0) {
+              savingsPct = Math.round((savingsAmount / originalPrice) * 100);
+            }
+
             return {
               id: it.id,
               product_id: it.product_id || null,
-              name: snap.name || "Product",
-              image: snap.image || snap.image_url || snap.imageUrl || null,
+              combo_id: comboId,
+              is_combo: isCombo,
+              name: snap.name || (isCombo ? "Combo Offer" : "Product"),
+              image: snap.image || snap.image_url || snap.imageUrl || snap.primary_image_url || null,
               quantity: it.quantity || 1,
               line_total: Number(it.line_total) || 0,
-              price:
-                Number(it.price_snapshot) ||
-                (Number(it.line_total) / (it.quantity || 1)) ||
-                0,
+              price: unitPrice,
               sku: it.sku_snapshot || snap.sku || "",
               slug: snap.slug || "",
+              original_price: originalPrice > 0 ? originalPrice : undefined,
+              compare_at_price: snap.compare_at_price ? Number(snap.compare_at_price) : undefined,
+              savings_amount: savingsAmount > 0 ? savingsAmount : undefined,
+              savings_percentage: savingsPct > 0 ? savingsPct : undefined,
+              components,
+              product_snapshot: snap,
             };
           });
+
+          const hasCombo = items.some((it) => it.is_combo);
+          const comboItemsCount = items
+            .filter((it) => it.is_combo)
+            .reduce((sum, it) => sum + it.quantity, 0);
+          const regularItemsCount = items
+            .filter((it) => !it.is_combo)
+            .reduce((sum, it) => sum + it.quantity, 0);
+          const isPureCombo = hasCombo && regularItemsCount === 0;
+          const isMixed = hasCombo && regularItemsCount > 0;
+          const totalSavings =
+            items.reduce(
+              (sum, it) => sum + (it.savings_amount ? it.savings_amount * it.quantity : 0),
+              0
+            ) + (Number(o.discount_amount) || 0);
 
           return {
             id: o.id,
@@ -390,6 +469,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             total_amount: Number(o.total) || 0,
             subtotal: Number(o.subtotal) || Number(o.total) || 0,
             discount_amount: Number(o.discount_amount) || 0,
+            tax_amount: Number(o.tax_amount) || 0,
             shipping_amount: Number(o.shipping_amount) || 0,
             payment_status: o.payment_status || "pending",
             order_status: (o.status || "pending") as AdminOrderItem["order_status"],
@@ -397,7 +477,15 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             city,
             shipping_address: addr,
             notes: o.notes || null,
+            stripe_checkout_session_id: o.stripe_checkout_session_id || null,
+            stripe_payment_intent_id: o.stripe_payment_intent_id || null,
             items,
+            has_combo: hasCombo,
+            is_pure_combo: isPureCombo,
+            is_mixed: isMixed,
+            combo_items_count: comboItemsCount,
+            regular_items_count: regularItemsCount,
+            total_savings: totalSavings > 0 ? totalSavings : undefined,
           };
         });
 

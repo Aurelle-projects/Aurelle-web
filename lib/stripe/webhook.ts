@@ -8,7 +8,7 @@
 import type Stripe from "stripe";
 import { stripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { PaymentStatus, OrderStatus } from "@/types/database";
+import { finalizeStripeOrder } from "@/lib/orders/stripe-fulfillment";
 
 /**
  * Verify and construct a Stripe webhook event from the raw request body.
@@ -90,74 +90,15 @@ async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
   eventId: string
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createAdminClient() as any;
-  const orderId = session.metadata?.["order_id"];
-
-  if (!orderId) {
-    console.error("[Stripe Webhook] No order_id in session metadata:", session.id);
-    throw new Error("No order_id in session metadata.");
-  }
-
   console.log(
-    `[Stripe Webhook] Processing checkout.session.completed for order ${orderId}`
+    `[Stripe Webhook] Processing checkout.session.completed for session ${session.id}`
   );
 
-  // ── 1. Mark order as paid ────────────────────────────────────────────────
-  const orderUpdate: {
-    status: OrderStatus;
-    payment_status: PaymentStatus;
-    stripe_checkout_session_id: string;
-    stripe_payment_intent_id: string | null;
-    updated_at: string;
-  } = {
-    status: "paid",
-    payment_status: "paid",
-    stripe_checkout_session_id: session.id,
-    stripe_payment_intent_id:
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error: orderError } = await supabase
-    .from("orders")
-    .update(orderUpdate)
-    .eq("id", orderId)
-    .eq("payment_status", "pending"); // Only update if still pending (idempotent)
-
-  if (orderError) {
-    console.error("[Stripe Webhook] Failed to update order:", orderError);
-    throw orderError;
+  const result = await finalizeStripeOrder(session, eventId);
+  if (!result.success) {
+    console.error("[Stripe Webhook] finalizeStripeOrder error:", result.error);
+    throw new Error(result.error || "Failed to finalize order from webhook.");
   }
-
-  // ── 2. Record payment ────────────────────────────────────────────────────
-  const { error: paymentError } = await supabase.from("payments").insert({
-    order_id: orderId,
-    stripe_payment_intent_id:
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null,
-    stripe_checkout_session_id: session.id,
-    stripe_event_id: eventId,
-    amount: session.amount_total ?? 0,
-    currency: session.currency ?? "aed",
-    status: "paid",
-    payment_method: session.payment_method_types?.[0] ?? null,
-  });
-
-  if (paymentError) {
-    console.error("[Stripe Webhook] Failed to record payment:", paymentError);
-    throw paymentError;
-  }
-
-  // ── 3. Reduce stock (server-side, transactional) ─────────────────────────
-  await reduceStockForOrder(orderId, supabase);
-
-  console.log(
-    `[Stripe Webhook] Order ${orderId} marked paid. Stock updated.`
-  );
 }
 
 // ─── Handler: Checkout Expired ────────────────────────────────────────────────
@@ -166,8 +107,13 @@ async function handleCheckoutSessionExpired(
 ): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createAdminClient() as any;
-  const orderId = session.metadata?.["order_id"];
-  if (!orderId) return;
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("stripe_checkout_session_id", session.id)
+    .maybeSingle();
+
+  if (!order) return;
 
   await supabase
     .from("orders")
@@ -176,10 +122,10 @@ async function handleCheckoutSessionExpired(
       payment_status: "expired",
       updated_at: new Date().toISOString(),
     })
-    .eq("id", orderId)
+    .eq("id", order.id)
     .eq("payment_status", "pending");
 
-  console.log(`[Stripe Webhook] Order ${orderId} expired/cancelled.`);
+  console.log(`[Stripe Webhook] Order ${order.id} expired/cancelled.`);
 }
 
 // ─── Handler: Payment Failed ──────────────────────────────────────────────────
@@ -210,28 +156,4 @@ async function handlePaymentFailed(
   });
 
   console.log(`[Stripe Webhook] Payment failed for order ${orderId}.`);
-}
-
-// ─── Stock Reduction (server-side, safe) ─────────────────────────────────────
-async function reduceStockForOrder(
-  orderId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any
-): Promise<void> {
-  const { data: orderItems, error } = await supabase
-    .from("order_items")
-    .select("product_id, quantity, sku_snapshot")
-    .eq("order_id", orderId);
-
-  if (error || !orderItems?.length) return;
-
-  for (const item of orderItems) {
-    if (!item.product_id) continue;
-
-    // Use RPC for atomic stock decrement to prevent negative stock
-    await supabase.rpc("decrement_stock", {
-      p_product_id: item.product_id,
-      p_quantity: item.quantity,
-    });
-  }
 }

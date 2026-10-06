@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
+import { ADMIN_COOKIE_NAME, getAdminCookieOptions } from "@/lib/auth/adminSession";
 
 export async function POST() {
   try {
     const response = NextResponse.json({ success: true });
     // Clear admin session cookie
-    response.cookies.set("aurelle_admin_session", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+    response.cookies.set(ADMIN_COOKIE_NAME, "", {
+      ...getAdminCookieOptions(),
       maxAge: 0,
-      path: "/",
     });
     return response;
   } catch (error) {

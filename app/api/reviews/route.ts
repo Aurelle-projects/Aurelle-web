@@ -297,7 +297,11 @@ export async function POST(request: NextRequest) {
     }
 
     const bodyJson = await request.json();
-    const { product_id, order_id, rating, body, title } = bodyJson;
+    const product_id = bodyJson.product_id || bodyJson.productId;
+    const order_id = bodyJson.order_id || bodyJson.orderId;
+    const rating = bodyJson.rating;
+    const body = bodyJson.body;
+    const title = bodyJson.title;
 
     if (!product_id) {
       return NextResponse.json(

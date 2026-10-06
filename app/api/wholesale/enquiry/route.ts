@@ -63,15 +63,17 @@ export async function POST(request: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (admin as any)
-      .from("wholesale_applications")
+      .from("wholesale_enquiries")
       .insert({
-        business_name: companyName.trim(),
+        company_name: companyName.trim(),
         contact_person: contactPerson.trim(),
-        email: finalEmail,
         phone: phone.trim(),
-        country: "United Arab Emirates",
-        business_type: "Wholesale Trade Enquiry",
-        expected_order_volume: quantity?.trim() || "Wholesale MOQ",
+        email: email && email.trim() ? email.trim() : null,
+        whatsapp: whatsapp && whatsapp.trim() ? whatsapp.trim() : null,
+        category_name: categoryName && categoryName.trim() ? categoryName.trim() : null,
+        product_name: productName && productName.trim() ? productName.trim() : null,
+        quantity: quantity && quantity.trim() ? quantity.trim() : null,
+        message: message && message.trim() ? message.trim() : null,
         notes: notesSummary,
         status: "pending",
       })
@@ -84,60 +86,6 @@ export async function POST(request: Request) {
         { error: error.message || "Failed to submit enquiry" },
         { status: 500 }
       );
-    }
-
-    // Also create order in orders table so it displays in Wholesale B2B on /admin/orders
-    try {
-      const appId = data?.id;
-      const orderNumber = `B2B-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-      const parsedQty = parseInt(String(quantity || "").replace(/\D/g, ""), 10) || 1;
-      const itemPrice = Number(body.price) || 0;
-      const lineTotal = itemPrice * parsedQty;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: newOrder } = await (admin as any)
-        .from("orders")
-        .insert({
-          order_number: orderNumber,
-          customer_email: finalEmail,
-          customer_type: "wholesale",
-          status: "pending",
-          payment_status: "pending",
-          subtotal: lineTotal,
-          total: lineTotal,
-          discount_amount: 0,
-          shipping_amount: 0,
-          tax_amount: 0,
-          shipping_address: {
-            fullName: contactPerson.trim(),
-            companyName: companyName.trim(),
-            phone: phone.trim(),
-            city: "Dubai",
-            country: "United Arab Emirates",
-          },
-          notes: `[Wholesale Application ID: ${appId || ""}]\n${notesSummary}`,
-        })
-        .select()
-        .single();
-
-      if (newOrder && (productName?.trim() || body.productId)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (admin as any).from("order_items").insert({
-          order_id: newOrder.id,
-          product_id: body.productId || null,
-          product_snapshot: {
-            name: productName?.trim() || "Wholesale B2B Consignment",
-            image: body.image || null,
-            category: categoryName?.trim() || "",
-          },
-          sku_snapshot: body.sku || "B2B-WHOLESALE",
-          price_snapshot: itemPrice,
-          quantity: parsedQty,
-          line_total: lineTotal,
-        });
-      }
-    } catch (orderErr) {
-      console.warn("[Wholesale Enquiry API] Order creation error (non-fatal):", orderErr);
     }
 
     // Auto-send emails to admin and client (non-blocking)

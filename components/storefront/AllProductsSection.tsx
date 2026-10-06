@@ -151,7 +151,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
             return (
               <article key={product.id} className="group relative min-w-0" role="listitem">
                 <div className="relative aspect-[3/4] overflow-hidden bg-white">
-                  <Link href={`/products/${product.slug}`} prefetch={true} className="block h-full w-full">
+                  <Link href={`/products/${product.slug}`} prefetch={true} className="relative block h-full w-full">
                     {imageUrl ? (
                       <Image src={imageUrl} alt={image?.alt_text || product.name} fill sizes="(max-width: 768px) 50vw, 16vw" className="object-cover " />
                     ) : (

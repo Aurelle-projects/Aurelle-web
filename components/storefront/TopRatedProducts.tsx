@@ -240,7 +240,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             return (
               <article key={product.id} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
-                  <Link href={`/products/${product.slug}`} prefetch={true} className="block w-full h-full">
+                  <Link href={`/products/${product.slug}`} prefetch={true} className="relative block w-full h-full">
                     {imageUrl ? (
                       <Image
                         src={imageUrl}

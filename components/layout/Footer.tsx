@@ -88,14 +88,28 @@ const FOOTER_POLICIES = [
 ];
 
 export default function Footer({ settings = {} }: FooterProps) {
-  const contactEmail = (settings["contact_email"] as string) || "info@aurelle.ae";
-  const contactPhone = (settings["contact_phone"] as string) || "+971 50 123 4567";
-  const contactAddress = (settings["contact_address"] as string) || "Dubai, United Arab Emirates";
+  const contactEmail =
+    (settings["contact_email"] as string) ||
+    (settings["store_email"] as string) ||
+    "care@aurelle.ae";
+  const contactPhone =
+    (settings["contact_phone"] as string) ||
+    (settings["store_phone"] as string) ||
+    "+971 50 123 4567";
+  const contactAddress =
+    (settings["contact_address"] as string) ||
+    (settings["store_address"] as string) ||
+    "Dubai, United Arab Emirates";
 
   const instagram = (settings["social_instagram"] as string) || "https://instagram.com/aurelle.ae";
   const facebook = (settings["social_facebook"] as string) || "https://facebook.com/aurelle.ae";
   const tiktok = (settings["social_tiktok"] as string) || "https://tiktok.com/@aurelle.ae";
-  const whatsapp = (settings["social_whatsapp"] as string) || "https://wa.me/971501234567";
+  const rawWhatsapp = (settings["social_whatsapp"] as string) || "";
+  const whatsapp = rawWhatsapp
+    ? rawWhatsapp.startsWith("http")
+      ? rawWhatsapp
+      : `https://wa.me/${rawWhatsapp.replace(/[^0-9]/g, "")}`
+    : `https://wa.me/${contactPhone.replace(/[^0-9]/g, "") || "971501234567"}`;
 
   return (
     <footer className="bg-[#183D2B] text-white pt-8 md:pt-10 pb-5 border-t border-[#DCCFB9]/20" role="contentinfo">

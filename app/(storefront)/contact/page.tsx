@@ -17,8 +17,37 @@ export default function ContactPage() {
     message: "",
   });
 
+  const [storeSettings, setStoreSettings] = useState({
+    storeName: "Aurelle Cosmetics Trading FZ-LLC",
+    address: "Business Center, Meydan Free Zone\nDubai, United Arab Emirates",
+    operatingHours: "Monday – Saturday: 9:00 AM – 6:00 PM GST",
+    operatingHoursWeekend: "Sunday: Closed (Online Orders Processed 24/7)",
+    contactEmail: "care@aurelle.ae",
+    tradeEmail: "trade@aurelle.ae",
+    phone: "+971 50 123 4567",
+  });
+
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          setStoreSettings({
+            storeName: data.store_name || "Aurelle Cosmetics Trading FZ-LLC",
+            address: data.contact_address || "Business Center, Meydan Free Zone\nDubai, United Arab Emirates",
+            operatingHours: data.operating_hours || "Monday – Saturday: 9:00 AM – 6:00 PM GST",
+            operatingHoursWeekend: data.operating_hours_weekend || "Sunday: Closed (Online Orders Processed 24/7)",
+            contactEmail: data.contact_email || data.store_email || "care@aurelle.ae",
+            tradeEmail: data.trade_email || "trade@aurelle.ae",
+            phone: data.contact_phone || data.store_phone || "+971 50 123 4567",
+          });
+        }
+      })
+      .catch((err) => console.warn("Failed to load contact settings:", err));
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +57,8 @@ export default function ContactPage() {
       setSubmitted(true);
     }, 1000);
   }
+
+  const addressLines = storeSettings.address.split("\n").filter(Boolean);
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-12 md:py-12">
@@ -41,13 +72,12 @@ export default function ContactPage() {
                 <MapPin size={20} />
               </div>
               <h3 className="font-bold text-sm text-[#1D211F]">UAE Headquarters</h3>
-              <p className="text-xs text-[#5C6460] leading-relaxed">
-                Aurelle Cosmetics Trading FZ-LLC
-                <br />
-                Business Center, Meydan Free Zone
-                <br />
-                Dubai, United Arab Emirates
-              </p>
+              <div className="text-xs text-[#5C6460] leading-relaxed">
+                <p className="font-medium text-[#1D211F]">{storeSettings.storeName}</p>
+                {addressLines.map((line, idx) => (
+                  <p key={idx}>{line}</p>
+                ))}
+              </div>
             </div>
 
             <div className="bg-white p-6 rounded-sm space-y-3">
@@ -56,9 +86,13 @@ export default function ContactPage() {
               </div>
               <h3 className="font-bold text-sm text-[#1D211F]">Operating Hours</h3>
               <p className="text-xs text-[#5C6460] leading-relaxed">
-                Monday – Saturday: 9:00 AM – 6:00 PM GST
-                <br />
-                Sunday: Closed (Online Orders Processed 24/7)
+                {storeSettings.operatingHours}
+                {storeSettings.operatingHoursWeekend && (
+                  <>
+                    <br />
+                    {storeSettings.operatingHoursWeekend}
+                  </>
+                )}
               </p>
             </div>
 
@@ -67,11 +101,30 @@ export default function ContactPage() {
                 <Mail size={20} />
               </div>
               <h3 className="font-bold text-sm text-[#1D211F]">Electronic Mail</h3>
-              <p className="text-xs text-[#5C6460] leading-relaxed">
-                Customer Care: <strong className="text-[#1D211F]">care@aurelle.ae</strong>
-                <br />
-                Trade & Wholesale: <strong className="text-[#1D211F]">trade@aurelle.ae</strong>
-              </p>
+              <div className="text-xs text-[#5C6460] leading-relaxed space-y-1">
+                <p>
+                  Customer Care:{" "}
+                  <a href={`mailto:${storeSettings.contactEmail}`} className="font-semibold text-[#183D2B] hover:underline">
+                    {storeSettings.contactEmail}
+                  </a>
+                </p>
+                {storeSettings.tradeEmail && (
+                  <p>
+                    Trade & Wholesale:{" "}
+                    <a href={`mailto:${storeSettings.tradeEmail}`} className="font-semibold text-[#183D2B] hover:underline">
+                      {storeSettings.tradeEmail}
+                    </a>
+                  </p>
+                )}
+                {storeSettings.phone && (
+                  <p className="pt-1">
+                    Direct Tel / WhatsApp:{" "}
+                    <a href={`tel:${storeSettings.phone.replace(/\s/g, "")}`} className="font-semibold text-[#183D2B] hover:underline">
+                      {storeSettings.phone}
+                    </a>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

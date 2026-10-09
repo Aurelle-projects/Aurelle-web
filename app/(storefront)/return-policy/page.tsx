@@ -1,9 +1,12 @@
 import React from "react";
 
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
-  title: "Returns & Exchanges Policy | Aurelle",
-  description: "Learn about Aurelle 14-day return and refund policy in the United Arab Emirates.",
+  title: "Returns & Exchanges Policy | Aurelle Cosmetics UAE",
+  description: "Learn about Aurelle 14-day return and exchange policy in the United Arab Emirates.",
+  alternates: { canonical: `${SITE_URL}/return-policy` },
 };
 
 export default function ReturnPolicyPage() {

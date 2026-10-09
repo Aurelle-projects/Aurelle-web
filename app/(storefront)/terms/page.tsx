@@ -1,8 +1,11 @@
 import React from "react";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
   title: "Terms of Service | Aurelle Cosmetics Trading FZ-LLC",
-  description: "Terms and conditions of sale and platform usage for Aurelle Cosmetics Trading FZ-LLC.",
+  description: "Terms and conditions of sale and platform usage for Aurelle Cosmetics Trading FZ-LLC in the UAE.",
+  alternates: { canonical: `${SITE_URL}/terms` },
 };
 
 export default function TermsPage() {

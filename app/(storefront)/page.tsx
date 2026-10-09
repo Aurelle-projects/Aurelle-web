@@ -14,11 +14,54 @@ import AllProductsSection from "@/components/storefront/AllProductsSection";
 import B2BHomeCTASection from "@/components/storefront/B2BHomeCTASection";
 import ComboOffersSection from "@/components/storefront/ComboOffersSection";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata: Metadata = {
-  title: "Aurelle — Everyday Essentials. Elevated.",
+  title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE | متجر أوريل للتجميل دبي",
   description:
-    "Beauty, personal care and lifestyle essentials for everyone. Shop skincare, hair care, cosmetics, fragrances and more at Aurelle Cosmetics, UAE.",
-  alternates: { canonical: "/" },
+    "Shop authentic luxury cosmetics, skincare, haircare, perfumes & personal care online in UAE. Express delivery in Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on delivery & Card. متجر مستحضرات تجميل ومكياج وعناية بالبشرة أونلاين في الإمارات.",
+  keywords: [
+    "cosmetics UAE",
+    "online beauty shop Dubai",
+    "buy makeup online UAE",
+    "skincare Dubai",
+    "perfumes online UAE",
+    "haircare products UAE",
+    "luxury beauty Dubai",
+    "Aurelle Cosmetics",
+    "cosmetics Abu Dhabi",
+    "beauty store Sharjah",
+    "cash on delivery cosmetics UAE",
+    "express beauty delivery Dubai",
+    "مستحضرات تجميل دبي",
+    "مكياج الإمارات",
+    "عناية بالبشرة أبوظبي",
+    "عطور أصلية دبي",
+    "متجر مكياج أونلاين الإمارات",
+  ],
+  alternates: { canonical: `${SITE_URL}/` },
+  openGraph: {
+    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    description:
+      "Shop authentic cosmetics, skincare, haircare, perfumes & personal care in UAE. Express delivery across Dubai, Abu Dhabi & GCC.",
+    url: `${SITE_URL}/`,
+    type: "website",
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Aurelle Cosmetics UAE — Luxury Beauty, Skincare & Fragrances",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    description:
+      "Authentic cosmetics, skincare, haircare & fragrances delivered across UAE.",
+    images: [`${SITE_URL}/og-image.jpg`],
+  },
 };
 
 // Enable ISR caching (60s) to eliminate repeated slow DB queries on page navigation
@@ -58,9 +101,9 @@ export default async function HomePage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let supabase: any;
     try {
-      supabase = createAdminClient();
-    } catch {
       supabase = await createClient();
+    } catch {
+      supabase = createAdminClient();
     }
 
     try {

@@ -14,13 +14,13 @@ export default function AnnouncementBar() {
   useEffect(() => {
     async function loadAnnouncement() {
       try {
-        const res = await fetch("/api/admin/hero");
+        const res = await fetch("/api/announcement");
         const data = await res.json();
-        if (data.success && data.hero?.top_announcement) {
+        if (data.success && data.announcement?.text) {
           setAnnouncement({
-            text: data.hero.top_announcement,
-            link: "/shop",
-            country: data.hero.currency_label || "",
+            text: data.announcement.text,
+            link: data.announcement.link || "/shop",
+            country: data.announcement.currency_label || "",
           });
         } else {
           setAnnouncement(null);

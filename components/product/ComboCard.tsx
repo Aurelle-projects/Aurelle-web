@@ -99,6 +99,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
       <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
         <Link
           href={`/combos/${combo.slug}`}
+          prefetch={true}
           className="block w-full h-full relative"
           aria-label={combo.name}
         >
@@ -147,7 +148,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
       {/* Card Content */}
       <div className="p-2.5 sm:p-4 lg:p-5 flex flex-col justify-between flex-1 bg-white space-y-2 sm:space-y-3">
         <div>
-          <Link href={`/combos/${combo.slug}`} className="block">
+          <Link href={`/combos/${combo.slug}`} prefetch={true} className="block">
             <h3 className="text-[13px] sm:text-[14px] lg:text-[15px] font-semibold text-[#1D211F] group-hover:text-[#183D2B] transition-colors leading-snug line-clamp-1 sm:line-clamp-2 min-h-[1.25rem] sm:min-h-0">
               {combo.name}
             </h3>

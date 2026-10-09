@@ -2,10 +2,20 @@ import React from "react";
 import Link from "next/link";
 import { Sparkles, ShieldCheck, Heart, Globe } from "lucide-react";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
-  title: "About Aurelle | Aurelle Cosmetics Trading FZ-LLC",
+  title: "About Aurelle Cosmetics UAE | Dubai Heritage & Philosophy | من نحن",
   description:
-    "Learn about Aurelle Cosmetics Trading FZ-LLC, our Dubai heritage, formulation ethos, and commitment to elevating everyday beauty and wellness.",
+    "Learn about Aurelle Cosmetics Trading FZ-LLC, our Dubai heritage, formulation ethos, and commitment to elevating everyday beauty and wellness in the UAE.",
+  alternates: { canonical: `${SITE_URL}/about` },
+  openGraph: {
+    title: "About Aurelle Cosmetics UAE | Dubai Heritage & Philosophy",
+    description: "Our Dubai heritage, formulation ethos, and premium personal care commitment.",
+    url: `${SITE_URL}/about`,
+    type: "website",
+    images: [{ url: `${SITE_URL}/og-image.jpg`, width: 1200, height: 630, alt: "About Aurelle Cosmetics" }],
+  },
 };
 
 export default function AboutPage() {

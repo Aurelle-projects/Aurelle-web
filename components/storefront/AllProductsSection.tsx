@@ -151,7 +151,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
             return (
               <article key={product.id} className="group relative min-w-0" role="listitem">
                 <div className="relative aspect-[3/4] overflow-hidden bg-white">
-                  <Link href={`/products/${product.slug}`} className="block h-full w-full">
+                  <Link href={`/products/${product.slug}`} prefetch={true} className="relative block h-full w-full">
                     {imageUrl ? (
                       <Image src={imageUrl} alt={image?.alt_text || product.name} fill sizes="(max-width: 768px) 50vw, 16vw" className="object-cover " />
                     ) : (
@@ -208,7 +208,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                     </button>
                   )}
                 </div>
-                <Link href={`/products/${product.slug}`} className="block truncate px-1 pt-2 text-sm text-[#1D211F]">{product.name}</Link>
+                <Link href={`/products/${product.slug}`} prefetch={true} className="block truncate px-1 pt-2 text-sm text-[#1D211F]">{product.name}</Link>
                 <div className="flex items-baseline gap-2 px-1 pb-4 pt-1">
                   <span className="text-sm font-semibold text-[#1D211F]">{formatPrice(product.retail_price)}</span>
                   {onSale && <span className="text-xs text-[#8E9590] line-through">{formatPrice(product.compare_at_price as number)}</span>}

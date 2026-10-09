@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +11,10 @@ interface RouteParams {
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params;
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: combo, error } = await (admin as any)
+    const { data: combo, error } = await (supabase as any)
       .from("combo_offers")
       .select(`
         id,

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await verifyAdminSession())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { public_id } = body;
 

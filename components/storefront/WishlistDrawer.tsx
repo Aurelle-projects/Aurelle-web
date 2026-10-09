@@ -268,7 +268,7 @@ export default function WishlistDrawer({
                     const image = product.images?.find((i) => i.is_primary) ?? product.images?.[0];
                     return (
                       <div key={product.id} className="flex gap-3 pb-4 border-b border-[#EDE9DF] last:border-0 last:pb-0">
-                        <Link href={`/products/${product.slug}`} onClick={onClose} className="shrink-0">
+                        <Link href={`/products/${product.slug}`} prefetch={true} onClick={onClose} className="shrink-0">
                           <div className="w-[72px] h-[88px] bg-[#F5F5F5] rounded-sm overflow-hidden relative">
                             {image?.url ? (
                               <Image
@@ -288,6 +288,7 @@ export default function WishlistDrawer({
                         <div className="flex-1 min-w-0">
                           <Link
                             href={`/products/${product.slug}`}
+                            prefetch={true}
                             onClick={onClose}
                             className="text-[13px] font-semibold text-[#1D211F] line-clamp-2 hover:text-[#183D2B] transition-colors leading-snug"
                           >

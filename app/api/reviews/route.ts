@@ -80,10 +80,9 @@ export async function GET(request: NextRequest) {
     const userOnly = searchParams.get("userOnly") === "true";
     const checkEligibility = searchParams.get("checkEligibility") === "true";
 
-    const admin = createAdminClient();
-
     // ── Eligibility check: can the current user review this product? ──
     if (checkEligibility && productId) {
+      const admin = createAdminClient();
       const supabase = await createClient();
       const {
         data: { user },
@@ -149,7 +148,7 @@ export async function GET(request: NextRequest) {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (admin as any)
+      const { data, error } = await (supabase as any)
         .from("reviews")
         .select(`
           id,
@@ -172,9 +171,10 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Published reviews for a product ──────────────────────────────
-    if (productId) {
+    if (productId && !checkEligibility) {
+      const supabasePublic = await createClient();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (admin as any)
+      const { data, error } = await (supabasePublic as any)
         .from("reviews")
         .select(`
           id,

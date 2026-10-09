@@ -209,17 +209,28 @@ export default function WholesaleFooter() {
         </div>
 
         {/* Bottom Bar: anchors to wholesale page top */}
-        <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/60">
+        <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-white/60">
           <p>
             &copy; {new Date().getFullYear()} Aurelle Cosmetics Trading FZ-LLC. All rights reserved.
           </p>
-          <div className="flex items-center gap-3 text-white/50 text-[10px]">
+          <div className="hidden sm:flex items-center gap-3 text-white/50 text-[10px]">
             <span>100% Genuine Cosmetics</span>
             <span>•</span>
             <span>Dubai Municipality Registered</span>
             <span>•</span>
             <span>UAE VAT 5% Compliant</span>
           </div>
+          <p className="text-white/55 text-[10px] tracking-wide">
+            Crafted by{" "}
+            <a
+              href="https://ekodrix.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/85 hover:text-white font-medium transition-colors hover:underline underline-offset-2"
+            >
+              Ekodrix
+            </a>
+          </p>
         </div>
       </div>
     </footer>

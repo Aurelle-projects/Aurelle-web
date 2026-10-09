@@ -27,7 +27,7 @@ export default function HomeBanners({ images = [] }: HomeBannersProps) {
               className="relative w-full aspect-[16/9] sm:aspect-[2/1] overflow-hidden rounded-xl shadow-xs"
             >
               {image.link ? (
-                <Link href={image.link} className="block w-full h-full group">
+                <Link href={image.link} className="relative block w-full h-full group">
                   <Image
                     src={image.url as string}
                     alt={`Homepage banner ${index + 1}`}

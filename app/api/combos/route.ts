@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
     const featuredOnly = searchParams.get("featured") === "true";
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query = (admin as any)
+    let query = (supabase as any)
       .from("combo_offers")
       .select(`
         id,

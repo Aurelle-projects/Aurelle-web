@@ -134,6 +134,7 @@ export default function ProductCard({
       <div className="relative aspect-[3/4] w-full bg-gray-200 overflow-hidden rounded-none flex items-center justify-center">
         <Link
           href={productLink}
+          prefetch={true}
           className="relative w-full h-full block"
           tabIndex={-1}
           aria-hidden="true"
@@ -249,6 +250,7 @@ export default function ProductCard({
       <div className="pt-3 flex flex-col text-left">
         <Link
           href={productLink}
+          prefetch={true}
           className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-1"
         >
           {product.name}

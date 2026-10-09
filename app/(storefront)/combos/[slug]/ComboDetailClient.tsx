@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Minus,
   Plus,
-  Star,
   Package,
   ArrowRight,
 } from "lucide-react";
@@ -221,10 +220,10 @@ export default function ComboDetailClient({
                     key={idx}
                     type="button"
                     onClick={() => setSelectedImageIdx(idx)}
-                    className={`relative w-16 h-20 md:w-20 md:h-24 shrink-0 rounded-none overflow-hidden border transition-all ${
+                    className={`relative w-16 h-20 md:w-20 md:h-24 shrink-0 rounded-none overflow-hidden transition-all ${
                       selectedImageIdx === idx
-                        ? "border-[#183D2B] ring-1 ring-[#183D2B]"
-                        : "border-[#DCCFB9]/60 hover:border-[#183D2B]/50"
+                        ? "opacity-100"
+                        : "opacity-50 hover:opacity-80"
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -234,7 +233,7 @@ export default function ComboDetailClient({
               </div>
             )}
 
-            <div className="flex-1 relative aspect-[4/3] md:aspect-[5/4] bg-white rounded-none border border-[#DCCFB9]/60 overflow-hidden shadow-xs flex items-center justify-center">
+            <div className="flex-1 relative aspect-[4/3] md:aspect-[5/4] bg-white rounded-none overflow-hidden shadow-xs flex items-center justify-center">
               {primaryImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -280,7 +279,7 @@ export default function ComboDetailClient({
             </div>
 
             {/* Price Box */}
-            <div className="border-y border-[#DCCFB9]/40 py-4 space-y-1">
+            <div className="py-4 space-y-1">
               <div className="flex items-baseline gap-3">
                 <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
                   AED {Number(combo.price).toFixed(2)}
@@ -312,7 +311,7 @@ export default function ComboDetailClient({
             {!combo.is_out_of_stock ? (
               <div className="space-y-3 pt-2">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center border border-[#DCCFB9] rounded-none bg-white">
+                  <div className="flex items-center rounded-none bg-white">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -361,13 +360,13 @@ export default function ComboDetailClient({
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="w-full h-11 border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs uppercase tracking-widest font-bold rounded-none transition-colors cursor-pointer"
+                  className="w-full h-11 bg-[#183D2B]/10 text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs uppercase tracking-widest font-bold rounded-none transition-colors cursor-pointer"
                 >
                   Buy Now with Express Checkout
                 </button>
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 border border-gray-200 text-center space-y-1">
+              <div className="p-4 bg-gray-50 text-center space-y-1">
                 <p className="text-sm font-semibold text-[#1D211F]">Currently Out of Stock</p>
                 <p className="text-xs text-[#5C6460]">
                   This combo offer is being restocked. Check out our other bundles below!
@@ -376,7 +375,7 @@ export default function ComboDetailClient({
             )}
 
             {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#DCCFB9]/40 text-center">
+            <div className="grid grid-cols-3 gap-2 pt-4 text-center">
               <div className="flex flex-col items-center gap-1.5 p-2">
                 <Truck size={18} className="text-[#183D2B]" />
                 <span className="text-[11px] font-semibold text-[#1D211F]">Next-Day Delivery</span>
@@ -398,7 +397,7 @@ export default function ComboDetailClient({
 
         {/* ── Included Items Showcase ──────────────────────────────────────── */}
         {combo.items && combo.items.length > 0 && (
-          <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs space-y-6">
+          <div className="bg-white rounded-none p-6 md:p-8 shadow-xs space-y-6">
             <div>
               <h2 className="text-xl font-bold text-[#1D211F] tracking-tight">
                 Included in This Bundle ({combo.items.length}{" "}
@@ -416,9 +415,9 @@ export default function ComboDetailClient({
                 return (
                   <div
                     key={it.id || idx}
-                    className="flex items-center gap-4 p-4 border border-[#EDE9DF] bg-[#FAF8F5]/50"
+                    className="flex items-center gap-4 p-4 bg-[#FAF8F5]/50"
                   >
-                    <div className="w-16 h-20 bg-white border border-[#DCCFB9]/40 overflow-hidden shrink-0 flex items-center justify-center">
+                    <div className="w-16 h-20 bg-white overflow-hidden shrink-0 flex items-center justify-center">
                       {pImg ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

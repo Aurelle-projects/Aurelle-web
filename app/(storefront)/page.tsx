@@ -338,7 +338,13 @@ export default async function HomePage() {
         if (!b || b.is_active === false) return false;
         if (b.starts_at && new Date(b.starts_at) > now) return false;
         if (b.ends_at && new Date(b.ends_at) < now) return false;
-        return true;
+        const hasImage = Boolean(
+          b.image_url ||
+          b.background_image_url ||
+          b.product_image_url ||
+          b.mobile_image_url
+        );
+        return hasImage;
       });
     } catch {
       // Graceful degradation — show layout without DB data

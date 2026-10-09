@@ -315,7 +315,7 @@ function LinkPicker({ value, onChange }: LinkPickerProps) {
 export default function AdminHeroPage() {
   const [formData, setFormData] = useState<HeroData>(DEFAULT_HERO_DATA);
   const [heroBanners, setHeroBanners] = useState<AdminHeroBanner[]>([]);
-  const [expandedBannerId, setExpandedBannerId] = useState<string | null>(null);
+  const [expandedBannerId, setExpandedBannerId] = useState<string | null>("all");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -328,7 +328,7 @@ export default function AdminHeroPage() {
           if (data.hero) {
             setFormData((prev) => ({ ...prev, ...data.hero }));
           }
-          if (Array.isArray(data.banners) && data.banners.length > 0) {
+          if (Array.isArray(data.banners)) {
             const formatted: AdminHeroBanner[] = data.banners.map((b: any, index: number) => ({
               id: b.id || `temp-${index}`,
               title: b.title || "EVERYDAY ESSENTIALS. ELEVATED",
@@ -348,10 +348,50 @@ export default function AdminHeroPage() {
               starts_at: b.starts_at || null,
               ends_at: b.ends_at || null,
             }));
-            setHeroBanners(formatted);
-            if (formatted.length > 0 && formatted[0]) {
-              setExpandedBannerId(formatted[0].id);
+
+            const defaultTemplates = [
+              {
+                title: "EVERYDAY ESSENTIALS. ELEVATED",
+                subtitle: "Beauty, personal care and lifestyle products for every member of the family.",
+                overline: "NATURAL CARE FOR A BRIGHTER YOU",
+              },
+              {
+                title: "SUMMER GLOW COLLECTION",
+                subtitle: "Discover hydrating formulas and glowing skincare essentials.",
+                overline: "NEW ARRIVALS",
+              },
+              {
+                title: "EXCLUSIVE LUXURY SCENTS",
+                subtitle: "Curated designer fragrances and premium perfumes for every occasion.",
+                overline: "SIGNATURE ESSENTIALS",
+              },
+            ];
+
+            while (formatted.length < 3) {
+              const idx = formatted.length;
+              const tpl = defaultTemplates[idx] ?? defaultTemplates[0]!;
+              formatted.push({
+                id: `hero-slot-${idx + 1}`,
+                title: tpl.title,
+                subtitle: tpl.subtitle,
+                overline: tpl.overline,
+                link_text: "EXPLORE NOW",
+                link_url: "/shop",
+                image_url: null,
+                image_public_id: null,
+                mobile_image_url: null,
+                mobile_image_public_id: null,
+                product_image_url: null,
+                product_image_public_id: null,
+                position: "hero",
+                sort_order: idx,
+                is_active: true,
+                starts_at: null,
+                ends_at: null,
+              });
             }
+
+            setHeroBanners(formatted);
           }
         }
       } catch {}
@@ -396,8 +436,8 @@ export default function AdminHeroPage() {
   }
 
   function handleDeleteBanner(id: string) {
-    if (heroBanners.length <= 1) {
-      alert("At least one hero banner is required.");
+    if (heroBanners.length <= 3) {
+      alert("At least 3 hero banner slots are recommended for the homepage carousel. You can hide a slide instead using the Active/Hidden toggle.");
       return;
     }
     if (!confirm("Are you sure you want to delete this hero slide?")) return;
@@ -444,27 +484,50 @@ export default function AdminHeroPage() {
       if (!data.success) throw new Error(data.error || "Save failed");
 
       if (Array.isArray(data.banners)) {
-        setHeroBanners(
-          data.banners.map((b: any, index: number) => ({
-            id: b.id || `temp-${index}`,
-            title: b.title || "EVERYDAY ESSENTIALS. ELEVATED",
-            subtitle: b.subtitle || "",
-            overline: b.overline || b.hero_tagline || "",
-            link_text: b.link_text || b.cta_primary_text || "SHOP COLLECTION",
-            link_url: b.link_url || b.cta_primary_href || "/shop",
-            image_url: b.image_url || b.background_image_url || b.product_image_url || null,
-            image_public_id: b.image_public_id || b.background_image_public_id || b.product_image_public_id || null,
-            mobile_image_url: b.mobile_image_url || null,
-            mobile_image_public_id: b.mobile_image_public_id || null,
-            product_image_url: b.product_image_url || null,
-            product_image_public_id: b.product_image_public_id || null,
+        const formatted: AdminHeroBanner[] = data.banners.map((b: any, index: number) => ({
+          id: b.id || `temp-${index}`,
+          title: b.title || "EVERYDAY ESSENTIALS. ELEVATED",
+          subtitle: b.subtitle || "",
+          overline: b.overline || b.hero_tagline || "",
+          link_text: b.link_text || b.cta_primary_text || "SHOP COLLECTION",
+          link_url: b.link_url || b.cta_primary_href || "/shop",
+          image_url: b.image_url || b.background_image_url || b.product_image_url || null,
+          image_public_id: b.image_public_id || b.background_image_public_id || b.product_image_public_id || null,
+          mobile_image_url: b.mobile_image_url || null,
+          mobile_image_public_id: b.mobile_image_public_id || null,
+          product_image_url: b.product_image_url || null,
+          product_image_public_id: b.product_image_public_id || null,
+          position: "hero",
+          sort_order: typeof b.sort_order === "number" ? b.sort_order : index,
+          is_active: b.is_active !== false,
+          starts_at: b.starts_at || null,
+          ends_at: b.ends_at || null,
+        }));
+
+        while (formatted.length < 3) {
+          const idx = formatted.length;
+          formatted.push({
+            id: `hero-slot-${idx + 1}`,
+            title: `COLLECTION HIGHLIGHT #${idx + 1}`,
+            subtitle: "Discover our luxury skincare and beauty essentials.",
+            overline: "NEW ARRIVALS",
+            link_text: "EXPLORE NOW",
+            link_url: "/shop",
+            image_url: null,
+            image_public_id: null,
+            mobile_image_url: null,
+            mobile_image_public_id: null,
+            product_image_url: null,
+            product_image_public_id: null,
             position: "hero",
-            sort_order: typeof b.sort_order === "number" ? b.sort_order : index,
-            is_active: b.is_active !== false,
-            starts_at: b.starts_at || null,
-            ends_at: b.ends_at || null,
-          }))
-        );
+            sort_order: idx,
+            is_active: true,
+            starts_at: null,
+            ends_at: null,
+          });
+        }
+
+        setHeroBanners(formatted);
       }
 
       setMessage({ text: "All changes and hero banners saved successfully!", type: "success" });
@@ -556,31 +619,90 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          {/* 2. Main Hero Section — MULTI-BANNER SLIDER CMS */}
+          {/* 2. Main Hero Section — 3 BANNERS SLIDER CMS */}
           <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#DCCFB9]/30 pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#DCCFB9]/30 pb-3 gap-2">
               <div>
-                <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider">
-                  2. Hero Slider Banners ({heroBanners.length} Slide{heroBanners.length === 1 ? "" : "s"})
+                <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider flex items-center gap-2">
+                  <span>2. Hero Slider Banners ({heroBanners.length} Slots Total)</span>
+                  <span className="text-[10px] px-2 py-0.5 bg-[#183D2B]/10 text-[#183D2B] rounded-full font-bold">
+                    3 Slots Ready
+                  </span>
                 </h2>
                 <p className="text-[11px] text-[#5C6460] mt-0.5">
-                  Manage multiple hero slides with autoplay and mobile swipe. When multiple slides are active, they slide automatically on the storefront.
+                  Configure the 3 hero banner slots for desktop &amp; mobile with automatic storefront rotation and touch swipe.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleAddBanner}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-[11px] font-bold uppercase tracking-wider rounded-md shadow-xs transition-colors cursor-pointer"
-              >
-                <Plus size={13} />
-                <span>Add Slide</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExpandedBannerId(expandedBannerId === "all" ? (heroBanners[0]?.id || null) : "all")}
+                  className="px-2.5 py-1.5 bg-[#F7F5EF] hover:bg-[#EAE6DB] border border-[#DCCFB9] text-[#1D211F] text-[11px] font-bold rounded-md shadow-xs transition-colors cursor-pointer"
+                >
+                  {expandedBannerId === "all" ? "Collapse All" : "Expand All 3 Slots"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddBanner}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#183D2B] hover:bg-[#102D20] text-white text-[11px] font-bold uppercase tracking-wider rounded-md shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Add Slide</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Slot Selector Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-[#F7F5EF] rounded-lg border border-[#DCCFB9]/70">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#5C6460]">
+                  Jump To Slot:
+                </span>
+                {heroBanners.map((b, idx) => {
+                  const hasDesktop = Boolean(b.image_url);
+                  const hasMobile = Boolean(b.mobile_image_url);
+                  const isCurrent = expandedBannerId === b.id || expandedBannerId === "all";
+
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setExpandedBannerId(expandedBannerId === b.id ? null : b.id)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isCurrent
+                          ? "bg-[#183D2B] text-white shadow-xs"
+                          : "bg-white text-[#1D211F] border border-[#DCCFB9] hover:border-[#183D2B]"
+                      }`}
+                    >
+                      <span>Slot #{idx + 1}</span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                          hasDesktop
+                            ? isCurrent ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+                            : isCurrent ? "bg-amber-400/30 text-amber-100" : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        Desktop {hasDesktop ? "✓" : "−"}
+                      </span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                          hasMobile
+                            ? isCurrent ? "bg-white/20 text-white" : "bg-sky-100 text-sky-800"
+                            : isCurrent ? "bg-white/10 text-white/70" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        Mobile {hasMobile ? "✓" : "−"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Banners List */}
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {heroBanners.map((banner, index) => {
-                const isExpanded = expandedBannerId === banner.id;
+                const isExpanded = expandedBannerId === "all" || expandedBannerId === banner.id;
                 const desktopImg = banner.image_url;
                 const mobileImg = banner.mobile_image_url;
 
@@ -621,30 +743,47 @@ export default function AdminHeroPage() {
                         </div>
 
                         {/* Slide Badge */}
-                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-[#183D2B]/10 text-[#183D2B] rounded">
-                          Slide #{index + 1}
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-[#183D2B] text-white rounded">
+                          Slot #{index + 1}
                         </span>
 
-                        {/* Miniature Preview */}
-                        {desktopImg ? (
-                          <div className="w-12 h-7 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-300 relative">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={desktopImg}
-                              alt="Thumbnail"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-7 rounded bg-gray-200 border border-gray-300 flex items-center justify-center text-[9px] text-gray-400 shrink-0">
-                            No Img
-                          </div>
-                        )}
+                        {/* Mini Desktop & Mobile Previews */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {desktopImg ? (
+                            <div className="w-12 h-7 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-300 relative" title="Desktop Preview">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={desktopImg}
+                                alt="Desktop Banner"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-7 rounded bg-amber-50 border border-amber-200 flex items-center justify-center text-[8px] font-bold text-amber-700 shrink-0">
+                              No Desktop
+                            </div>
+                          )}
+
+                          {mobileImg ? (
+                            <div className="w-5 h-7 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-300 relative" title="Mobile Preview">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={mobileImg}
+                                alt="Mobile Banner"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-7 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-[7px] text-gray-400 shrink-0" title="No Mobile Image (Desktop fallback will be used)">
+                              Mob-
+                            </div>
+                          )}
+                        </div>
 
                         {/* Title & Overline */}
                         <div className="min-w-0 truncate">
                           <p className="text-xs font-bold text-[#1D211F] truncate">
-                            {banner.title || "Untitled Slide"}
+                            {banner.title || `Hero Banner Slot #${index + 1}`}
                           </p>
                           {banner.overline && (
                             <p className="text-[10px] text-[#5C6460] uppercase tracking-wider truncate">
@@ -680,11 +819,11 @@ export default function AdminHeroPage() {
                           }
                           className="px-2.5 py-1 bg-white border border-[#DCCFB9] hover:border-[#183D2B] text-xs font-semibold rounded text-[#1D211F] cursor-pointer"
                         >
-                          {isExpanded ? "Collapse" : "Edit Slide"}
+                          {isExpanded ? "Collapse" : "Edit Slot"}
                         </button>
 
                         {/* Delete Slide */}
-                        {heroBanners.length > 1 && (
+                        {heroBanners.length > 3 && (
                           <button
                             type="button"
                             onClick={() => handleDeleteBanner(banner.id)}
@@ -700,6 +839,80 @@ export default function AdminHeroPage() {
                     {/* Slide Expanded Editing Panel */}
                     {isExpanded && (
                       <div className="p-4 border-t border-[#DCCFB9]/50 bg-white space-y-4">
+                        {/* 1. Hero Slide Banner Images — Prominently placed at TOP */}
+                        <div className="p-3.5 bg-[#FAF9F5] rounded-xl border border-[#DCCFB9]/80 space-y-2">
+                          <div className="flex items-center justify-between border-b border-[#DCCFB9]/40 pb-1.5">
+                            <span className="text-[11px] font-extrabold text-[#183D2B] uppercase tracking-wider">
+                              Slot #{index + 1} Banner Images (Desktop &amp; Mobile)
+                            </span>
+                            <span className="text-[10px] text-[#5C6460]">
+                              Dedicated banners tailored for desktop &amp; phone viewports
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                            {/* Desktop Banner Field */}
+                            <div>
+                              <CloudinaryUploader
+                                label="Desktop Banner Image"
+                                description="Shown on desktop, PC & tablets (≥768px). Recommended: 1920×1080 landscape."
+                                folder="aurelle/hero"
+                                aspectRatio="hero"
+                                value={banner.image_url}
+                                publicId={banner.image_public_id}
+                                onUploadSuccess={(asset: CloudinaryAsset) => {
+                                  handleUpdateBanner(banner.id, {
+                                    image_url: asset.secure_url,
+                                    image_public_id: asset.public_id,
+                                    product_image_url: asset.secure_url,
+                                    product_image_public_id: asset.public_id,
+                                  });
+                                  setMessage({
+                                    text: `Desktop banner for Slot #${index + 1} uploaded!`,
+                                    type: "success",
+                                  });
+                                }}
+                                onRemove={() => {
+                                  handleUpdateBanner(banner.id, {
+                                    image_url: null,
+                                    image_public_id: null,
+                                    product_image_url: null,
+                                    product_image_public_id: null,
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            {/* Mobile Banner Field */}
+                            <div>
+                              <CloudinaryUploader
+                                label="Mobile Banner Image"
+                                description="Shown exclusively on mobile phones (<768px). Recommended: 800×1200 or 9:16 portrait."
+                                folder="aurelle/hero"
+                                aspectRatio="hero"
+                                value={banner.mobile_image_url}
+                                publicId={banner.mobile_image_public_id}
+                                onUploadSuccess={(asset: CloudinaryAsset) => {
+                                  handleUpdateBanner(banner.id, {
+                                    mobile_image_url: asset.secure_url,
+                                    mobile_image_public_id: asset.public_id,
+                                  });
+                                  setMessage({
+                                    text: `Mobile banner for Slot #${index + 1} uploaded!`,
+                                    type: "success",
+                                  });
+                                }}
+                                onRemove={() => {
+                                  handleUpdateBanner(banner.id, {
+                                    mobile_image_url: null,
+                                    mobile_image_public_id: null,
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Text Content & CTA Settings */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                           {/* Overline */}
                           <div className="md:col-span-2">
@@ -776,74 +989,6 @@ export default function AdminHeroPage() {
                                 handleUpdateBanner(banner.id, { link_url: val })
                               }
                             />
-                          </div>
-
-                          {/* Hero Banner Images — 2-column: Desktop | Mobile */}
-                          <div className="md:col-span-2 pt-1 border-t border-[#DCCFB9]/40">
-                            <p className="text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-2">
-                              Hero Slide Banner Images
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                              {/* Desktop Banner */}
-                              <div>
-                                <CloudinaryUploader
-                                  label="Desktop Banner"
-                                  description="Shown on tablet & desktop (≥768px). Recommended: 1920×1080 landscape."
-                                  folder="aurelle/hero"
-                                  aspectRatio="hero"
-                                  value={banner.image_url}
-                                  publicId={banner.image_public_id}
-                                  onUploadSuccess={(asset: CloudinaryAsset) => {
-                                    handleUpdateBanner(banner.id, {
-                                      image_url: asset.secure_url,
-                                      image_public_id: asset.public_id,
-                                      product_image_url: asset.secure_url,
-                                      product_image_public_id: asset.public_id,
-                                    });
-                                    setMessage({
-                                      text: `Desktop banner for Slide #${index + 1} uploaded!`,
-                                      type: "success",
-                                    });
-                                  }}
-                                  onRemove={() => {
-                                    handleUpdateBanner(banner.id, {
-                                      image_url: null,
-                                      image_public_id: null,
-                                      product_image_url: null,
-                                      product_image_public_id: null,
-                                    });
-                                  }}
-                                />
-                              </div>
-
-                              {/* Mobile Banner */}
-                              <div>
-                                <CloudinaryUploader
-                                  label="Mobile Banner"
-                                  description="Shown on mobile only (<768px). Recommended: 9×16 portrait."
-                                  folder="aurelle/hero"
-                                  aspectRatio="hero"
-                                  value={banner.mobile_image_url}
-                                  publicId={banner.mobile_image_public_id}
-                                  onUploadSuccess={(asset: CloudinaryAsset) => {
-                                    handleUpdateBanner(banner.id, {
-                                      mobile_image_url: asset.secure_url,
-                                      mobile_image_public_id: asset.public_id,
-                                    });
-                                    setMessage({
-                                      text: `Mobile banner for Slide #${index + 1} uploaded!`,
-                                      type: "success",
-                                    });
-                                  }}
-                                  onRemove={() => {
-                                    handleUpdateBanner(banner.id, {
-                                      mobile_image_url: null,
-                                      mobile_image_public_id: null,
-                                    });
-                                  }}
-                                />
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </div>

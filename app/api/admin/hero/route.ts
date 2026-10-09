@@ -230,29 +230,65 @@ export async function GET() {
       // Table might not have custom columns yet or empty
     }
 
-    // If banners is empty but site_settings.hero exists, construct initial slide
-    if (bannersList.length === 0 && (flat.hero_title || flat.background_image_url || flat.product_image_url)) {
-      bannersList = [
-        {
-          id: "initial-hero-1",
-          title: (flat.hero_title as string) || "EVERYDAY ESSENTIALS. ELEVATED",
-          subtitle: (flat.hero_subtitle as string) || "",
-          overline: (flat.hero_tagline as string) || "",
-          link_text: (flat.cta_primary_text as string) || "SHOP COLLECTION",
-          link_url: (flat.cta_primary_href as string) || "/shop",
-          image_url: (flat.background_image_url as string) || (flat.product_image_url as string) || null,
-          image_public_id: (flat.background_image_public_id as string) || (flat.product_image_public_id as string) || null,
-          mobile_image_url: (flat.mobile_image_url as string) || null,
-          mobile_image_public_id: (flat.mobile_image_public_id as string) || null,
-          product_image_url: (flat.product_image_url as string) || null,
-          product_image_public_id: (flat.product_image_public_id as string) || null,
-          position: "hero",
-          sort_order: 0,
-          is_active: true,
-          starts_at: null,
-          ends_at: null,
-        },
-      ];
+    const defaultBannerTemplates = [
+      {
+        title: (flat.hero_title as string) || "EVERYDAY ESSENTIALS. ELEVATED",
+        subtitle: (flat.hero_subtitle as string) || "Beauty, personal care and lifestyle products for every member of the family.",
+        overline: (flat.hero_tagline as string) || "NATURAL CARE FOR A BRIGHTER YOU",
+        link_text: (flat.cta_primary_text as string) || "SHOP COLLECTION",
+        link_url: (flat.cta_primary_href as string) || "/shop",
+        image_url: (flat.background_image_url as string) || (flat.product_image_url as string) || null,
+        image_public_id: (flat.background_image_public_id as string) || (flat.product_image_public_id as string) || null,
+        mobile_image_url: (flat.mobile_image_url as string) || null,
+        mobile_image_public_id: (flat.mobile_image_public_id as string) || null,
+      },
+      {
+        title: "SUMMER GLOW COLLECTION",
+        subtitle: "Discover hydrating formulas and glowing skincare essentials.",
+        overline: "NEW ARRIVALS",
+        link_text: "EXPLORE NOW",
+        link_url: "/shop",
+        image_url: null,
+        image_public_id: null,
+        mobile_image_url: null,
+        mobile_image_public_id: null,
+      },
+      {
+        title: "EXCLUSIVE LUXURY SCENTS",
+        subtitle: "Curated designer fragrances and premium perfumes for every occasion.",
+        overline: "SIGNATURE ESSENTIALS",
+        link_text: "EXPLORE NOW",
+        link_url: "/shop",
+        image_url: null,
+        image_public_id: null,
+        mobile_image_url: null,
+        mobile_image_public_id: null,
+      },
+    ];
+
+    // Ensure we always provide at least 3 banner slots
+    while (bannersList.length < 3) {
+      const idx = bannersList.length;
+      const tpl = defaultBannerTemplates[idx] ?? defaultBannerTemplates[0]!;
+      bannersList.push({
+        id: `hero-slot-${idx + 1}`,
+        title: tpl.title,
+        subtitle: tpl.subtitle,
+        overline: tpl.overline,
+        link_text: tpl.link_text,
+        link_url: tpl.link_url,
+        image_url: tpl.image_url,
+        image_public_id: tpl.image_public_id,
+        mobile_image_url: tpl.mobile_image_url,
+        mobile_image_public_id: tpl.mobile_image_public_id,
+        product_image_url: tpl.image_url,
+        product_image_public_id: tpl.image_public_id,
+        position: "hero",
+        sort_order: idx,
+        is_active: true,
+        starts_at: null,
+        ends_at: null,
+      });
     }
 
     return NextResponse.json({ success: true, hero: flat, banners: bannersList });
@@ -287,7 +323,7 @@ export async function POST(req: NextRequest) {
         const incomingIds = new Set(
           incomingBanners
             .map((b: any) => b.id)
-            .filter((id: any) => id && !String(id).startsWith("initial-") && !String(id).startsWith("temp-"))
+            .filter((id: any) => id && !String(id).startsWith("initial-") && !String(id).startsWith("temp-") && !String(id).startsWith("hero-slot-"))
         );
 
         // Delete removed banners
@@ -296,10 +332,10 @@ export async function POST(req: NextRequest) {
           await supabase.from("banners").delete().in("id", toDelete);
         }
 
-        // Upsert all incoming banners with updated sort_orders
+        // Upsert or insert all incoming banners with updated sort_orders
         for (let i = 0; i < incomingBanners.length; i++) {
           const banner = incomingBanners[i];
-          const isTempId = !banner.id || String(banner.id).startsWith("initial-") || String(banner.id).startsWith("temp-");
+          const isTempId = !banner.id || String(banner.id).startsWith("initial-") || String(banner.id).startsWith("temp-") || String(banner.id).startsWith("hero-slot-");
 
           const bannerRecord: Record<string, any> = {
             title: banner.title || "EVERYDAY ESSENTIALS. ELEVATED",
@@ -321,15 +357,19 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           };
 
-          if (!isTempId) {
-            bannerRecord.id = banner.id;
-          }
+          let upserted = null;
+          let upsertErr = null;
 
-          const { data: upserted, error: upsertErr } = await supabase
-            .from("banners")
-            .upsert(bannerRecord)
-            .select()
-            .single();
+          if (isTempId) {
+            const res = await supabase.from("banners").insert(bannerRecord).select().single();
+            upserted = res.data;
+            upsertErr = res.error;
+          } else {
+            bannerRecord.id = banner.id;
+            const res = await supabase.from("banners").upsert(bannerRecord).select().single();
+            upserted = res.data;
+            upsertErr = res.error;
+          }
 
           if (!upsertErr && upserted) {
             savedBanners.push(upserted);

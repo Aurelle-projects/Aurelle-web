@@ -74,10 +74,30 @@ export default function AdminSettingsPage() {
         }
         const data = await res.json();
         if (data.settings) {
-          setSettings((prev) => ({
-            ...prev,
-            ...data.settings,
-          }));
+          const s = data.settings;
+          let normalizedVat = s.vat_rate;
+          if (typeof normalizedVat === "number" && normalizedVat > 0 && normalizedVat < 1) {
+            normalizedVat = Math.round(normalizedVat * 100);
+          }
+          setSettings({
+            standard_shipping_fee: s.standard_shipping_fee ?? 20,
+            free_shipping_threshold: s.free_shipping_threshold ?? 199,
+            vat_rate: normalizedVat ?? 5,
+            store_name: s.store_name || DEFAULT_SETTINGS.store_name,
+            trade_license: s.trade_license || DEFAULT_SETTINGS.trade_license,
+            city: s.city || DEFAULT_SETTINGS.city,
+            country: s.country || DEFAULT_SETTINGS.country,
+            contact_address: s.contact_address || DEFAULT_SETTINGS.contact_address,
+            contact_phone: s.contact_phone || s.store_phone || DEFAULT_SETTINGS.contact_phone,
+            contact_email: s.contact_email || s.store_email || DEFAULT_SETTINGS.contact_email,
+            trade_email: s.trade_email || DEFAULT_SETTINGS.trade_email,
+            operating_hours: s.operating_hours || DEFAULT_SETTINGS.operating_hours,
+            operating_hours_weekend: s.operating_hours_weekend || DEFAULT_SETTINGS.operating_hours_weekend,
+            social_instagram: s.social_instagram || DEFAULT_SETTINGS.social_instagram,
+            social_facebook: s.social_facebook || DEFAULT_SETTINGS.social_facebook,
+            social_tiktok: s.social_tiktok || DEFAULT_SETTINGS.social_tiktok,
+            social_whatsapp: s.social_whatsapp || DEFAULT_SETTINGS.social_whatsapp,
+          });
         }
       } catch (err: any) {
         console.error("Error loading settings:", err);
@@ -104,11 +124,24 @@ export default function AdminSettingsPage() {
     setErrorMessage(null);
 
     try {
-      const payload = {
-        ...settings,
+      const payload: Record<string, any> = {
         standard_shipping_fee: Number(settings.standard_shipping_fee) || 0,
         free_shipping_threshold: Number(settings.free_shipping_threshold) || 0,
         vat_rate: Number(settings.vat_rate) || 0,
+        store_name: String(settings.store_name || "").trim(),
+        trade_license: String(settings.trade_license || "").trim(),
+        city: String(settings.city || "").trim(),
+        country: String(settings.country || "").trim(),
+        contact_address: String(settings.contact_address || "").trim(),
+        contact_phone: String(settings.contact_phone || "").trim(),
+        contact_email: String(settings.contact_email || "").trim(),
+        trade_email: String(settings.trade_email || "").trim(),
+        operating_hours: String(settings.operating_hours || "").trim(),
+        operating_hours_weekend: String(settings.operating_hours_weekend || "").trim(),
+        social_instagram: String(settings.social_instagram || "").trim(),
+        social_facebook: String(settings.social_facebook || "").trim(),
+        social_tiktok: String(settings.social_tiktok || "").trim(),
+        social_whatsapp: String(settings.social_whatsapp || "").trim(),
       };
 
       const res = await fetch("/api/admin/settings", {

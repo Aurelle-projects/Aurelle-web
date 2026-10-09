@@ -13,7 +13,7 @@ const SETTINGS_DEFAULTS = {
   trade_license: "FZ-LLC-2026-AURELLE",
   city: "Dubai",
   country: "United Arab Emirates",
-  contact_address: "Business Center, Meydan Free Zone, Dubai, United Arab Emirates",
+  contact_address: "Business Center, Meydan Free Zone\nDubai, United Arab Emirates",
   contact_phone: "+971 50 123 4567",
   contact_email: "care@aurelle.ae",
   trade_email: "trade@aurelle.ae",
@@ -44,7 +44,12 @@ export async function GET() {
 
     if (Array.isArray(rows)) {
       for (const r of rows) {
-        if (r.key in current || r.key === "store_email" || r.key === "store_phone") {
+        // Only override default if value in DB is non-null and defined
+        if (
+          (r.key in current || r.key === "store_email" || r.key === "store_phone") &&
+          r.value !== null &&
+          r.value !== undefined
+        ) {
           current[r.key] = r.value;
         }
       }
@@ -56,6 +61,13 @@ export async function GET() {
     }
     if (current.store_phone && !current.contact_phone) {
       current.contact_phone = current.store_phone;
+    }
+
+    // Final safety check: ensure NO field is null or undefined
+    for (const [k, v] of Object.entries(current)) {
+      if (v === null || v === undefined) {
+        current[k] = (SETTINGS_DEFAULTS as any)[k] ?? "";
+      }
     }
 
     return NextResponse.json({
@@ -87,11 +99,25 @@ export async function POST(request: NextRequest) {
     for (const key of allowedKeys) {
       if (key in body) {
         let val = body[key];
-        if (key === "standard_shipping_fee" || key === "free_shipping_threshold" || key === "vat_rate") {
+        if (val === null || val === undefined) {
+          val = (SETTINGS_DEFAULTS as any)[key] ?? "";
+        }
+
+        if (
+          key === "standard_shipping_fee" ||
+          key === "free_shipping_threshold" ||
+          key === "vat_rate"
+        ) {
           val = Number(val) || 0;
         } else if (typeof val === "string") {
           val = val.trim();
         }
+
+        // Never let null or undefined reach Postgres jsonb NOT NULL column
+        if (val === null || val === undefined) {
+          val = "";
+        }
+
         updates.push({ key, value: val });
       }
     }
@@ -104,13 +130,14 @@ export async function POST(request: NextRequest) {
       updates.push({ key: "store_phone", value: String(body.contact_phone).trim() });
     }
 
-    // Upsert into site_settings
+    // Upsert into site_settings with guaranteed non-null value
     for (const u of updates) {
+      const safeValue = u.value !== null && u.value !== undefined ? u.value : "";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (admin as any).from("site_settings").upsert(
         {
           key: u.key,
-          value: u.value,
+          value: safeValue,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "key" }

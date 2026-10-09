@@ -264,7 +264,6 @@ export default async function HomePage() {
           .select("key, value")
           .in("key", [
             "hero",
-            "family_banner",
             "promo_banners",
             "announcement",
             "trust_badges",
@@ -361,7 +360,6 @@ export default async function HomePage() {
   }
 
   const heroSettings = settings.hero || {};
-  const familySettings = settings.family_banner || {};
   const promoSettings = settings.promo_banners || {};
   const announcementSettings = settings.announcement || {};
   const badgeSettings = settings.trust_badges || {};

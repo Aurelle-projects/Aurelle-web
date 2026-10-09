@@ -1095,79 +1095,11 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          {/* 4. Family Banner Section */}
-          <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-3">
-            <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
-              4. Family Collection Banner
-            </h2>
-            <p className="text-[11px] text-[#5C6460] leading-relaxed">
-              This section appears on the homepage below categories. Upload a family lifestyle image and customize the text.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Banner Headline
-                </label>
-                <input
-                  type="text"
-                  value={formData.family_title}
-                  onChange={(e) => handleChange("family_title", e.target.value)}
-                  className="w-full h-8 px-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all placeholder:text-[#8C938F]"
-                  placeholder="Enter banner headline"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                  Banner Subtitle
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.family_subtitle}
-                  onChange={(e) => handleChange("family_subtitle", e.target.value)}
-                  className="w-full p-2.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] focus:bg-white focus:border-[#183D2B] focus:ring-1 focus:ring-[#183D2B]/10 outline-none transition-all resize-none placeholder:text-[#8C938F]"
-                  placeholder="Enter banner subtitle"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <CloudinaryUploader
-                  label="Family Collection Image"
-                  description="Upload a lifestyle photo showing family/household products. Appears on the right side of the Family Banner on the homepage. Recommended: 900×700px or 4:3 ratio."
-                  folder="aurelle/hero"
-                  aspectRatio="hero"
-                  value={formData.family_image_url}
-                  publicId={formData.family_image_public_id}
-                  onUploadSuccess={(asset: CloudinaryAsset) => {
-                    const updated = {
-                      ...formData,
-                      family_image_url: asset.secure_url,
-                      family_image_public_id: asset.public_id,
-                    };
-                    setFormData(updated);
-                    setMessage({
-                      text: "Family banner image uploaded & saved!",
-                      type: "success",
-                    });
-                  }}
-                  onRemove={() => {
-                    const updated = {
-                      ...formData,
-                      family_image_url: null,
-                      family_image_public_id: null,
-                    };
-                    setFormData(updated);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Promotional Dual Banners (Storefront) */}
+          {/* 4. Promotional Dual Banners (Storefront) */}
           <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
-                5. Promotional Dual Banners (Storefront)
+                4. Promotional Dual Banners (Storefront)
               </h2>
               <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Configure the two side-by-side promotional campaign banners displayed on the homepage. Upload campaign model / product imagery and adjust text &amp; links.
@@ -1354,11 +1286,11 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          {/* 6. Homepage Two-Banner Section */}
+          {/* 5. Homepage Two-Banner Section */}
           <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
-                6. Homepage Banners (2 Images)
+                5. Homepage Banners (2 Images)
               </h2>
               <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Upload up to two images for the homepage two-column banner section.
@@ -1409,11 +1341,11 @@ export default function AdminHeroPage() {
             </div>
           </div>
 
-          {/* 7. Brand Showcase / Gallery Section (6 Images + Text) */}
+          {/* 6. Brand Showcase / Gallery Section (6 Images + Text) */}
           <div className="bg-white p-4 md:p-5 rounded-lg border border-[#DCCFB9]/60 shadow-xs space-y-4">
             <div>
               <h2 className="text-xs font-bold text-[#1D211F] uppercase tracking-wider border-b border-[#DCCFB9]/30 pb-1.5">
-                7. Brand Showcase / Timeless Glow (6 Images + Text)
+                6. Brand Showcase / Timeless Glow (6 Images + Text)
               </h2>
               <p className="text-[11px] text-[#5C6460] leading-relaxed mt-1">
                 Configure the homepage showcase section featuring a 6-image photo collage alongside your campaign heading and description.

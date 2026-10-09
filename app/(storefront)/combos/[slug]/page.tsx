@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import ComboDetailClient from "./ComboDetailClient";
@@ -7,7 +8,82 @@ interface ComboPageProps {
   params: Promise<{ slug: string }>;
 }
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: ComboPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return { title: "Exclusive Combo Offer | Aurelle Cosmetics UAE" };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawCombo } = await (supabase as any)
+    .from("combo_offers")
+    .select("name, slug, description, price, compare_at_price, primary_image_url")
+    .eq("slug", slug.toLowerCase())
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!rawCombo) {
+    return {
+      title: "Combo Deal Not Found | Aurelle Cosmetics UAE",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `${rawCombo.name} | Exclusive Beauty Combo | Aurelle Cosmetics UAE`;
+  const cleanDesc = rawCombo.description
+    ? rawCombo.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 160)
+    : `Shop ${rawCombo.name} at Aurelle Cosmetics UAE for AED ${rawCombo.price}. Curated luxury beauty & skincare bundle with express delivery across Dubai & all Emirates.`;
+  const primaryImage = rawCombo.primary_image_url || `${SITE_URL}/og-image.jpg`;
+  const pageUrl = `${SITE_URL}/combos/${slug}`;
+
+  return {
+    title,
+    description: cleanDesc,
+    keywords: [
+      rawCombo.name,
+      `${rawCombo.name} UAE`,
+      "beauty combos UAE",
+      "skincare bundles Dubai",
+      "cosmetics gift sets UAE",
+      "Aurelle",
+      "Aurelle Cosmetics",
+      "Aurelle UAE",
+      "Aurelle Cosmetics UAE",
+      "buy cosmetics UAE",
+    ],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title,
+      description: cleanDesc,
+      url: pageUrl,
+      type: "website",
+      images: [
+        {
+          url: primaryImage,
+          width: 800,
+          height: 800,
+          alt: `${rawCombo.name} — Aurelle Cosmetics UAE`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: cleanDesc,
+      images: [primaryImage],
+    },
+  };
+}
 
 export default async function ComboDetailPage({ params }: ComboPageProps) {
   const { slug } = await params;
@@ -145,11 +221,81 @@ export default async function ComboDetailPage({ params }: ComboPageProps) {
     otherCombos = [];
   }
 
+  const primaryImage = rawCombo.primary_image_url || `${SITE_URL}/og-image.jpg`;
+
+  const comboSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: rawCombo.name,
+    image: [primaryImage],
+    description:
+      rawCombo.description?.replace(/<[^>]*>/g, "").slice(0, 300) ||
+      `${rawCombo.name} exclusive beauty combo deal at Aurelle Cosmetics UAE`,
+    sku: rawCombo.sku || undefined,
+    brand: {
+      "@type": "Brand",
+      name: "Aurelle",
+    },
+    offers: {
+      "@type": "Offer",
+      url: `${SITE_URL}/combos/${slug}`,
+      priceCurrency: "AED",
+      price: comboPrice,
+      itemCondition: "https://schema.org/NewCondition",
+      availability: rawCombo.is_out_of_stock
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "Aurelle Cosmetics",
+      },
+    },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE_URL,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Combos",
+        item: `${SITE_URL}/combos`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: rawCombo.name,
+        item: `${SITE_URL}/combos/${slug}`,
+      },
+    ],
+  };
+
   return (
-    <ComboDetailClient
-      initialCombo={combo}
-      initialOtherCombos={otherCombos}
-      slug={slug}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(comboSchema),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema),
+        }}
+      />
+      <ComboDetailClient
+        initialCombo={combo}
+        initialOtherCombos={otherCombos}
+        slug={slug}
+      />
+    </>
   );
 }

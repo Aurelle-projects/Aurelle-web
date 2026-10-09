@@ -3,10 +3,15 @@ import type { Metadata } from "next";
 const SITE_URL = "https://aurellecosmeticshop.com";
 
 export const metadata: Metadata = {
-  title: "Shop Cosmetics, Skincare & Makeup Online UAE | متجر التجميل والمكياج دبي",
+  title: "Shop Luxury Cosmetics & Skincare Online UAE | متجر التجميل والمكياج دبي",
   description:
-    "Explore 100% genuine cosmetics, skincare, haircare, perfumes & personal care products with fast delivery across Dubai, Abu Dhabi, Sharjah & all UAE. Cash on Delivery & Card payment. تسوق أرقى مستحضرات التجميل والمكياج والعناية بالبشرة أونلاين في الإمارات.",
+    "Explore 100% genuine cosmetics, skincare, haircare, perfumes & personal care products with fast delivery across Dubai, Abu Dhabi, Sharjah & all UAE at Aurelle Cosmetics. Cash on Delivery & Card payment. تسوق أرقى مستحضرات التجميل والمكياج والعناية بالبشرة أونلاين في الإمارات.",
   keywords: [
+    "Aurelle",
+    "Aurelle Cosmetics",
+    "Aurelle UAE",
+    "Aurelle Cosmetics UAE",
+    "Aurelle shop",
     "shop cosmetics UAE",
     "buy makeup online Dubai",
     "skincare products UAE",
@@ -22,6 +27,7 @@ export const metadata: Metadata = {
     "منتجات تجميل أصلية الإمارات",
     "عطور أصلية دبي",
     "مكياج دبي أونلاين",
+    "أوريل كوزمتكس",
   ],
   alternates: {
     canonical: `${SITE_URL}/shop`,

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import WholesaleProductDetailClient from "./WholesaleProductDetailClient";
@@ -6,7 +7,92 @@ interface WholesaleProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: WholesaleProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return { title: "Wholesale Product | Aurelle Cosmetics UAE" };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data: product } = await supabase
+    .from("products")
+    .select(`
+      name, slug, description, wholesale_price, wholesale_moq,
+      brand:brands(name),
+      category:categories(name),
+      product_images(secure_url, is_primary)
+    `)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (!product) {
+    return {
+      title: "Wholesale Product Not Found | Aurelle Cosmetics UAE",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const brandName = (product.brand as any)?.name || "Aurelle";
+  const title = `${product.name} Wholesale UAE | Aurelle B2B Cosmetics Dubai`;
+  const cleanDesc = product.description
+    ? product.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 160)
+    : `Buy bulk ${product.name} wholesale in UAE at Aurelle. Direct B2B supplier with starter MOQ of ${product.wholesale_moq || 1} units for pharmacies, salons & retail shops across UAE.`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const primaryImage =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (product.product_images as any)?.find((img: any) => img.is_primary)?.secure_url ||
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (product.product_images as any)?.[0]?.secure_url ||
+    `${SITE_URL}/og-image.jpg`;
+  const pageUrl = `${SITE_URL}/wholesale/products/${slug}`;
+
+  return {
+    title,
+    description: cleanDesc,
+    keywords: [
+      `${product.name} wholesale`,
+      `${product.name} bulk UAE`,
+      "wholesale cosmetics UAE",
+      "B2B beauty supplier Dubai",
+      brandName,
+      "Aurelle Wholesale",
+      "Aurelle Cosmetics UAE",
+      "cosmetics distributor Dubai",
+    ],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title,
+      description: cleanDesc,
+      url: pageUrl,
+      type: "website",
+      images: [
+        {
+          url: primaryImage,
+          width: 800,
+          height: 800,
+          alt: `${product.name} Wholesale — Aurelle Cosmetics UAE`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: cleanDesc,
+      images: [primaryImage],
+    },
+  };
+}
 
 export default async function WholesaleProductDetailPage({ params }: WholesaleProductPageProps) {
   const { slug } = await params;

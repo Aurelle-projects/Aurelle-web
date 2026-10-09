@@ -35,13 +35,38 @@ const SITE_URL = "https://aurellecosmeticshop.com";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE | متجر أوريل للتجميل دبي",
+    default: "Aurelle Cosmetics UAE | Luxury Beauty, Skincare & Makeup Online Dubai | متجر أوريل للتجميل",
     template: "%s | Aurelle Cosmetics UAE",
   },
   description:
-    "Shop authentic cosmetics, skincare, haircare, perfumes & personal care in UAE. Express delivery in Dubai, Abu Dhabi, Sharjah & GCC. Cash on delivery & Card. متجر مستحضرات تجميل ومكياج وعناية بالبشرة أونلاين في الإمارات.",
+    "Aurelle Cosmetics UAE — Shop 100% authentic luxury cosmetics, skincare, haircare, perfumes & combo sets in Dubai & UAE. Express delivery in Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on Delivery & Card. متجر أوريل لمستحضرات التجميل والمكياج والعناية بالبشرة أونلاين في الإمارات.",
   keywords: [
-    // English UAE Commercial Keywords
+    // ── Primary Brand Exact Keywords (Google #1 Brand Rank) ──
+    "Aurelle",
+    "Aurelle Cosmetics",
+    "Aurelle UAE",
+    "Aurelle Cosmetics UAE",
+    "Aurelle Cosmetic Shop",
+    "Aurelle Beauty",
+    "Aurelle Dubai",
+    "Aurelle online shop",
+    "Aurelle store",
+    "Aurelle beauty shop",
+    "Aurelle cosmetics trading",
+    "Aurelle cosmetics trading fz-llc",
+    "aurellecosmeticshop.com",
+    "Aurelle wholesale",
+    "Aurelle combos",
+    // ── Arabic Brand Exact Keywords ──
+    "أوريل",
+    "أوريل كوزمتكس",
+    "أوريل للتجميل",
+    "أوريل لمستحضرات التجميل",
+    "متجر أوريل",
+    "متجر أوريل للتجميل",
+    "أوريل الإمارات",
+    "أوريل دبي",
+    // ── English UAE Commercial High-Intent Keywords ──
     "cosmetics UAE",
     "online beauty shop Dubai",
     "buy makeup online UAE",
@@ -49,10 +74,10 @@ export const metadata: Metadata = {
     "perfumes online UAE",
     "haircare products UAE",
     "luxury beauty Dubai",
-    "Aurelle Cosmetics",
     "cosmetics Abu Dhabi",
     "beauty store Sharjah",
     "personal care UAE",
+    "Korean skincare UAE",
     "baby care essentials Dubai",
     "wellness products UAE",
     "cash on delivery cosmetics UAE",
@@ -60,7 +85,7 @@ export const metadata: Metadata = {
     "wholesale cosmetics UAE",
     "beauty distributor Dubai",
     "authentic cosmetics UAE",
-    // Arabic High-Volume Search Keywords
+    // ── Arabic High-Volume Search Keywords ──
     "مستحضرات تجميل دبي",
     "مكياج الإمارات",
     "متجر تجميل أونلاين",
@@ -75,8 +100,6 @@ export const metadata: Metadata = {
     "توصيل مكياج دبي وأبوظبي",
     "الدفع عند الاستلام مكياج الإمارات",
     "مستحضرات تجميل بالجملة دبي",
-    "متجر أوريل",
-    "أوريل لمستحضرات التجميل",
   ],
   authors: [{ name: "Aurelle Cosmetics Trading FZ-LLC", url: SITE_URL }],
   creator: "Aurelle Cosmetics",
@@ -102,10 +125,10 @@ export const metadata: Metadata = {
     locale: "en_AE",
     alternateLocale: ["ar_AE"],
     url: SITE_URL,
-    siteName: "Aurelle Cosmetics",
-    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    siteName: "Aurelle Cosmetics UAE",
+    title: "Aurelle Cosmetics UAE | Luxury Beauty & Skincare Shop Dubai",
     description:
-      "Shop authentic cosmetics, skincare, haircare, perfumes & personal care in UAE. Express delivery across Dubai, Abu Dhabi & GCC.",
+      "Aurelle Cosmetics UAE — Shop 100% authentic cosmetics, skincare, haircare, perfumes & personal care in UAE. Express delivery across Dubai, Abu Dhabi & GCC.",
     images: [
       {
         url: "/og-image.jpg",
@@ -117,9 +140,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    title: "Aurelle Cosmetics UAE | Luxury Beauty & Skincare Shop Dubai",
     description:
-      "Authentic cosmetics, skincare, haircare & fragrances delivered across UAE.",
+      "Authentic cosmetics, skincare, haircare & fragrances delivered across UAE by Aurelle Cosmetics.",
     images: ["/og-image.jpg"],
   },
   icons: {
@@ -136,6 +159,14 @@ export const metadata: Metadata = {
     },
   },
   category: "Beauty & Cosmetics",
+  other: {
+    "geo.region": "AE-DU",
+    "geo.placename": "Dubai, United Arab Emirates",
+    "geo.position": "25.2048;55.2708",
+    "ICBM": "25.2048, 55.2708",
+    "country": "United Arab Emirates",
+    "coverage": "United Arab Emirates, GCC",
+  },
 };
 
 // ─── Comprehensive Multi-Entity JSON-LD Schema (UAE Focused) ─────────────────
@@ -145,25 +176,61 @@ const jsonLdGraph = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      name: "Aurelle Cosmetics Trading FZ-LLC",
-      alternateName: ["Aurelle", "أوريل لمستحضرات التجميل"],
+      name: "Aurelle Cosmetics",
+      legalName: "Aurelle Cosmetics Trading FZ-LLC",
+      alternateName: [
+        "Aurelle",
+        "Aurelle UAE",
+        "Aurelle Cosmetics UAE",
+        "Aurelle Cosmetic Shop",
+        "Aurelle Beauty",
+        "Aurelle Cosmetics Trading",
+        "أوريل",
+        "أوريل كوزمتكس",
+        "أوريل للتجميل",
+        "أوريل لمستحضرات التجميل",
+        "متجر أوريل للتجميل",
+      ],
       url: SITE_URL,
       logo: {
         "@type": "ImageObject",
         url: `${SITE_URL}/logo.png`,
       },
+      image: `${SITE_URL}/og-image.jpg`,
       description:
-        "Premier UAE cosmetics, luxury skincare, haircare, and personal care destination based in Dubai, United Arab Emirates.",
+        "Premier UAE cosmetics, luxury skincare, haircare, and personal care beauty destination based in Dubai, United Arab Emirates.",
+      email: "aurellecosmeticstrading@gmail.com",
       address: {
         "@type": "PostalAddress",
+        streetAddress: "Dubai",
         addressLocality: "Dubai",
         addressRegion: "Dubai",
         addressCountry: "AE",
+      },
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: 25.2048,
+        longitude: 55.2708,
+      },
+      brand: {
+        "@type": "Brand",
+        "@id": `${SITE_URL}/#brand`,
+        name: "Aurelle",
+        alternateName: [
+          "Aurelle Cosmetics",
+          "Aurelle UAE",
+          "Aurelle Cosmetics UAE",
+          "Aurelle Beauty",
+          "أوريل",
+          "أوريل كوزمتكس",
+        ],
+        logo: `${SITE_URL}/logo.png`,
       },
       contactPoint: [
         {
           "@type": "ContactPoint",
           contactType: "customer service",
+          email: "aurellecosmeticstrading@gmail.com",
           areaServed: ["AE", "SA", "OM", "KW", "BH", "QA"],
           availableLanguage: ["English", "Arabic"],
         },
@@ -177,15 +244,24 @@ const jsonLdGraph = {
       "@type": ["OnlineStore", "CosmeticsStore"],
       "@id": `${SITE_URL}/#store`,
       name: "Aurelle Cosmetics Shop",
+      alternateName: ["Aurelle Cosmetics UAE", "Aurelle Store Dubai"],
       url: SITE_URL,
       priceRange: "$$",
       currenciesAccepted: "AED",
       paymentAccepted: "Cash on Delivery, Credit Card, Debit Card, Apple Pay",
+      parentOrganization: {
+        "@id": `${SITE_URL}/#organization`,
+      },
       address: {
         "@type": "PostalAddress",
         addressLocality: "Dubai",
         addressRegion: "Dubai",
         addressCountry: "AE",
+      },
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: 25.2048,
+        longitude: 55.2708,
       },
       areaServed: [
         { "@type": "City", name: "Dubai" },
@@ -218,7 +294,15 @@ const jsonLdGraph = {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
       url: SITE_URL,
-      name: "Aurelle Cosmetics",
+      name: "Aurelle Cosmetics UAE",
+      alternateName: [
+        "Aurelle",
+        "Aurelle UAE",
+        "Aurelle Cosmetics",
+        "Aurelle Cosmetic Shop",
+        "أوريل",
+        "أوريل كوزمتكس",
+      ],
       inLanguage: ["en-AE", "ar-AE"],
       publisher: {
         "@id": `${SITE_URL}/#organization`,

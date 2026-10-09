@@ -17,10 +17,32 @@ import ComboOffersSection from "@/components/storefront/ComboOffersSection";
 const SITE_URL = "https://aurellecosmeticshop.com";
 
 export const metadata: Metadata = {
-  title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE | متجر أوريل للتجميل دبي",
+  title: "Aurelle Cosmetics UAE | Luxury Beauty, Skincare & Fragrance Shop Dubai | متجر أوريل للتجميل",
   description:
-    "Shop authentic luxury cosmetics, skincare, haircare, perfumes & personal care online in UAE. Express delivery in Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on delivery & Card. متجر مستحضرات تجميل ومكياج وعناية بالبشرة أونلاين في الإمارات.",
+    "Aurelle Cosmetics UAE — Shop 100% genuine luxury cosmetics, skincare, haircare, perfumes & exclusive combo offers in UAE. Express delivery in Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on Delivery & Card. متجر أوريل لمستحضرات التجميل والمكياج والعناية بالبشرة أونلاين في الإمارات.",
   keywords: [
+    // ── Primary Brand Exact Keywords ──
+    "Aurelle",
+    "Aurelle Cosmetics",
+    "Aurelle UAE",
+    "Aurelle Cosmetics UAE",
+    "Aurelle Cosmetic Shop",
+    "Aurelle Beauty",
+    "Aurelle Dubai",
+    "Aurelle online shop",
+    "Aurelle store",
+    "Aurelle beauty shop",
+    "Aurelle cosmetics trading",
+    "aurellecosmeticshop.com",
+    // ── Arabic Brand Keywords ──
+    "أوريل",
+    "أوريل كوزمتكس",
+    "أوريل للتجميل",
+    "أوريل لمستحضرات التجميل",
+    "متجر أوريل",
+    "أوريل الإمارات",
+    "أوريل دبي",
+    // ── UAE Commercial High-Intent Keywords ──
     "cosmetics UAE",
     "online beauty shop Dubai",
     "buy makeup online UAE",
@@ -28,11 +50,12 @@ export const metadata: Metadata = {
     "perfumes online UAE",
     "haircare products UAE",
     "luxury beauty Dubai",
-    "Aurelle Cosmetics",
     "cosmetics Abu Dhabi",
     "beauty store Sharjah",
+    "Korean skincare UAE",
     "cash on delivery cosmetics UAE",
     "express beauty delivery Dubai",
+    // ── Arabic Search Keywords ──
     "مستحضرات تجميل دبي",
     "مكياج الإمارات",
     "عناية بالبشرة أبوظبي",
@@ -41,9 +64,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/` },
   openGraph: {
-    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    title: "Aurelle Cosmetics UAE | Luxury Beauty, Skincare & Fragrance Shop Dubai",
     description:
-      "Shop authentic cosmetics, skincare, haircare, perfumes & personal care in UAE. Express delivery across Dubai, Abu Dhabi & GCC.",
+      "Aurelle Cosmetics UAE — Shop authentic cosmetics, skincare, haircare, perfumes & combo sets in UAE. Express delivery across Dubai, Abu Dhabi & GCC.",
     url: `${SITE_URL}/`,
     type: "website",
     images: [
@@ -57,11 +80,58 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aurelle Cosmetics | Luxury Beauty & Skincare Shop UAE",
+    title: "Aurelle Cosmetics UAE | Luxury Beauty, Skincare & Fragrance Shop Dubai",
     description:
-      "Authentic cosmetics, skincare, haircare & fragrances delivered across UAE.",
+      "Authentic cosmetics, skincare, haircare & fragrances delivered across UAE by Aurelle Cosmetics.",
     images: [`${SITE_URL}/og-image.jpg`],
   },
+};
+
+const homeFaqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What is Aurelle Cosmetics?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Aurelle Cosmetics (Aurelle Cosmetics Trading FZ-LLC) is a premier luxury beauty and skincare destination based in Dubai, UAE, offering 100% authentic cosmetics, skincare, haircare, fragrances, and exclusive beauty combos.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does Aurelle Cosmetics deliver across all UAE emirates?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes, Aurelle provides express delivery across all 7 Emirates in the United Arab Emirates: Dubai, Abu Dhabi, Sharjah, Ajman, Ras Al Khaimah, Fujairah, and Umm Al Quwain, as well as GCC shipping.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Are products on Aurelle Cosmetics 100% authentic?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes, all products sold on Aurelle Cosmetics are 100% guaranteed genuine and authentic, sourced directly from certified manufacturers and authorized brand distributors.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What payment methods are accepted on Aurelle Cosmetics?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Aurelle accepts Cash on Delivery (COD) as well as secure online payments via Credit Card, Debit Card, and Apple Pay.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does Aurelle offer wholesale cosmetics in the UAE?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes, Aurelle Wholesale provides direct B2B supply, starter MOQs, and volume discounts for UAE pharmacies, salons, and retail beauty shops.",
+      },
+    },
+  ],
 };
 
 // Enable ISR caching (60s) to eliminate repeated slow DB queries on page navigation
@@ -316,6 +386,15 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(homeFaqSchema),
+        }}
+      />
+      <h1 className="sr-only">
+        Aurelle Cosmetics UAE — Luxury Beauty, Skincare & Fragrance Online Shop Dubai
+      </h1>
       {/* ─── 1. Hero ─────────────────────────────────────────────── */}
       <HeroSection
         title={heroData.hero_title}

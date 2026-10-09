@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import { verifyAdminPassword, safeCompare, getLocalAdminCredentials } from "@/lib/auth/adminPassword";
 import {
   createAdminSessionToken,
   ADMIN_COOKIE_NAME,
@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     const envAdminEmail = process.env.ADMIN_EMAIL?.trim();
     const envAdminPassword = process.env.ADMIN_PASSWORD?.trim();
 
-    if (!envAdminEmail || !envAdminPassword) {
-      console.error("[Admin Auth Login Error]: ADMIN_EMAIL or ADMIN_PASSWORD environment variable is not configured.");
+    if (!envAdminEmail) {
+      console.error("[Admin Auth Login Error]: ADMIN_EMAIL environment variable is not configured.");
       return NextResponse.json(
         { success: false, error: "Admin authentication is not configured." },
         { status: 500 }
@@ -52,30 +52,70 @@ export async function POST(request: NextRequest) {
     if (safeCompare(cleanEmail, configuredAdminEmail)) {
       // Check if a custom password hash exists in site_settings
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const supabaseAdmin = createAdminClient() as any;
-        const { data: credSetting } = await supabaseAdmin
-          .from("site_settings")
-          .select("value")
-          .eq("key", "admin_custom_credentials")
-          .maybeSingle();
+        let credSetting = null;
+
+        // Query site_settings with server client (publishable key)
+        try {
+          const supabase = await createClient();
+          const { data } = await (supabase as any)
+            .from("site_settings")
+            .select("value")
+            .eq("key", "admin_custom_credentials")
+            .maybeSingle();
+          credSetting = data;
+        } catch (clientErr) {
+          console.warn("[Admin login site_settings server check]:", clientErr);
+        }
+
+        // Fallback to admin client if needed
+        if (!credSetting) {
+          try {
+            const supabaseAdmin = createAdminClient() as any;
+            const { data } = await supabaseAdmin
+              .from("site_settings")
+              .select("value")
+              .eq("key", "admin_custom_credentials")
+              .maybeSingle();
+            credSetting = data;
+          } catch (adminClientErr) {
+            console.warn("[Admin login site_settings admin check]:", adminClientErr);
+          }
+        }
 
         if (credSetting?.value?.hash && credSetting?.value?.salt) {
           if (verifyAdminPassword(cleanPassword, credSetting.value.salt, credSetting.value.hash)) {
             isAuthenticated = true;
           }
-        } else if (safeCompare(cleanPassword, configuredAdminPassword)) {
+        }
+
+        // Also check local credentials fallback
+        if (!isAuthenticated) {
+          const localCreds = getLocalAdminCredentials();
+          if (localCreds?.salt && localCreds?.hash) {
+            if (verifyAdminPassword(cleanPassword, localCreds.salt, localCreds.hash)) {
+              isAuthenticated = true;
+            }
+          }
+        }
+
+        if (!isAuthenticated && configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       } catch (dbErr) {
         console.warn("[Admin login site_settings check]:", dbErr);
-        if (safeCompare(cleanPassword, configuredAdminPassword)) {
+        const localCreds = getLocalAdminCredentials();
+        if (localCreds?.salt && localCreds?.hash) {
+          if (verifyAdminPassword(cleanPassword, localCreds.salt, localCreds.hash)) {
+            isAuthenticated = true;
+          }
+        }
+        if (!isAuthenticated && configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       }
     }
 
-    // 2. Also check Supabase Auth if credentials didn't match env default
+    // 2. Also check Supabase Auth if credentials didn't match yet
     if (!isAuthenticated) {
       try {
         const supabase = await createClient();
@@ -84,17 +124,21 @@ export async function POST(request: NextRequest) {
           password: cleanPassword,
         });
 
-        if (!authError && authData.user) {
-          // Verify admin role in profiles table
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: profile } = await (supabase as any)
-            .from("profiles")
-            .select("role")
-            .eq("id", authData.user.id)
-            .single();
-
-          if (profile?.role === "admin" || profile?.role === "super_admin") {
+        if (!authError && authData?.user) {
+          if (safeCompare(cleanEmail, configuredAdminEmail)) {
             isAuthenticated = true;
+          } else {
+            // Verify admin role in profiles table
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: profile } = await (supabase as any)
+              .from("profiles")
+              .select("role")
+              .eq("id", authData.user.id)
+              .maybeSingle();
+
+            if (profile?.role === "admin" || profile?.role === "super_admin") {
+              isAuthenticated = true;
+            }
           }
         }
       } catch {

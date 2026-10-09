@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,12 @@ export default function AdminLoginPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear fields on mount / logout
+  useEffect(() => {
+    setEmail("");
+    setPassword("");
+  }, []);
 
   // Forgot password states
   const [otp, setOtp] = useState("");
@@ -228,7 +234,7 @@ export default function AdminLoginPanel() {
 
         {/* ── MODE 1: Standard Login Form ──────────────────────── */}
         {mode === "login" && (
-          <form onSubmit={handleLogin} className="space-y-3">
+          <form onSubmit={handleLogin} className="space-y-3" autoComplete="off">
             <div>
               <label className="block text-[10px] font-bold text-white/75 uppercase tracking-wider mb-1">
                 Admin Email
@@ -239,6 +245,8 @@ export default function AdminLoginPanel() {
                 </span>
                 <input
                   type="email"
+                  name="admin_auth_user"
+                  autoComplete="off"
                   required
                   autoFocus
                   value={email}
@@ -272,6 +280,8 @@ export default function AdminLoginPanel() {
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
+                  name="admin_auth_pass"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

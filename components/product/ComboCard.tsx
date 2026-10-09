@@ -94,7 +94,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
   };
 
   return (
-    <article className="group flex flex-col bg-white border border-[#EDE9DF] hover:border-[#183D2B]/40 transition-all duration-300 overflow-hidden h-full">
+    <article className="group flex flex-col bg-white transition-all duration-300 overflow-hidden h-full">
       {/* Top Image Container with Controlled 4:3 Ratio */}
       <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden">
         <Link
@@ -121,24 +121,25 @@ export default function ComboCard({ combo }: ComboCardProps) {
           )}
         </Link>
 
-        {/* Refined Combo Badge */}
+        {/* Combo Badge */}
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 pointer-events-none">
           {isOutOfStock ? (
-            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-[#1D211F]/90 text-white text-[8.5px] sm:text-[9.5px] font-semibold uppercase tracking-wider">
+            <span className="inline-flex items-center whitespace-nowrap px-1.5 sm:px-2 py-0.5 bg-[#1D211F]/90 text-white text-[8.5px] sm:text-[9.5px] font-semibold uppercase tracking-wider">
               Out of Stock
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 bg-[#FAF8F5]/95 backdrop-blur-xs text-[#183D2B] text-[8.5px] sm:text-[10px] font-bold uppercase tracking-widest border border-[#DCCFB9]/70 shadow-2xs">
+            <span className="inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap px-1.5 sm:px-2.5 py-0.5 sm:py-1 bg-[#FAF8F5]/95 backdrop-blur-xs text-[#183D2B] text-[8.5px] sm:text-[10px] font-bold uppercase tracking-widest shadow-2xs">
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-[#C9A84C]" />
-              <span>Curated Combo</span>
+              <span className="sm:hidden">Combo</span>
+              <span className="hidden sm:inline">Curated Combo</span>
             </span>
           )}
         </div>
 
-        {/* Savings Badge */}
+        {/* Savings Badge (desktop/tablet only; on mobile it's shown under the price) */}
         {!isOutOfStock && savingsVal > 0 && (
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 pointer-events-none">
-            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-[#183D2B] text-[#FAF8F5] text-[8.5px] sm:text-[10px] font-semibold tracking-wide shadow-2xs">
+          <div className="hidden sm:block absolute top-3 right-3 z-10 pointer-events-none">
+            <span className="inline-flex items-center whitespace-nowrap px-2 py-0.5 bg-[#183D2B] text-[#FAF8F5] text-[10px] font-semibold tracking-wide shadow-2xs">
               Save AED {savingsVal.toFixed(0)}
             </span>
           </div>
@@ -165,7 +166,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
 
           {/* Desktop Only: Product Composition Preview (Thumbnail stack + count) */}
           {validItems.length > 0 && (
-            <div className="hidden sm:flex items-center gap-2 mt-2 pt-2 border-t border-[#EDE9DF]/60">
+            <div className="hidden sm:flex items-center gap-2 mt-2 pt-2">
               <div className="flex -space-x-1.5 overflow-hidden shrink-0">
                 {validItems.slice(0, 4).map((item, idx) => {
                   const itemImg =
@@ -179,7 +180,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
                   return (
                     <div
                       key={item.id || idx}
-                      className="w-5 h-5 lg:w-6 lg:h-6 rounded-full border border-white bg-[#FAF8F5] overflow-hidden relative shrink-0 shadow-2xs"
+                      className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-[#FAF8F5] overflow-hidden relative shrink-0 shadow-2xs"
                       title={`${item.product?.name || "Product"} (x${item.quantity})`}
                     >
                       {itemImg ? (
@@ -207,7 +208,7 @@ export default function ComboCard({ combo }: ComboCardProps) {
         </div>
 
         {/* Pricing & Actions */}
-        <div className="pt-2 sm:pt-3 border-t border-[#EDE9DF] flex items-end justify-between gap-1.5 sm:gap-2">
+        <div className="pt-2 sm:pt-3 flex items-end justify-between gap-1.5 sm:gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
               <span className="text-[13px] sm:text-[15px] lg:text-base font-bold text-[#14231B] leading-tight">
@@ -238,10 +239,10 @@ export default function ComboCard({ combo }: ComboCardProps) {
                 onClick={handleAddToCart}
                 disabled={isAdded}
                 aria-label={isAdded ? "Added to cart" : `Add ${combo.name} to cart`}
-                className={`hidden sm:flex p-2 border transition-all duration-200 cursor-pointer items-center justify-center ${
+                className={`hidden sm:flex p-2 transition-all duration-200 cursor-pointer items-center justify-center ${
                   isAdded
-                    ? "bg-emerald-700 text-white border-emerald-700"
-                    : "border-[#EDE9DF] bg-[#FAF8F5] text-[#183D2B] hover:bg-[#183D2B] hover:text-white hover:border-[#183D2B]"
+                    ? "bg-emerald-700 text-white"
+                    : "bg-[#FAF8F5] text-[#183D2B] hover:bg-[#183D2B] hover:text-white"
                 }`}
                 title="Add combo to bag"
               >

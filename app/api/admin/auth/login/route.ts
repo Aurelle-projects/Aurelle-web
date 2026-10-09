@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyAdminPassword, safeCompare, getLocalAdminCredentials } from "@/lib/auth/adminPassword";
+import { verifyAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
 import {
   createAdminSessionToken,
   ADMIN_COOKIE_NAME,
@@ -86,30 +86,12 @@ export async function POST(request: NextRequest) {
           if (verifyAdminPassword(cleanPassword, credSetting.value.salt, credSetting.value.hash)) {
             isAuthenticated = true;
           }
-        }
-
-        // Also check local credentials fallback
-        if (!isAuthenticated) {
-          const localCreds = getLocalAdminCredentials();
-          if (localCreds?.salt && localCreds?.hash) {
-            if (verifyAdminPassword(cleanPassword, localCreds.salt, localCreds.hash)) {
-              isAuthenticated = true;
-            }
-          }
-        }
-
-        if (!isAuthenticated && configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
+        } else if (configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       } catch (dbErr) {
         console.warn("[Admin login site_settings check]:", dbErr);
-        const localCreds = getLocalAdminCredentials();
-        if (localCreds?.salt && localCreds?.hash) {
-          if (verifyAdminPassword(cleanPassword, localCreds.salt, localCreds.hash)) {
-            isAuthenticated = true;
-          }
-        }
-        if (!isAuthenticated && configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
+        if (configuredAdminPassword && safeCompare(cleanPassword, configuredAdminPassword)) {
           isAuthenticated = true;
         }
       }

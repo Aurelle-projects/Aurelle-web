@@ -8,7 +8,7 @@ import {
   verifyResetToken,
   sendOtpEmail,
 } from "@/lib/auth/otp";
-import { hashAdminPassword, safeCompare, saveLocalAdminCredentials } from "@/lib/auth/adminPassword";
+import { hashAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
 import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -132,42 +132,54 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Hash and store the custom admin password
+      // Hash and store the custom admin password in the database
       const { salt, hash } = hashAdminPassword(newPassword);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabaseAdmin = createAdminClient() as any;
 
-      // Save locally to ensure admin password updates immediately and reliably
-      saveLocalAdminCredentials(salt, hash);
-
-      // Also attempt updating in Supabase if database connection is available
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const supabaseAdmin = createAdminClient() as any;
-        await supabaseAdmin.from("site_settings").upsert({
+      const { error: saveError } = await supabaseAdmin.from("site_settings").upsert(
+        {
           key: "admin_custom_credentials",
           value: {
             salt,
             hash,
             updated_at: new Date().toISOString(),
           },
-        });
+        },
+        { onConflict: "key" }
+      );
 
-        // Also update in Supabase Auth if an admin user exists
-        try {
-          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-          const adminUser = userList?.users?.find(
-            (u: { email?: string }) => u.email?.toLowerCase() === email
-          );
-          if (adminUser?.id) {
-            await supabaseAdmin.auth.admin.updateUserById(adminUser.id, {
-              password: newPassword,
-              email_confirm: true,
-            });
-          }
-        } catch (authErr) {
-          console.warn("[Admin Auth Sync Notice]:", authErr);
+      if (saveError) {
+        console.error("[Admin Reset Password DB Error]:", saveError);
+        const isLegacyKeyDisabled =
+          saveError?.message?.includes("Legacy API keys are disabled") ||
+          saveError?.hint?.includes("Legacy API keys are disabled");
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: isLegacyKeyDisabled
+              ? "Supabase secret key error: Legacy API keys are disabled in Supabase. Please re-enable legacy keys in the Supabase Dashboard (Settings -> API) or configure the new secret key."
+              : (saveError.message || "Failed to update admin password in database."),
+          },
+          { status: 500 }
+        );
+      }
+
+      // Also update in Supabase Auth if an admin user exists
+      try {
+        const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+        const adminUser = userList?.users?.find(
+          (u: { email?: string }) => u.email?.toLowerCase() === email
+        );
+        if (adminUser?.id) {
+          await supabaseAdmin.auth.admin.updateUserById(adminUser.id, {
+            password: newPassword,
+            email_confirm: true,
+          });
         }
-      } catch (dbErr) {
-        console.warn("[Admin Reset Password DB Notice]:", dbErr);
+      } catch (authErr) {
+        console.warn("[Admin Auth Sync Notice]:", authErr);
       }
 
       return NextResponse.json({

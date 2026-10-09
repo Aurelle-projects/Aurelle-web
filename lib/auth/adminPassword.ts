@@ -38,34 +38,3 @@ export function safeCompare(a: string, b: string): boolean {
   }
 }
 
-import fs from "fs";
-import path from "path";
-
-const CREDENTIALS_FILE = path.join(process.cwd(), ".admin_credentials.json");
-
-export function saveLocalAdminCredentials(salt: string, hash: string): void {
-  try {
-    fs.writeFileSync(
-      CREDENTIALS_FILE,
-      JSON.stringify({ salt, hash, updated_at: new Date().toISOString() }, null, 2),
-      "utf-8"
-    );
-  } catch (err) {
-    console.warn("[saveLocalAdminCredentials] Could not write credentials file:", err);
-  }
-}
-
-export function getLocalAdminCredentials(): { salt: string; hash: string } | null {
-  try {
-    if (!fs.existsSync(CREDENTIALS_FILE)) return null;
-    const raw = fs.readFileSync(CREDENTIALS_FILE, "utf-8");
-    const data = JSON.parse(raw);
-    if (data?.salt && data?.hash) {
-      return { salt: data.salt, hash: data.hash };
-    }
-  } catch (err) {
-    console.warn("[getLocalAdminCredentials] Could not read credentials file:", err);
-  }
-  return null;
-}
-

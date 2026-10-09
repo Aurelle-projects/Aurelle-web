@@ -8,7 +8,7 @@ import {
   verifyResetToken,
   sendOtpEmail,
 } from "@/lib/auth/otp";
-import { hashAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import { hashAdminPassword, safeCompare, saveLocalAdminCredentials } from "@/lib/auth/adminPassword";
 import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -134,40 +134,40 @@ export async function POST(request: NextRequest) {
 
       // Hash and store the custom admin password
       const { salt, hash } = hashAdminPassword(newPassword);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const supabaseAdmin = createAdminClient() as any;
 
-      const { error: saveError } = await supabaseAdmin.from("site_settings").upsert({
-        key: "admin_custom_credentials",
-        value: {
-          salt,
-          hash,
-          updated_at: new Date().toISOString(),
-        },
-      });
+      // Save locally to ensure admin password updates immediately and reliably
+      saveLocalAdminCredentials(salt, hash);
 
-      if (saveError) {
-        console.error("[Admin Reset Password Error]:", saveError);
-        return NextResponse.json(
-          { success: false, error: "Failed to update admin password." },
-          { status: 500 }
-        );
-      }
-
-      // Also update in Supabase Auth if an admin user exists
+      // Also attempt updating in Supabase if database connection is available
       try {
-        const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-        const adminUser = userList?.users?.find(
-          (u: { email?: string }) => u.email?.toLowerCase() === email
-        );
-        if (adminUser?.id) {
-          await supabaseAdmin.auth.admin.updateUserById(adminUser.id, {
-            password: newPassword,
-            email_confirm: true,
-          });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const supabaseAdmin = createAdminClient() as any;
+        await supabaseAdmin.from("site_settings").upsert({
+          key: "admin_custom_credentials",
+          value: {
+            salt,
+            hash,
+            updated_at: new Date().toISOString(),
+          },
+        });
+
+        // Also update in Supabase Auth if an admin user exists
+        try {
+          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+          const adminUser = userList?.users?.find(
+            (u: { email?: string }) => u.email?.toLowerCase() === email
+          );
+          if (adminUser?.id) {
+            await supabaseAdmin.auth.admin.updateUserById(adminUser.id, {
+              password: newPassword,
+              email_confirm: true,
+            });
+          }
+        } catch (authErr) {
+          console.warn("[Admin Auth Sync Notice]:", authErr);
         }
-      } catch (authErr) {
-        console.warn("[Admin Auth Sync Notice]:", authErr);
+      } catch (dbErr) {
+        console.warn("[Admin Reset Password DB Notice]:", dbErr);
       }
 
       return NextResponse.json({

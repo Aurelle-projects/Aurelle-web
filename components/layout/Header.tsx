@@ -367,11 +367,10 @@ export default function Header({
     setMobileSearchOpen(false);
     router.push(`/products/${slug}`);
   }
-
   function renderCategoryNav() {
     return (
       <nav className="w-full flex items-center justify-center pt-0.5" aria-label="Category navigation">
-        <ul className="flex items-center justify-center gap-4 lg:gap-5 xl:gap-6 list-none m-0 p-0 whitespace-nowrap">
+        <ul className="flex items-center justify-center gap-4 lg:gap-5 xl:gap-6 2xl:gap-8 list-none m-0 p-0 whitespace-nowrap">
           {navLinks.map((link) => {
             const hasDropdown = !!link.dropdown;
             const catKey = `cat-${link.label}`;
@@ -393,7 +392,7 @@ export default function Header({
                   <>
                     <button
                       type="button"
-                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-0.5 uppercase transition-colors ${isActive || isOpen
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] 2xl:text-[13px] font-medium tracking-wide py-0.5 uppercase transition-colors ${isActive || isOpen
                           ? "text-[#183D2B] font-semibold"
                           : "text-[#1D211F] hover:text-[#183D2B]"
                         }`}
@@ -423,7 +422,7 @@ export default function Header({
                             {chunkArray(link.dropdown ?? [], 10).map((chunk, colIdx) => (
                               <React.Fragment key={colIdx}>
                                 {colIdx > 0 && (
-                                  <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
+                                   <div className="w-px bg-[#DCCFB9]/60 self-stretch flex-shrink-0" />
                                 )}
                                 <ul className="list-none m-0 p-1 w-[240px]">
                                   {chunk.map((item) => (
@@ -452,7 +451,7 @@ export default function Header({
                 ) : (
                   <Link
                     href={link.href}
-                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide uppercase py-0.5 relative transition-colors ${isActive
+                    className={`text-[11px] sm:text-[11.5px] lg:text-[12px] 2xl:text-[13px] font-medium tracking-wide uppercase py-0.5 relative transition-colors ${isActive
                         ? "text-[#183D2B] font-semibold"
                         : "text-[#1D211F] hover:text-[#183D2B]"
                       }`}
@@ -471,7 +470,7 @@ export default function Header({
   function renderScrolledNav() {
     return (
       <nav className="w-full flex items-center justify-center" aria-label="Main navigation" ref={dropdownRef}>
-        <ul className="flex items-center justify-center gap-5 md:gap-4 list-none m-0 p-0 whitespace-nowrap">
+        <ul className="flex items-center justify-center gap-5 md:gap-4 2xl:gap-6 list-none m-0 p-0 whitespace-nowrap">
           {navLinks.map((link) => {
             const hasDropdown = !!link.dropdown;
             const isActive =
@@ -492,7 +491,7 @@ export default function Header({
                   <>
                     <button
                       type="button"
-                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] font-medium tracking-wide py-1 px-1 uppercase transition-colors ${isActive || isOpen
+                      className={`flex items-center gap-0.5 text-[11px] sm:text-[11.5px] lg:text-[12px] 2xl:text-[13px] font-medium tracking-wide py-1 px-1 uppercase transition-colors ${isActive || isOpen
                           ? "text-[#183D2B] font-semibold"
                           : "text-[#1D211F] hover:text-[#183D2B]"
                         }`}
@@ -576,12 +575,12 @@ export default function Header({
 
         {/* ─── Main Header ───────────────────────────────────────────── */}
         <header className={`bg-white border-b border-[#DCCFB9]/40 ${isScrolled ? "shadow-md" : "shadow-xs"}`} role="banner">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className={`flex items-center gap-5 lg:gap-7 ${isScrolled ? "py-3" : "py-2.5"}`}>
+          <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className={`flex items-center gap-5 lg:gap-7 2xl:gap-9 ${isScrolled ? "py-3" : "py-2.5 2xl:py-3.5"}`}>
               {/* Logo — Stable container width avoids horizontal layout shift */}
               <Link
                 href="/"
-                className="flex items-center shrink-0 w-[150px] sm:w-[180px] md:w-[210px] hover:scale-[1.02] transition-transform"
+                className="flex items-center shrink-0 w-[150px] sm:w-[180px] md:w-[210px] 2xl:w-[240px] hover:scale-[1.02] transition-transform"
                 aria-label="Aurelle Home"
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               >
@@ -592,8 +591,8 @@ export default function Header({
                   height={110}
                   priority
                   className={`w-auto object-contain block ${isScrolled
-                    ? "h-11 md:h-[46px]"
-                    : "h-12 sm:h-14 md:h-[80px]"
+                    ? "h-11 md:h-[46px] 2xl:h-[50px]"
+                    : "h-12 sm:h-14 md:h-[80px] 2xl:h-[88px]"
                     }`}
                 />
               </Link>
@@ -601,11 +600,11 @@ export default function Header({
               {/* Desktop Right Column: Search & Actions on Top, Category Nav on Bottom */}
               <div className={`hidden md:flex flex-1 flex-col justify-center min-w-0 ${isScrolled ? "gap-0" : "gap-2"}`}>
                 {/* Row 1: Search (Decreased Width & Centered) or Scrolled Nav (when scrolled) & Actions */}
-                <div className="flex items-center justify-between gap-4 lg:gap-6">
+                <div className="flex items-center justify-between gap-4 lg:gap-6 2xl:gap-8">
                   {/* Search / Scrolled Navigation in stable h-10 container */}
                   <div className="flex-1 flex justify-center items-center min-w-0 h-10">
                     {!isScrolled ? (
-                      <div ref={searchContainerRef} className="w-full max-w-[480px] relative">
+                      <div ref={searchContainerRef} className="w-full max-w-[480px] 2xl:max-w-[580px] relative">
                         <form
                           className="w-full h-10 relative flex items-center"
                           onSubmit={handleSearchSubmit}
@@ -614,7 +613,7 @@ export default function Header({
                           <input
                             ref={searchInputRef}
                             type="text"
-                            className="w-full h-10 pl-4 pr-11 bg-transparent border border-[#D8CDBB] rounded-sm text-[13.5px] text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 transition-colors"
+                            className="w-full h-10 pl-4 pr-11 bg-transparent border border-[#D8CDBB] rounded-sm text-[13.5px] 2xl:text-[14.5px] text-[#1D211F] outline-none placeholder:text-[#8C938F] focus:border-[#183D2B] focus:ring-2 focus:ring-[#183D2B]/10 transition-colors"
                             placeholder="Search for products, brands or categories..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -705,7 +704,7 @@ export default function Header({
                   </div>
 
                   {/* Actions - Reduced icon size */}
-                  <div className="flex items-center gap-5 lg:gap-6 shrink-0">
+                  <div className="flex items-center gap-5 lg:gap-6 2xl:gap-8 shrink-0">
                     {isScrolled && (
                       <button
                         type="button"
@@ -832,7 +831,7 @@ export default function Header({
                     </div>
 
                     {/* Symmetrical spacer matching the exact Actions width to guarantee dead-center alignment */}
-                    <div className="invisible flex items-center gap-5 lg:gap-6 shrink-0 pointer-events-none" aria-hidden="true">
+                    <div className="invisible flex items-center gap-5 lg:gap-6 2xl:gap-8 shrink-0 pointer-events-none" aria-hidden="true">
                       <div className="flex flex-col items-center p-1">
                         <div className="w-[19px] h-[19px]" />
                         <span className="text-[11px]">Account</span>

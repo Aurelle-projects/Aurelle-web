@@ -506,7 +506,7 @@ function ShopContent() {
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
           {/* Desktop Filter Sidebar - Strictly Unchanged on Desktop, Hidden on Mobile */}
           <aside className="hidden lg:block h-fit bg-white p-5 shadow-xs lg:sticky lg:top-24 rounded-sm">
@@ -785,7 +785,7 @@ export default function ShopPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-[#FAF8F5] py-8 md:py-12 animate-pulse">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <div className="h-8 w-48 bg-[#E9E4DC] rounded-none" />
             <div className="h-10 w-full bg-[#E9E4DC] rounded-none" />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 pt-4">

@@ -391,7 +391,7 @@ function CheckoutContent() {
   // ── MAIN CHECKOUT PAGE ───────────────────────────────────
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12 pb-28 md:pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {isWholesaleUser && (
           <div className="p-4 bg-[#183D2B]/10 border border-[#183D2B]/30 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#183D2B]">
             <div>

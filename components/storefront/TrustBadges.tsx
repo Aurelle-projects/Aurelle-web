@@ -182,7 +182,7 @@ export default function TrustBadges({ badges }: TrustBadgesProps) {
       className="bg-white py-6 sm:py-16"
       aria-label="Customer Guarantees"
     >
-      <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-0 sm:px-6 lg:px-8">
         {/* Mobile: 2×2 Modern Boxed Cards */}
         <div className="grid grid-cols-2 gap-2.5 px-4 sm:hidden">
           {BADGES.map((badge) => {

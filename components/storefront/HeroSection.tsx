@@ -276,7 +276,7 @@ export default function HeroSection({
 
             {/* ── 2. Content Container (Identical positioning & styling) ── */}
             <div
-              className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full
+              className="relative z-10 max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full
                 flex items-end justify-center pb-10
                 sm:items-center sm:justify-start sm:my-auto sm:py-14 lg:py-16"
             >

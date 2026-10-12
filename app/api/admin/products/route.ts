@@ -140,6 +140,7 @@ export async function POST(req: NextRequest) {
         sku: autoSku,
         brand_id: brand_id || null,
         category_id,
+        subcategory_id: subcategory_id || null,
         specifications,
         description: description || null,
         benefits: benefits || null,
@@ -320,6 +321,7 @@ export async function PATCH(req: NextRequest) {
       updatePayload.is_out_of_stock = !!is_out_of_stock;
     }
     if (subcategory_id !== undefined) {
+      updatePayload.subcategory_id = subcategory_id || null;
       updatePayload.specifications = subcategory_id
         ? { ...(incomingSpecs || {}), subcategory_id }
         : null;

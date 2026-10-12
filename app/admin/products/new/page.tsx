@@ -13,10 +13,13 @@ import {
   Trash2,
   Star,
   Loader2,
+  Plus,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
+import { useAdminData } from "@/context/AdminDataContext";
 
 interface UploadedImage {
   public_id: string;
@@ -34,7 +37,8 @@ interface DbSubcategory {
   id: string;
   name: string;
   slug: string;
-  parent_id: string;
+  category_id?: string;
+  parent_id?: string;
 }
 
 interface DbBrand {
@@ -45,12 +49,20 @@ interface DbBrand {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { loadCategories } = useAdminData();
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [imageToDelete, setImageToDelete] = useState<{ index: number; url: string; public_id?: string } | null>(null);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [isCustomSlug, setIsCustomSlug] = useState(false);
+
+  // Quick-add subcategory modal state
+  const [showQuickSubModal, setShowQuickSubModal] = useState(false);
+  const [quickSubName, setQuickSubName] = useState("");
+  const [quickSubCategoryId, setQuickSubCategoryId] = useState("");
+  const [isCreatingSub, setIsCreatingSub] = useState(false);
+  const [quickSubError, setQuickSubError] = useState("");
 
   // DB option lists
   const [dbBrands, setDbBrands] = useState<DbBrand[]>([]);
@@ -89,29 +101,81 @@ export default function NewProductPage() {
   });
 
   // Subcategories filtered by selected category
-  const filteredSubs = dbAllSubs.filter((s) => s.parent_id === formData.category_id);
+  const filteredSubs = dbAllSubs.filter(
+    (s) => s.parent_id === formData.category_id || s.category_id === formData.category_id
+  );
 
   useEffect(() => {
     async function loadOptions() {
       setLoadingOptions(true);
       try {
-        const supabase = createClient();
-        const [{ data: brands }, { data: cats }, { data: subs }] = await Promise.all([
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase as any).from("brands").select("id, name, slug").eq("is_active", true).order("name"),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase as any).from("categories").select("id, name, slug").is("parent_id", null).eq("is_active", true).order("sort_order"),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase as any).from("categories").select("id, name, slug, parent_id").not("parent_id", "is", null).eq("is_active", true).order("sort_order"),
-        ]);
-        if (brands) setDbBrands(brands);
-        if (cats) {
-          setDbCategories(cats);
-          setFormData((prev) => ({ ...prev, category_id: cats[0]?.id ?? "" }));
+        let loadedCats: DbCategory[] = [];
+        let loadedSubs: DbSubcategory[] = [];
+        let loadedBrands: DbBrand[] = [];
+
+        try {
+          const [catRes, brandRes] = await Promise.all([
+            fetch("/api/admin/categories"),
+            fetch("/api/admin/brands"),
+          ]);
+          if (catRes.ok) {
+            const catJson = await catRes.json();
+            if (catJson.categories) loadedCats = catJson.categories;
+            if (catJson.subcategories) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              loadedSubs = catJson.subcategories.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                slug: s.slug,
+                parent_id: s.category_id || s.parent_id,
+                category_id: s.category_id || s.parent_id,
+              }));
+            }
+          }
+          if (brandRes.ok) {
+            const brandJson = await brandRes.json();
+            if (brandJson.brands) loadedBrands = brandJson.brands;
+          }
+        } catch (apiErr) {
+          console.warn("Direct API options fetch failed, falling back to Supabase client:", apiErr);
         }
-        if (subs) setDbAllSubs(subs);
-      } catch {
-        // silent
+
+        // Fallback to Supabase client if API returned empty
+        if (loadedCats.length === 0 || loadedSubs.length === 0 || loadedBrands.length === 0) {
+          const supabase = createClient();
+          const [{ data: brands }, { data: cats }, { data: subs }] = await Promise.all([
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (supabase as any).from("brands").select("id, name, slug").eq("is_active", true).order("name"),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (supabase as any).from("categories").select("id, name, slug").is("parent_id", null).eq("is_active", true).order("sort_order"),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (supabase as any).from("subcategories").select("id, name, slug, category_id").eq("is_active", true).order("sort_order"),
+          ]);
+          if (brands && loadedBrands.length === 0) loadedBrands = brands;
+          if (cats && loadedCats.length === 0) loadedCats = cats;
+          if (subs && loadedSubs.length === 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            loadedSubs = subs.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              slug: s.slug,
+              parent_id: s.category_id,
+              category_id: s.category_id,
+            }));
+          }
+        }
+
+        if (loadedBrands.length > 0) setDbBrands(loadedBrands);
+        if (loadedCats.length > 0) {
+          setDbCategories(loadedCats);
+          setFormData((prev) => ({
+            ...prev,
+            category_id: prev.category_id || loadedCats[0]?.id || "",
+          }));
+        }
+        if (loadedSubs.length > 0) setDbAllSubs(loadedSubs);
+      } catch (err) {
+        console.error("Error loading options in NewProductPage:", err);
       } finally {
         setLoadingOptions(false);
       }
@@ -200,6 +264,67 @@ export default function NewProductPage() {
       setImageToDelete(null);
     } finally {
       setIsDeletingImage(false);
+    }
+  }
+
+  async function handleCreateQuickSubcategory() {
+    const parentCatId = quickSubCategoryId || formData.category_id;
+    if (!parentCatId) {
+      setQuickSubError("Please select a parent category first.");
+      return;
+    }
+    if (!quickSubName.trim()) {
+      setQuickSubError("Subcategory name is required.");
+      return;
+    }
+
+    setIsCreatingSub(true);
+    setQuickSubError("");
+
+    try {
+      const payload = {
+        name: quickSubName.trim(),
+        slug: slugify(quickSubName),
+        parent_id: parentCatId,
+        sort_order: dbAllSubs.filter((s) => s.category_id === parentCatId || s.parent_id === parentCatId).length + 1,
+        is_active: true,
+      };
+
+      const res = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        throw new Error(result.error || "Failed to create subcategory.");
+      }
+
+      const created = result.data;
+      const newSub: DbSubcategory = {
+        id: created.id,
+        name: created.name,
+        slug: created.slug,
+        category_id: created.category_id || parentCatId,
+        parent_id: created.category_id || parentCatId,
+      };
+
+      setDbAllSubs((prev) => [...prev, newSub]);
+      setFormData((prev) => ({
+        ...prev,
+        category_id: parentCatId,
+        subcategory_id: newSub.id,
+      }));
+      setShowQuickSubModal(false);
+      setQuickSubName("");
+      setQuickSubError("");
+      loadCategories(true).catch(() => {});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setQuickSubError(err?.message || "Failed to create subcategory.");
+    } finally {
+      setIsCreatingSub(false);
     }
   }
 
@@ -353,14 +478,42 @@ export default function NewProductPage() {
 
                   {/* Subcategory */}
                   <div>
-                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">Subcategory</label>
-                    <select name="subcategory_id" value={formData.subcategory_id} onChange={handleChange}
-                      disabled={!formData.category_id || filteredSubs.length === 0}
-                      className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider">Subcategory</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickSubCategoryId(formData.category_id || (dbCategories[0]?.id ?? ""));
+                          setQuickSubName("");
+                          setQuickSubError("");
+                          setShowQuickSubModal(true);
+                        }}
+                        className="text-[11px] font-bold text-[#183D2B] hover:text-[#102D20] inline-flex items-center gap-1 hover:underline cursor-pointer"
+                        title="Create a new subcategory"
+                      >
+                        <Plus size={12} />
+                        <span>Add New</span>
+                      </button>
+                    </div>
+                    <select
+                      name="subcategory_id"
+                      value={formData.subcategory_id}
+                      onChange={handleChange}
+                      disabled={!formData.category_id}
+                      className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <option value="">
-                        {!formData.category_id ? "Select a category first" : filteredSubs.length === 0 ? "No subcategories" : "Select subcategory..."}
+                        {!formData.category_id
+                          ? "Select a category first"
+                          : filteredSubs.length === 0
+                          ? "No subcategories yet (click '+ Add New')"
+                          : "Select subcategory (optional)..."}
                       </option>
-                      {filteredSubs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      {filteredSubs.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -718,6 +871,93 @@ export default function NewProductPage() {
         description="Are you sure you want to remove this image? It will be permanently removed from Cloudinary storage."
         isLoading={isDeletingImage}
       />
+
+      {/* Quick Add Subcategory Modal */}
+      {showQuickSubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-[#DCCFB9] overflow-hidden">
+            <div className="p-5 border-b border-[#DCCFB9]/50 flex items-center justify-between bg-[#F7F6F2]">
+              <div>
+                <h3 className="text-sm font-bold text-[#1D211F]">Add New Subcategory</h3>
+                <p className="text-xs text-[#5C6460] mt-0.5">
+                  Category: <strong className="text-[#183D2B]">{dbCategories.find((c) => c.id === (quickSubCategoryId || formData.category_id))?.name || "Choose below"}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickSubModal(false)}
+                className="text-[#8E9590] hover:text-[#1D211F] p-1 rounded-md transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {quickSubError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg flex items-center gap-2">
+                  <AlertCircle size={15} className="shrink-0" />
+                  <span>{quickSubError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                  Parent Category *
+                </label>
+                <select
+                  value={quickSubCategoryId || formData.category_id}
+                  onChange={(e) => setQuickSubCategoryId(e.target.value)}
+                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-[#1D211F] outline-none"
+                >
+                  <option value="">Select Category...</option>
+                  {dbCategories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                  Subcategory Name *
+                </label>
+                <input
+                  type="text"
+                  value={quickSubName}
+                  onChange={(e) => setQuickSubName(e.target.value)}
+                  placeholder="e.g. Cleansing Balm, Retinol Serum"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateQuickSubcategory();
+                    }
+                  }}
+                  className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F7F6F2] border-t border-[#DCCFB9]/50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowQuickSubModal(false)}
+                className="px-4 py-2 border border-[#DCCFB9] text-xs font-bold text-[#5C6460] rounded-lg hover:bg-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isCreatingSub || !quickSubName.trim() || !(quickSubCategoryId || formData.category_id)}
+                onClick={handleCreateQuickSubcategory}
+                className="px-4 py-2 bg-[#183D2B] text-white text-xs font-bold rounded-lg hover:bg-[#102D20] disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+              >
+                {isCreatingSub ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                <span>{isCreatingSub ? "Creating..." : "Create & Select"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

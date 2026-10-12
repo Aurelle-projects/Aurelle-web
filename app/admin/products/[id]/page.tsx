@@ -8,6 +8,7 @@ import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/Cloudina
 import { createClient } from "@/lib/supabase/client";
 import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2 } from "lucide-react";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
+import { slugify } from "@/utils/slug";
 
 interface UploadedImage {
   public_id: string;
@@ -188,6 +189,20 @@ export default function EditProductPage() {
     }
   }
 
+  function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFormData((prev) => ({
+      ...prev,
+      slug: slugify(e.target.value),
+    }));
+  }
+
+  function handleRegenerateSlug() {
+    setFormData((prev) => ({
+      ...prev,
+      slug: slugify(prev.name),
+    }));
+  }
+
   const filteredSubs = dbAllSubs.filter((s) => s.parent_id === formData.category_id);
 
   function handleImageUploaded(asset: CloudinaryAsset) {
@@ -229,10 +244,11 @@ export default function EditProductPage() {
     setMessage(null);
 
     try {
+      const cleanSlug = slugify(formData.slug || formData.name);
       const res = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...formData, images }),
+        body: JSON.stringify({ id, ...formData, slug: cleanSlug, images }),
       });
 
       const result = await res.json();
@@ -403,16 +419,29 @@ export default function EditProductPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                    URL Slug
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider">
+                      URL Slug
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRegenerateSlug}
+                      className="text-[11px] text-[#183D2B] hover:underline font-semibold"
+                    >
+                      Regenerate from Title
+                    </button>
+                  </div>
                   <input
                     type="text"
                     name="slug"
                     value={formData.slug}
-                    onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none"
+                    onChange={handleSlugChange}
+                    placeholder={slugify(formData.name)}
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B]"
                   />
+                  <p className="mt-1 text-[11px] text-[#5C6460] truncate">
+                    Preview: <span className="font-mono text-[#183D2B]">/products/{formData.slug || slugify(formData.name)}</span>
+                  </p>
                 </div>
 
                 <div>

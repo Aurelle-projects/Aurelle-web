@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
+import { slugify } from "@/utils/slug";
 
 interface UploadedImage {
   public_id: string;
@@ -49,6 +50,7 @@ export default function NewProductPage() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [imageToDelete, setImageToDelete] = useState<{ index: number; url: string; public_id?: string } | null>(null);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [isCustomSlug, setIsCustomSlug] = useState(false);
 
   // DB option lists
   const [dbBrands, setDbBrands] = useState<DbBrand[]>([]);
@@ -119,12 +121,30 @@ export default function NewProductPage() {
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
-    const autoSlug = val.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
+    const autoSlug = slugify(val);
     setFormData((prev) => ({
       ...prev,
       name: val,
-      slug: prev.slug === "" || prev.slug === autoSlug.slice(0, -1) ? autoSlug : prev.slug,
-      sku: prev.sku === "" ? `AUR-${autoSlug.slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}` : prev.sku,
+      slug: isCustomSlug ? prev.slug : autoSlug,
+      sku: prev.sku === "" || prev.sku.startsWith("AUR-")
+        ? (autoSlug ? `AUR-${autoSlug.slice(0, 4).toUpperCase().replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}` : "")
+        : prev.sku,
+    }));
+  }
+
+  function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setIsCustomSlug(true);
+    setFormData((prev) => ({
+      ...prev,
+      slug: slugify(e.target.value),
+    }));
+  }
+
+  function handleResetSlugToName() {
+    setIsCustomSlug(false);
+    setFormData((prev) => ({
+      ...prev,
+      slug: slugify(prev.name),
     }));
   }
 
@@ -192,10 +212,11 @@ export default function NewProductPage() {
     setMessage(null);
 
     try {
+      const cleanSlug = slugify(formData.slug || formData.name);
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, images }),
+        body: JSON.stringify({ ...formData, slug: cleanSlug, images }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
@@ -261,9 +282,39 @@ export default function NewProductPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">URL Slug</label>
-                  <input type="text" name="slug" value={formData.slug} onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none" />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider">
+                      URL Slug {!isCustomSlug && <span className="text-[10px] text-emerald-700 font-normal lowercase bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">auto</span>}
+                    </label>
+                    {isCustomSlug ? (
+                      <button
+                        type="button"
+                        onClick={handleResetSlugToName}
+                        className="text-[11px] text-[#183D2B] hover:underline font-semibold"
+                      >
+                        Reset to Auto
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomSlug(true)}
+                        className="text-[11px] text-[#5C6460] hover:text-[#183D2B] hover:underline"
+                      >
+                        Customize
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    name="slug"
+                    value={formData.slug}
+                    onChange={handleSlugChange}
+                    placeholder={slugify(formData.name) || "product-url-slug"}
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B]"
+                  />
+                  <p className="mt-1 text-[11px] text-[#5C6460] truncate">
+                    Preview: <span className="font-mono text-[#183D2B]">/products/{formData.slug || slugify(formData.name) || "slug"}</span>
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">SKU Code</label>

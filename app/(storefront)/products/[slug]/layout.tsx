@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { slugify } from "@/utils/slug";
 
 const SITE_URL = "https://aurellecosmeticshop.com";
 
@@ -15,7 +16,10 @@ async function getProduct(slug: string) {
     if (!supabaseUrl || !supabaseKey) return null;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: product } = await supabase
+    const decodedSlug = decodeURIComponent(slug).trim();
+    const cleanSlug = slugify(decodedSlug);
+
+    let { data: product } = await supabase
       .from("products")
       .select(`
         id,
@@ -30,9 +34,31 @@ async function getProduct(slug: string) {
         category:categories(name, slug),
         product_images(secure_url, is_primary)
       `)
-      .eq("slug", slug)
+      .eq("slug", cleanSlug)
       .eq("status", "published")
       .maybeSingle();
+
+    if (!product && decodedSlug !== cleanSlug) {
+      const { data: legacyProduct } = await supabase
+        .from("products")
+        .select(`
+          id,
+          name,
+          slug,
+          sku,
+          description,
+          retail_price,
+          compare_at_price,
+          is_out_of_stock,
+          brand:brands(name),
+          category:categories(name, slug),
+          product_images(secure_url, is_primary)
+        `)
+        .eq("slug", decodedSlug)
+        .eq("status", "published")
+        .maybeSingle();
+      product = legacyProduct;
+    }
 
     return product;
   } catch {

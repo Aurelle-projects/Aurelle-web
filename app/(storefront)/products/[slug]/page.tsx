@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { slugify } from "@/utils/slug";
 import ProductDetailClient from "./ProductDetailClient";
 
 interface ProductPageProps {
@@ -21,7 +22,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: product, error } = await supabase
+  const decodedSlug = decodeURIComponent(slug).trim();
+  const cleanSlug = slugify(decodedSlug);
+
+  // Try clean slug first
+  let { data: product, error } = await supabase
     .from("products")
     .select(`
       id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
@@ -31,12 +36,35 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       category:categories(name, slug),
       product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
     `)
-    .eq("slug", slug)
+    .eq("slug", cleanSlug)
     .eq("status", "published")
     .maybeSingle();
 
+  // Fallback: If not found, check decoded slug in case DB still has spaces
+  if (!product && decodedSlug !== cleanSlug) {
+    const { data: legacyProduct } = await supabase
+      .from("products")
+      .select(`
+        id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
+        retail_price, compare_at_price, tax_enabled, is_out_of_stock,
+        is_published, is_featured, is_best_seller, is_new_arrival,
+        brand:brands(name),
+        category:categories(name, slug),
+        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
+      `)
+      .eq("slug", decodedSlug)
+      .eq("status", "published")
+      .maybeSingle();
+    product = legacyProduct;
+  }
+
   if (error || !product) {
     notFound();
+  }
+
+  // If the requested URL was non-canonical (e.g. contained %20 or spaces), redirect to clean canonical URL
+  if (product.slug && (slug !== product.slug || slug.includes("%20") || slug.includes(" "))) {
+    redirect(`/products/${product.slug}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

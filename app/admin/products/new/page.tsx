@@ -21,6 +21,10 @@ import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
 import { useAdminData } from "@/context/AdminDataContext";
 import ProductSpecificationsEditor, { SpecPair } from "@/components/admin/ProductSpecificationsEditor";
+import ProductDeliveryPromiseEditor, {
+  DeliveryPromiseSettings,
+  DEFAULT_DELIVERY_SETTINGS,
+} from "@/components/admin/ProductDeliveryPromiseEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -58,6 +62,7 @@ export default function NewProductPage() {
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [isCustomSlug, setIsCustomSlug] = useState(false);
   const [specifications, setSpecifications] = useState<SpecPair[]>([]);
+  const [deliverySettings, setDeliverySettings] = useState<DeliveryPromiseSettings>(DEFAULT_DELIVERY_SETTINGS);
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -340,14 +345,20 @@ export default function NewProductPage() {
 
     try {
       const cleanSlug = slugify(formData.slug || formData.name);
-      const specsObj: Record<string, string> = {};
+      const specsObj: Record<string, any> = {};
       specifications.forEach(({ key, value }) => {
         const k = key.trim();
         const v = value.trim();
-        if (k && v) {
+        if (k && v && !k.startsWith("delivery_")) {
           specsObj[k] = v;
         }
       });
+
+      // Delivery promise configurations
+      specsObj.delivery_enabled = deliverySettings.enabled;
+      specsObj.delivery_badge = deliverySettings.badge.trim() || DEFAULT_DELIVERY_SETTINGS.badge;
+      specsObj.delivery_dispatch = deliverySettings.dispatch.trim() || DEFAULT_DELIVERY_SETTINGS.dispatch;
+      specsObj.delivery_note = deliverySettings.note.trim() || DEFAULT_DELIVERY_SETTINGS.note;
 
       const res = await fetch("/api/admin/products", {
         method: "POST",
@@ -566,6 +577,12 @@ export default function NewProductPage() {
                 </div>
               </div>
             </div>
+
+            {/* Delivery & Dispatch Promise Editor */}
+            <ProductDeliveryPromiseEditor
+              settings={deliverySettings}
+              onChange={setDeliverySettings}
+            />
 
             {/* Key-Value Product Specifications Editor */}
             <ProductSpecificationsEditor

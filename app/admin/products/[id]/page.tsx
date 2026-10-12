@@ -11,6 +11,10 @@ import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
 import { useAdminData } from "@/context/AdminDataContext";
 import ProductSpecificationsEditor, { SpecPair } from "@/components/admin/ProductSpecificationsEditor";
+import ProductDeliveryPromiseEditor, {
+  DeliveryPromiseSettings,
+  DEFAULT_DELIVERY_SETTINGS,
+} from "@/components/admin/ProductDeliveryPromiseEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -37,6 +41,7 @@ export default function EditProductPage() {
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [specifications, setSpecifications] = useState<SpecPair[]>([]);
+  const [deliverySettings, setDeliverySettings] = useState<DeliveryPromiseSettings>(DEFAULT_DELIVERY_SETTINGS);
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -211,8 +216,17 @@ export default function EditProductPage() {
           });
 
           if (p.specifications && typeof p.specifications === "object") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sObj = p.specifications as Record<string, any>;
+            setDeliverySettings({
+              enabled: sObj.delivery_enabled !== undefined ? !!sObj.delivery_enabled : DEFAULT_DELIVERY_SETTINGS.enabled,
+              badge: sObj.delivery_badge ?? DEFAULT_DELIVERY_SETTINGS.badge,
+              dispatch: sObj.delivery_dispatch ?? DEFAULT_DELIVERY_SETTINGS.dispatch,
+              note: sObj.delivery_note ?? DEFAULT_DELIVERY_SETTINGS.note,
+            });
+
             const initialSpecs: SpecPair[] = Object.entries(p.specifications)
-              .filter(([k]) => k !== "subcategory_id" && k !== "id")
+              .filter(([k]) => k !== "subcategory_id" && k !== "id" && !k.startsWith("delivery_"))
               .map(([k, v]) => ({
                 key: k,
                 value: typeof v === "string" ? v : JSON.stringify(v),
@@ -374,14 +388,20 @@ export default function EditProductPage() {
 
     try {
       const cleanSlug = slugify(formData.slug || formData.name);
-      const specsObj: Record<string, string> = {};
+      const specsObj: Record<string, any> = {};
       specifications.forEach(({ key, value }) => {
         const k = key.trim();
         const v = value.trim();
-        if (k && v) {
+        if (k && v && !k.startsWith("delivery_")) {
           specsObj[k] = v;
         }
       });
+
+      // Delivery promise configurations
+      specsObj.delivery_enabled = deliverySettings.enabled;
+      specsObj.delivery_badge = deliverySettings.badge.trim() || DEFAULT_DELIVERY_SETTINGS.badge;
+      specsObj.delivery_dispatch = deliverySettings.dispatch.trim() || DEFAULT_DELIVERY_SETTINGS.dispatch;
+      specsObj.delivery_note = deliverySettings.note.trim() || DEFAULT_DELIVERY_SETTINGS.note;
 
       const res = await fetch("/api/admin/products", {
         method: "PATCH",
@@ -712,6 +732,12 @@ export default function EditProductPage() {
                 </div>
               </div>
             </div>
+
+            {/* Delivery & Dispatch Promise Editor */}
+            <ProductDeliveryPromiseEditor
+              settings={deliverySettings}
+              onChange={setDeliverySettings}
+            />
 
             {/* Key-Value Product Specifications Editor */}
             <ProductSpecificationsEditor

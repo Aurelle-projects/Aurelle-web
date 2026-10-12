@@ -297,7 +297,12 @@ function getProductSpecifications(product: any): SpecificationItem[] {
   // 6. Direct Admin Key-Value Pairs from specifications JSON (excluding internal IDs)
   for (const [key, val] of Object.entries(specs)) {
     const normKey = key.toLowerCase().replace(/[\s_-]+/g, "");
-    if (normKey === "subcategoryid" || normKey === "id") continue;
+    if (
+      normKey === "subcategoryid" ||
+      normKey === "id" ||
+      normKey.startsWith("delivery")
+    )
+      continue;
 
     const cleanV = cleanValue(
       typeof val === "string" ? val : typeof val === "number" ? String(val) : null

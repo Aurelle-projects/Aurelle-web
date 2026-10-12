@@ -170,24 +170,30 @@ export default function AdminProductsPage() {
                   filtered.map((item) => (
                     <tr key={item.id} className="hover:bg-[#F7F5EF]/50 transition-colors">
                       <td className="py-2.5 px-3.5">
-                        <div className="flex items-center gap-2.5">
+                        <Link
+                          href={`/admin/products/${item.id}`}
+                          className="flex items-center gap-2.5 group"
+                          title={`Edit ${item.name}`}
+                        >
                           {item.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={item.image_url}
                               alt={item.name}
-                              className="w-9 h-9 rounded object-cover border border-[#DCCFB9]/60 shrink-0"
+                              className="w-9 h-9 rounded object-cover border border-[#DCCFB9]/60 shrink-0 group-hover:border-[#183D2B] transition-colors"
                             />
                           ) : (
-                            <div className="w-9 h-9 rounded bg-[#F7F5EF] border border-[#DCCFB9]/60 flex items-center justify-center text-[#8E9590] shrink-0">
+                            <div className="w-9 h-9 rounded bg-[#F7F5EF] border border-[#DCCFB9]/60 flex items-center justify-center text-[#8E9590] shrink-0 group-hover:border-[#183D2B] transition-colors">
                               <Package size={15} />
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="font-semibold text-xs text-[#1D211F] truncate max-w-xs">{item.name}</p>
+                            <p className="font-semibold text-xs text-[#1D211F] truncate max-w-xs group-hover:text-[#183D2B] group-hover:underline transition-colors">
+                              {item.name}
+                            </p>
                             <span className="text-[10px] text-[#5C6460]">ID: {item.id}</span>
                           </div>
-                        </div>
+                        </Link>
                       </td>
 
                       <td className="py-2.5 px-3.5 text-[11px] text-[#1D211F]">

@@ -648,23 +648,40 @@ export default function ProductDetailClient({
               </p>
             )}
 
-            {/* UAE Express Delivery Promise Card (Reference Noon UX) */}
-            <div className="p-3.5 2xl:p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-sm flex items-start gap-3">
-              <div className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-full bg-[#183D2B] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <Truck size={17} className="2xl:w-5 2xl:h-5" />
-              </div>
-              <div className="text-xs 2xl:text-sm space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#183D2B] uppercase tracking-wide text-[11px] 2xl:text-xs bg-[#183D2B]/10 px-2 py-0.5 rounded-xs">
-                    UAE Express Delivery
-                  </span>
-                  <span className="text-emerald-800 font-semibold text-[11px] 2xl:text-xs">Dispatches in 24h</span>
+            {/* UAE Express Delivery Promise Card (Dynamic from Product Specs) */}
+            {(() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const dSpecs = (product.specifications as any) || {};
+              const isEnabled = dSpecs.delivery_enabled !== false;
+              if (!isEnabled) return null;
+
+              const badge = dSpecs.delivery_badge || "UAE Express Delivery";
+              const dispatch = dSpecs.delivery_dispatch || "Dispatches in 24h";
+              const note =
+                dSpecs.delivery_note ||
+                "Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.";
+
+              return (
+                <div className="p-3.5 2xl:p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-sm flex items-start gap-3">
+                  <div className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-full bg-[#183D2B] text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <Truck size={17} className="2xl:w-5 2xl:h-5" />
+                  </div>
+                  <div className="text-xs 2xl:text-sm space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#183D2B] uppercase tracking-wide text-[11px] 2xl:text-xs bg-[#183D2B]/10 px-2 py-0.5 rounded-xs">
+                        {badge}
+                      </span>
+                      <span className="text-emerald-800 font-semibold text-[11px] 2xl:text-xs">
+                        {dispatch}
+                      </span>
+                    </div>
+                    <p className="text-[#5C6460] text-[11px] 2xl:text-xs leading-normal">
+                      {note}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[#5C6460] text-[11px] 2xl:text-xs leading-normal">
-                  Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.
-                </p>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Quantity Selector & Add to Cart */}
             {!product.is_out_of_stock ? (

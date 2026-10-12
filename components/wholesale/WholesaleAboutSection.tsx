@@ -41,7 +41,7 @@ export default function WholesaleAboutSection({
       className="bg-white py-12 md:py-20 border-b border-[#EFEAE0]/60"
       aria-label="Wholesale About Section"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`grid grid-cols-1 ${imageSrc ? "lg:grid-cols-12" : ""} gap-8 md:gap-12 lg:gap-16 items-center`}>
           {/* Left Side: Image */}
           {imageSrc && (

@@ -186,29 +186,22 @@ export default async function WholesalePage() {
         bannerFallback={wholesaleBanners?.[0]?.url || null}
       />
 
-         {/* ─── 3. Wholesale Statistics Section ───────────────────────── */}
+         {/* ─── 2. Wholesale Statistics Section ───────────────────────── */}
       <div id="statistics">
         <WholesaleStatisticsSection data={statsSettings} />
       </div>
 
-      {/* ─── 2. Wholesale About Section ────────────────────────────── */}
-      <div id="about-us">
-        <WholesaleAboutSection data={aboutSettings} />
-      </div>
-
-   
-
-      {/* ─── 4. Wholesale Shop by Brand ──────────────────────────── */}
+      {/* ─── 3. Wholesale Shop by Brand ──────────────────────────── */}
       <div id="shop-by-brand">
         <WholesaleShopByBrand brands={brands} />
       </div>
 
-      {/* ─── 5. Shop by Category (Separate Wholesale Square Design) ─────────── */}
+      {/* ─── 4. Shop by Category (Separate Wholesale Square Design) ─────────── */}
       <div id="shop-by-category">
         <WholesaleCategorySection categories={categories} />
       </div>
 
-      {/* ─── 6. Wholesale New Arrivals (standalone carousel) ────────── */}
+      {/* ─── 5. Wholesale New Arrivals (standalone carousel) ────────── */}
       <div id="new-arrivals">
         <WholesaleNewArrivals
           products={newArrivalProducts}
@@ -217,17 +210,22 @@ export default async function WholesalePage() {
         />
       </div>
 
-      {/* ─── 7. Wholesale Home Banners (Reusing HomeBanners component) ── */}
+      {/* ─── 6. Wholesale Home Banners (Reusing HomeBanners component) ── */}
       {wholesaleBanners.length > 0 && (
         <HomeBanners images={wholesaleBanners} />
       )}
 
-      {/* ─── 8. All Products (Catalog with category filter & sort) ─── */}
+      {/* ─── 7. All Products (Catalog with category filter & sort) ─── */}
       <div id="all-products">
         <WholesaleAllProducts
           products={allWholesaleProducts}
           categories={categories}
         />
+      </div>
+
+      {/* ─── 8. Wholesale About Section ────────────────────────────── */}
+      <div id="about-us">
+        <WholesaleAboutSection data={aboutSettings} />
       </div>
 
       {/* ─── 9. Wholesale FAQ / Accordion Section ──────────────────── */}

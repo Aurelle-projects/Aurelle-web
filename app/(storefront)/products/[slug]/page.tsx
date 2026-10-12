@@ -1,13 +1,104 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { slugify } from "@/utils/slug";
 import ProductDetailClient from "./ProductDetailClient";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 // 60-second ISR caching: guarantees lightning-fast sub-10ms edge delivery and eliminates DB latency
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return { title: "Product | Aurelle Cosmetics UAE" };
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data: product } = await supabase
+    .from("products")
+    .select(`
+      name, slug, description, retail_price, compare_at_price,
+      brand:brands(name),
+      category:categories(name),
+      product_images(secure_url, is_primary)
+    `)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (!product) {
+    return {
+      title: "Product Not Found | Aurelle Cosmetics UAE",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const brandName = (product.brand as any)?.name || "Aurelle";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const catName = (product.category as any)?.name || "Cosmetics";
+  const title = `${product.name} | ${brandName} | Aurelle Cosmetics UAE`;
+  const cleanDesc = product.description
+    ? product.description.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 160)
+    : `Buy authentic ${product.name} by ${brandName} online in UAE at Aurelle. Fast delivery across Dubai, Abu Dhabi & GCC. Cash on Delivery available.`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const primaryImage =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    product.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+    product.product_images?.[0]?.secure_url ||
+    `${SITE_URL}/og-image.jpg`;
+  const pageUrl = `${SITE_URL}/products/${slug}`;
+
+  return {
+    title,
+    description: cleanDesc,
+    keywords: [
+      product.name,
+      `${product.name} UAE`,
+      `${product.name} Dubai`,
+      brandName,
+      catName,
+      "Aurelle",
+      "Aurelle Cosmetics",
+      "Aurelle Cosmetics UAE",
+      "buy cosmetics UAE",
+      "authentic skincare Dubai",
+      "beauty shop UAE",
+    ],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title,
+      description: cleanDesc,
+      url: pageUrl,
+      type: "website",
+      images: [
+        {
+          url: primaryImage,
+          width: 800,
+          height: 800,
+          alt: `${product.name} — Aurelle Cosmetics UAE`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: cleanDesc,
+      images: [primaryImage],
+    },
+  };
+}
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params;
@@ -21,22 +112,70 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: product, error } = await supabase
+  const decodedSlug = decodeURIComponent(slug).trim();
+  const cleanSlug = slugify(decodedSlug);
+
+  // Try clean slug first
+  let { data: product, error } = await supabase
     .from("products")
     .select(`
-      id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
+      id, name, slug, sku, category_id, subcategory_id, specifications,
+      description, benefits, ingredients, usage_instructions,
       retail_price, compare_at_price, tax_enabled, is_out_of_stock,
       is_published, is_featured, is_best_seller, is_new_arrival,
       brand:brands(name),
       category:categories(name, slug),
+      subcategory:subcategories(name, slug),
       product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
     `)
-    .eq("slug", slug)
+    .eq("slug", cleanSlug)
     .eq("status", "published")
     .maybeSingle();
 
+  // Fallback: If not found, check decoded slug in case DB still has spaces
+  if (!product && decodedSlug !== cleanSlug) {
+    const { data: legacyProduct } = await supabase
+      .from("products")
+      .select(`
+        id, name, slug, sku, category_id, subcategory_id, specifications,
+        description, benefits, ingredients, usage_instructions,
+        retail_price, compare_at_price, tax_enabled, is_out_of_stock,
+        is_published, is_featured, is_best_seller, is_new_arrival,
+        brand:brands(name),
+        category:categories(name, slug),
+        subcategory:subcategories(name, slug),
+        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
+      `)
+      .eq("slug", decodedSlug)
+      .eq("status", "published")
+      .maybeSingle();
+    product = legacyProduct;
+  }
+
+  // Resolve subcategory if stored in specifications JSON
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const specSubId = (product?.specifications as any)?.subcategory_id || product?.subcategory_id;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (product && !(product as any).subcategory && specSubId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: subData } = await (supabase as any)
+      .from("subcategories")
+      .select("name, slug")
+      .eq("id", specSubId)
+      .maybeSingle();
+    if (subData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (product as any).subcategory = subData;
+    }
+  }
+
   if (error || !product) {
     notFound();
+  }
+
+  // If the requested URL was non-canonical (e.g. contained %20 or spaces), redirect to clean canonical URL
+  if (product.slug && (slug !== product.slug || slug.includes("%20") || slug.includes(" "))) {
+    redirect(`/products/${product.slug}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,11 +198,89 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     relatedProducts = related || [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const brandName = (product.brand as any)?.name || "Aurelle";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const primaryImage =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    product.product_images?.find((img: any) => img.is_primary)?.secure_url ||
+    product.product_images?.[0]?.secure_url ||
+    `${SITE_URL}/og-image.jpg`;
+
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    image: product.product_images?.map((img: any) => img.secure_url) || [primaryImage],
+    description:
+      product.description?.replace(/<[^>]*>/g, "").slice(0, 300) ||
+      `${product.name} available at Aurelle Cosmetics UAE`,
+    sku: product.sku || undefined,
+    brand: {
+      "@type": "Brand",
+      name: brandName,
+    },
+    offers: {
+      "@type": "Offer",
+      url: `${SITE_URL}/products/${slug}`,
+      priceCurrency: "AED",
+      price: product.retail_price,
+      itemCondition: "https://schema.org/NewCondition",
+      availability: product.is_out_of_stock
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "Aurelle Cosmetics",
+      },
+    },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE_URL,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Shop",
+        item: `${SITE_URL}/shop`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: product.name,
+        item: `${SITE_URL}/products/${slug}`,
+      },
+    ],
+  };
+
   return (
-    <ProductDetailClient
-      initialProduct={product}
-      initialRelatedProducts={relatedProducts}
-      slug={slug}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(productSchema),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema),
+        }}
+      />
+      <ProductDetailClient
+        initialProduct={product}
+        initialRelatedProducts={relatedProducts}
+        slug={slug}
+      />
+    </>
   );
 }

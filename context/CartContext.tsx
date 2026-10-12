@@ -40,8 +40,10 @@ const STANDARD_SHIPPING_FEE = 20; // AED
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [standardShippingFee, setStandardShippingFee] = useState<number>(20);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(199);
 
-  // 1. Hydrate from localStorage once on client mount
+  // 1. Hydrate from localStorage once on client mount & load dynamic store settings
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -56,6 +58,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsHydrated(true);
     }
+
+    // Load dynamic shipping charges configured in Admin Settings
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.standard_shipping_fee === "number") {
+          setStandardShippingFee(data.standard_shipping_fee);
+        }
+        if (data && typeof data.free_shipping_threshold === "number") {
+          setFreeShippingThreshold(data.free_shipping_threshold);
+        }
+      })
+      .catch((err) => {
+        console.warn("[CartContext] Settings fetch warning:", err);
+      });
   }, []);
 
   // 2. Save to localStorage ONLY after hydration has completed
@@ -79,8 +96,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const shippingFee = useMemo(
-    () => (rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE),
-    [rawSubtotal]
+    () => (rawSubtotal >= freeShippingThreshold || rawSubtotal === 0 ? 0 : standardShippingFee),
+    [rawSubtotal, freeShippingThreshold, standardShippingFee]
   );
 
   const lineInputs = useMemo(
@@ -105,8 +122,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = pricingSummary.total;
 
   const amountUntilFreeShipping = useMemo(
-    () => Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal),
-    [subtotal]
+    () => Math.max(0, freeShippingThreshold - subtotal),
+    [subtotal, freeShippingThreshold]
   );
 
   const addItem = useCallback((product: ProductItem, quantity = 1) => {

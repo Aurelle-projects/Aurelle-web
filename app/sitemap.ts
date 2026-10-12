@@ -34,6 +34,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.85,
     },
     {
+      url: `${SITE_URL}/wholesale/shop`,
+      lastModified: currentDate,
+      changeFrequency: "daily",
+      priority: 0.85,
+    },
+    {
+      url: `${SITE_URL}/wholesale/about`,
+      lastModified: currentDate,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/wholesale/contact`,
+      lastModified: currentDate,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
       url: `${SITE_URL}/about`,
       lastModified: currentDate,
       changeFrequency: "monthly",
@@ -85,9 +103,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  // ── 3. Dynamic Products & Combo Offers from Supabase ──────────────────────
+  // ── 3. Dynamic Products, Combos & Wholesale Products from Supabase ────────
   let productRoutes: MetadataRoute.Sitemap = [];
   let comboRoutes: MetadataRoute.Sitemap = [];
+  let wholesaleProductRoutes: MetadataRoute.Sitemap = [];
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -133,10 +152,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
           }));
       }
+
+      // Fetch all wholesale-available products
+      const { data: wholesaleProducts } = await supabase
+        .from("products")
+        .select("slug, updated_at")
+        .eq("status", "published")
+        .eq("is_wholesale_available", true);
+
+      if (Array.isArray(wholesaleProducts) && wholesaleProducts.length > 0) {
+        wholesaleProductRoutes = wholesaleProducts
+          .filter((p) => Boolean(p.slug))
+          .map((p) => ({
+            url: `${SITE_URL}/wholesale/products/${p.slug}`,
+            lastModified: p.updated_at ? new Date(p.updated_at) : currentDate,
+            changeFrequency: "weekly" as const,
+            priority: 0.8,
+          }));
+      }
     }
   } catch (err) {
     console.error("Error generating dynamic sitemap from Supabase:", err);
   }
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes, ...comboRoutes];
+  return [
+    ...staticRoutes,
+    ...categoryRoutes,
+    ...productRoutes,
+    ...comboRoutes,
+    ...wholesaleProductRoutes,
+  ];
 }

@@ -436,13 +436,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Compute authoritative order totals
+    // 3. Compute authoritative order totals (Dynamic from site_settings)
     const rawSubtotal = verifiedItems.reduce(
       (sum: number, item: VerifiedOrderItem) => sum + item.lineSubtotal,
       0
     );
+
+    let activeShippingFee = STANDARD_SHIPPING_FEE;
+    let activeFreeThreshold = FREE_SHIPPING_THRESHOLD;
+    try {
+      const { data: shipSettings } = await (admin as any)
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["standard_shipping_fee", "free_shipping_threshold"]);
+
+      if (Array.isArray(shipSettings)) {
+        for (const s of shipSettings) {
+          if (s.key === "standard_shipping_fee" && s.value !== null) {
+            activeShippingFee = Number(s.value);
+          }
+          if (s.key === "free_shipping_threshold" && s.value !== null) {
+            activeFreeThreshold = Number(s.value);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[Orders API] Failed to read dynamic shipping settings, using default:", err);
+    }
+
     const authoritativeShipping =
-      rawSubtotal >= FREE_SHIPPING_THRESHOLD || rawSubtotal === 0 ? 0 : STANDARD_SHIPPING_FEE;
+      rawSubtotal >= activeFreeThreshold || rawSubtotal === 0 ? 0 : activeShippingFee;
 
     const authoritativeTotals = calculateRetailOrderTotals(
       verifiedItems.map((it: VerifiedOrderItem) => ({

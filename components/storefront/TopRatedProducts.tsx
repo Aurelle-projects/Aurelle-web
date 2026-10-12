@@ -281,7 +281,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
 
   return (
     <section className="bg-white py-6 md:py-16" aria-labelledby="top-rated-heading">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-4 sm:mb-7">
           <h2 id="top-rated-heading" className="text-base sm:text-xl text-[#1D211F] uppercase font-bold tracking-wide">
             Top Rated Products

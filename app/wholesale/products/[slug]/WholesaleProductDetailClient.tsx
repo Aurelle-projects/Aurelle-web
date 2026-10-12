@@ -180,10 +180,10 @@ export default function WholesaleProductDetailClient({
   }
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12 2xl:py-16">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-10 2xl:space-y-14">
         {/* Navigation Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="text-xs text-[#5C6460]">
+        <nav aria-label="Breadcrumb" className="text-xs 2xl:text-sm text-[#5C6460]">
           <ol className="flex items-center space-x-2">
             <li>
               <Link href="/wholesale" className="hover:text-[#183D2B] transition-colors">
@@ -224,17 +224,17 @@ export default function WholesaleProductDetailClient({
         </div>
 
         {/* ── Main Product Section ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 2xl:gap-14 items-start">
           {/* Left: Gallery (Col 7) */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
+          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4 2xl:gap-5">
             {images.length > 1 && (
-              <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[560px] pb-2 md:pb-0 scrollbar-none">
+              <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[560px] 2xl:max-h-[640px] pb-2 md:pb-0 scrollbar-none">
                 {images.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedImageIdx(idx)}
-                    className={`relative w-16 h-20 md:w-20 md:h-24 shrink-0 rounded-none overflow-hidden border transition-all ${
+                    className={`relative w-16 h-20 md:w-20 md:h-24 2xl:w-24 2xl:h-28 shrink-0 rounded-none overflow-hidden border transition-all ${
                       selectedImageIdx === idx
                         ? "border-[#183D2B] ring-1 ring-[#183D2B]"
                         : "border-[#DCCFB9]/60 hover:border-[#183D2B]/50"
@@ -247,7 +247,7 @@ export default function WholesaleProductDetailClient({
               </div>
             )}
 
-            <div className="flex-1 relative aspect-[3/4] bg-white rounded-none border border-[#DCCFB9]/60 overflow-hidden shadow-xs flex items-center justify-center">
+            <div className="flex-1 relative aspect-[3/4] 2xl:aspect-[4/5] bg-white rounded-none border border-[#DCCFB9]/60 overflow-hidden shadow-xs flex items-center justify-center min-h-[440px] lg:min-h-[520px] 2xl:min-h-[600px]">
               {primaryImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={primaryImage} alt={product.name} className="w-full h-full object-cover" />
@@ -258,11 +258,11 @@ export default function WholesaleProductDetailClient({
               )}
 
               <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
-                <span className="bg-[#183D2B] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1">
+                <span className="bg-[#183D2B] text-white text-[10px] 2xl:text-xs font-bold uppercase tracking-widest px-2.5 py-1">
                   B2B Distribution
                 </span>
                 {product.is_out_of_stock && (
-                  <span className="bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2.5 py-1 uppercase">
+                  <span className="bg-[#1D211F]/90 text-white text-[10px] 2xl:text-xs font-semibold tracking-wider px-2.5 py-1 uppercase">
                     Out of Stock
                   </span>
                 )}
@@ -271,30 +271,30 @@ export default function WholesaleProductDetailClient({
           </div>
 
           {/* Right: Buy Box (Col 5) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-5 2xl:space-y-6">
             <div className="hidden lg:block">
               <div className="flex items-center gap-2">
                 {brandName && (
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
+                  <span className="text-xs 2xl:text-sm font-bold uppercase tracking-widest text-[#183D2B]">
                     {brandName}
                   </span>
                 )}
                 <span className="text-xs text-[#8E9590]">•</span>
                 <span className="text-xs font-semibold text-[#8E9590]">SKU: {product.sku || "N/A"}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl 2xl:text-4xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
                 {product.name}
               </h1>
             </div>
 
             {/* Price Box */}
-            <div className="border-y border-[#DCCFB9]/40 py-4 space-y-2">
+            <div className="border-y border-[#DCCFB9]/40 py-4 2xl:py-5 space-y-2">
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-xs text-[#8E9590] uppercase tracking-wider block">Wholesale Rate</span>
-                  <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
+                  <span className="text-xs 2xl:text-sm text-[#8E9590] uppercase tracking-wider block">Wholesale Rate</span>
+                  <span className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-[#1D211F] tracking-tight">
                     {pricingResult ? formatPrice(pricingResult.effectiveUnitPrice) : formatPrice(product.wholesale_price || 0)}
-                    <span className="text-xs font-normal text-[#5C6460] font-sans ml-1">/ unit</span>
+                    <span className="text-xs 2xl:text-sm font-normal text-[#5C6460] font-sans ml-1">/ unit</span>
                   </span>
                 </div>
                 {product.retail_price && (

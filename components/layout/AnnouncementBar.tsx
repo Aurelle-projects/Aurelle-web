@@ -42,7 +42,7 @@ export default function AnnouncementBar() {
       role="region"
       aria-label="Announcement"
     >
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-[34px]">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-[34px]">
         <div className="flex items-center overflow-hidden text-ellipsis whitespace-nowrap">
           <Link
             href={announcement.link || "/shop"}

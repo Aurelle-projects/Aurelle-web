@@ -202,7 +202,7 @@ export default function WholesaleHeader({
     <>
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-xs border-b border-[#EFEAE0]/80">
         {/* Main Navbar */}
-        <div className="max-w-7xl mx-auto px-2.5 min-[380px]:px-4 sm:px-6">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-2.5 min-[380px]:px-4 sm:px-6 lg:px-8">
           <div className="h-14 sm:h-16 md:h-20 flex items-center justify-between gap-1.5 sm:gap-4">
             {/* Left: Mobile Menu Button & Brand Logo */}
             <div className="flex items-center gap-1 min-[360px]:gap-2 sm:gap-3 shrink-0">

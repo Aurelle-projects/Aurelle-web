@@ -646,6 +646,7 @@ export default function Header({
                                     <Link
                                       key={item.id}
                                       href={`/products/${item.slug}`}
+                                      prefetch={true}
                                       onClick={() => handleSelectSuggestion(item.slug)}
                                       className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-[#F7F5EF] transition-colors cursor-pointer"
                                     >
@@ -929,6 +930,7 @@ export default function Header({
                             <Link
                               key={item.id}
                               href={`/products/${item.slug}`}
+                              prefetch={true}
                               onClick={() => handleSelectSuggestion(item.slug)}
                               className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-[#F7F5EF] transition-colors cursor-pointer"
                             >
@@ -1026,6 +1028,7 @@ export default function Header({
                                 <Link
                                   key={item.id}
                                   href={`/products/${item.slug}`}
+                                  prefetch={true}
                                   onClick={() => handleSelectSuggestion(item.slug)}
                                   className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-[#F7F5EF] transition-colors cursor-pointer"
                                 >

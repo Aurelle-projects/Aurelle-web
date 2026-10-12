@@ -9,6 +9,7 @@ import {
   sendOtpEmail,
 } from "@/lib/auth/otp";
 import { hashAdminPassword, safeCompare } from "@/lib/auth/adminPassword";
+import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,15 @@ export async function POST(request: NextRequest) {
     // STEP 1: SEND OTP
     // ─────────────────────────────────────────────────────────────
     if (action === "send-otp") {
+      const ip = getClientIp(request);
+      const rl = checkRateLimit(`admin-otp:${ip}`, { limit: 3, windowMs: 15 * 60 * 1000 });
+      if (!rl.success) {
+        return NextResponse.json(
+          { success: false, error: "Too many reset code requests. Please wait 15 minutes before requesting a new code." },
+          { status: 429 }
+        );
+      }
+
       const otp = generateOtp();
       const otpToken = createOtpToken(email, otp);
 
@@ -122,24 +132,36 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Hash and store the custom admin password
+      // Hash and store the custom admin password in the database
       const { salt, hash } = hashAdminPassword(newPassword);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabaseAdmin = createAdminClient() as any;
 
-      const { error: saveError } = await supabaseAdmin.from("site_settings").upsert({
-        key: "admin_custom_credentials",
-        value: {
-          salt,
-          hash,
-          updated_at: new Date().toISOString(),
+      const { error: saveError } = await supabaseAdmin.from("site_settings").upsert(
+        {
+          key: "admin_custom_credentials",
+          value: {
+            salt,
+            hash,
+            updated_at: new Date().toISOString(),
+          },
         },
-      });
+        { onConflict: "key" }
+      );
 
       if (saveError) {
-        console.error("[Admin Reset Password Error]:", saveError);
+        console.error("[Admin Reset Password DB Error]:", saveError);
+        const isLegacyKeyDisabled =
+          saveError?.message?.includes("Legacy API keys are disabled") ||
+          saveError?.hint?.includes("Legacy API keys are disabled");
+
         return NextResponse.json(
-          { success: false, error: "Failed to update admin password." },
+          {
+            success: false,
+            error: isLegacyKeyDisabled
+              ? "Supabase secret key error: Legacy API keys are disabled in Supabase. Please re-enable legacy keys in the Supabase Dashboard (Settings -> API) or configure the new secret key."
+              : (saveError.message || "Failed to update admin password in database."),
+          },
           { status: 500 }
         );
       }

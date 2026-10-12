@@ -10,14 +10,61 @@ interface CategoryPageProps {
   params: Promise<{ slug: string }>;
 }
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { slug } = await params;
   const category = AURELLE_CATEGORIES.find((c) => c.slug === slug);
-  if (!category) return { title: "Category Not Found | Aurelle" };
+  if (!category) {
+    return {
+      title: "Category Not Found | Aurelle Cosmetics UAE",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `${category.name} | Buy Online Dubai & UAE | Aurelle`;
+  const description = `Shop authentic ${category.name} online at Aurelle UAE. ${category.description} Express delivery across Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on delivery available.`;
+  const pageUrl = `${SITE_URL}/categories/${slug}`;
+
+  const subcatKeywords = category.subcategories?.map((s) => s.name) || [];
 
   return {
-    title: `${category.name} | Aurelle UAE`,
-    description: category.description,
+    title,
+    description,
+    keywords: [
+      category.name,
+      `${category.name} UAE`,
+      `${category.name} Dubai`,
+      "buy cosmetics UAE",
+      "beauty shopping Dubai",
+      "authentic skincare UAE",
+      "تسوق مستحضرات تجميل دبي",
+      "مكياج الإمارات",
+      ...subcatKeywords,
+    ],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: pageUrl,
+      type: "website",
+      images: [
+        {
+          url: `${SITE_URL}/og-image.jpg`,
+          width: 1200,
+          height: 630,
+          alt: `${category.name} - Aurelle Cosmetics UAE`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [`${SITE_URL}/og-image.jpg`],
+    },
   };
 }
 
@@ -85,8 +132,47 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     }
   } catch { }
 
+  const categorySchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${category.name} | Aurelle Cosmetics UAE`,
+    url: `${SITE_URL}/categories/${slug}`,
+    description: category.description,
+    breadcrumb: {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: SITE_URL,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Shop",
+          item: `${SITE_URL}/shop`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: category.name,
+          item: `${SITE_URL}/categories/${slug}`,
+        },
+      ],
+    },
+  };
+
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(categorySchema),
+        }}
+      />
+      <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#5C6460]">
@@ -199,5 +285,6 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         </div>
       </div>
     </div>
-  );
+  </>
+);
 }

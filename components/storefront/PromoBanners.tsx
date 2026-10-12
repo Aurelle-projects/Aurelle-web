@@ -40,7 +40,7 @@ export default function PromoBanners({
 
   return (
     <section className="bg-white py-6 md:py-16" aria-label="Special Offers and Promotions">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
 
           {/* ── Left Banner: Primary Campaign (e.g. Christmas 30% off) ────── */}

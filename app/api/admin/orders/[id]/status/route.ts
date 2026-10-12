@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOrderDeliveredReviewEmail } from "@/lib/email/brevo";
 import { calculateOrderStatusTransition } from "@/lib/orders/status";
+import { verifyAdminSession } from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await verifyAdminSession())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const rawStatus = body.status;

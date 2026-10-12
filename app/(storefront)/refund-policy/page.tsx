@@ -1,8 +1,11 @@
 import React from "react";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
   title: "Refund Policy | Aurelle Cosmetics Trading FZ-LLC",
   description: "Learn about refund processing timelines and methods for Aurelle in the UAE.",
+  alternates: { canonical: `${SITE_URL}/refund-policy` },
 };
 
 export default function RefundPolicyPage() {

@@ -784,10 +784,19 @@ export default function ShopPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm font-semibold text-[#5C6460]">Loading catalog…</p>
+        <div className="min-h-screen bg-[#FAF8F5] py-8 md:py-12 animate-pulse">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div className="h-8 w-48 bg-[#E9E4DC] rounded-none" />
+            <div className="h-10 w-full bg-[#E9E4DC] rounded-none" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 pt-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="space-y-3">
+                  <div className="aspect-[3/4] bg-[#E9E4DC] rounded-none" />
+                  <div className="h-4 w-3/4 bg-[#E9E4DC] rounded-none" />
+                  <div className="h-4 w-1/3 bg-[#E9E4DC] rounded-none" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       }

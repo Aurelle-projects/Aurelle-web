@@ -29,23 +29,6 @@ export default function CategoryGrid({ categories: initialCategories }: Category
   const scrollLeftRef = useRef(0);
   const hasDraggedRef = useRef(false);
 
-  // Pick up any image updates from DB / Admin Panel
-  useEffect(() => {
-    async function loadLiveCategories() {
-      try {
-        const res = await fetch("/api/admin/categories");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.categories) && data.categories.length > 0) {
-            setCategories(data.categories);
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    }
-    loadLiveCategories();
-  }, []);
 
   // Sync when server data updates
   useEffect(() => {

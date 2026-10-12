@@ -4,9 +4,19 @@ import {
   sendAdminWholesaleEnquiryNotificationEmail,
   sendClientWholesaleEnquiryConfirmationEmail,
 } from "@/lib/email/brevo";
+import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`wholesale-enquiry:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 });
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many enquiries submitted. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       contactPerson,

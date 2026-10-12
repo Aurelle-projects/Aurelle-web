@@ -1,9 +1,12 @@
 import React from "react";
 
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata = {
-  title: "UAE Shipping & Delivery Policy | Aurelle",
-  description: "Learn about Aurelle shipping speeds, rates, and courier coverage across all 7 UAE Emirates.",
+  title: "UAE Shipping & Express Delivery Policy | Aurelle Cosmetics",
+  description: "Learn about Aurelle shipping speeds, rates, cash-on-delivery and courier coverage across all 7 UAE Emirates.",
+  alternates: { canonical: `${SITE_URL}/shipping-policy` },
 };
 
 export default function ShippingPolicyPage() {

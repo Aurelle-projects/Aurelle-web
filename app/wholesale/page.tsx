@@ -13,11 +13,50 @@ import HomeBanners from "@/components/storefront/HomeBanners";
 import WholesaleAllProducts from "@/components/wholesale/WholesaleAllProducts";
 import { getWholesaleCatalogSettings } from "@/lib/wholesale/catalog";
 
+const SITE_URL = "https://aurellecosmeticshop.com";
+
 export const metadata: Metadata = {
-  title: "Aurelle Wholesale — Commercial GCC Beauty & Cosmetics Distribution",
+  title: "Wholesale Cosmetics UAE | B2B Beauty Distribution Dubai | توريد مستحضرات تجميل بالجملة",
   description:
-    "Direct B2B beauty distribution, genuine cosmetics supply, low starter MOQs, and consolidated GCC logistics for verified pharmacies, retailers, and salons.",
-  alternates: { canonical: "/wholesale" },
+    "Direct B2B beauty distribution, genuine cosmetics supply, low starter MOQs, and consolidated GCC logistics for verified pharmacies, retailers, and salons in UAE & Dubai. توريد مستحضرات تجميل ومكياج وعطور بالجملة في الإمارات.",
+  keywords: [
+    "wholesale cosmetics UAE",
+    "B2B beauty distribution Dubai",
+    "cosmetics supplier Dubai",
+    "bulk skincare UAE",
+    "perfumes wholesale UAE",
+    "pharmacy cosmetics supplier UAE",
+    "salon beauty distributor Dubai",
+    "GCC cosmetics wholesale",
+    "مستحضرات تجميل بالجملة الإمارات",
+    "موزعي مستحضرات تجميل دبي",
+    "مكياج بالجملة دبي",
+    "عطور بالجملة الإمارات",
+    "توريد صيدليات وصالونات دبي",
+  ],
+  alternates: { canonical: `${SITE_URL}/wholesale` },
+  openGraph: {
+    title: "Wholesale Cosmetics UAE | B2B Beauty Distribution Dubai",
+    description:
+      "Direct B2B beauty distribution and cosmetics supply for UAE pharmacies, salons, and retail chains.",
+    url: `${SITE_URL}/wholesale`,
+    type: "website",
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "Aurelle Wholesale UAE B2B Cosmetics Distribution",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Wholesale Cosmetics UAE | B2B Beauty Distribution Dubai",
+    description:
+      "Direct B2B beauty distribution & cosmetics supply in UAE.",
+    images: [`${SITE_URL}/og-image.jpg`],
+  },
 };
 
 export const revalidate = 30;

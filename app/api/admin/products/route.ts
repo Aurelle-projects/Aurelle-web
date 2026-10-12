@@ -121,10 +121,14 @@ export async function POST(req: NextRequest) {
       category_id = catData?.id ?? null;
     }
 
-    // Specifications for subcategory metadata
-    const specifications = subcategory_id
-      ? { ...(incomingSpecs || {}), subcategory_id }
-      : (incomingSpecs || null);
+    // Specifications for subcategory metadata and key-value attributes
+    const specificationsPayload: Record<string, any> = {
+      ...(typeof incomingSpecs === "object" && incomingSpecs !== null ? incomingSpecs : {}),
+    };
+    if (subcategory_id) {
+      specificationsPayload.subcategory_id = subcategory_id;
+    }
+    const specifications = Object.keys(specificationsPayload).length > 0 ? specificationsPayload : null;
 
     // Auto-generate SKU if empty (products.sku is NOT NULL in DB)
     const autoSku = sku?.trim() || `AUR-${name.trim().slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Date.now().toString(36).toUpperCase()}`;
@@ -322,9 +326,46 @@ export async function PATCH(req: NextRequest) {
     }
     if (subcategory_id !== undefined) {
       updatePayload.subcategory_id = subcategory_id || null;
-      updatePayload.specifications = subcategory_id
-        ? { ...(incomingSpecs || {}), subcategory_id }
-        : null;
+    }
+
+    if (incomingSpecs !== undefined) {
+      const specificationsPayload: Record<string, any> = {
+        ...(typeof incomingSpecs === "object" && incomingSpecs !== null ? incomingSpecs : {}),
+      };
+      if (subcategory_id !== undefined) {
+        if (subcategory_id) {
+          specificationsPayload.subcategory_id = subcategory_id;
+        } else {
+          delete specificationsPayload.subcategory_id;
+        }
+      } else {
+        // preserve existing subcategory_id from DB if present
+        const { data: currentP } = await supabase
+          .from("products")
+          .select("subcategory_id, specifications")
+          .eq("id", id)
+          .maybeSingle();
+        const existingSubId = currentP?.subcategory_id || (currentP?.specifications as any)?.subcategory_id;
+        if (existingSubId) {
+          specificationsPayload.subcategory_id = existingSubId;
+        }
+      }
+      updatePayload.specifications = Object.keys(specificationsPayload).length > 0 ? specificationsPayload : null;
+    } else if (subcategory_id !== undefined) {
+      const { data: currentP } = await supabase
+        .from("products")
+        .select("specifications")
+        .eq("id", id)
+        .maybeSingle();
+      const currentSpecs = (currentP?.specifications && typeof currentP.specifications === "object")
+        ? { ...currentP.specifications }
+        : {};
+      if (subcategory_id) {
+        currentSpecs.subcategory_id = subcategory_id;
+      } else {
+        delete currentSpecs.subcategory_id;
+      }
+      updatePayload.specifications = Object.keys(currentSpecs).length > 0 ? currentSpecs : null;
     }
 
     const { error: prodErr } = await supabase

@@ -10,6 +10,7 @@ import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2, Plus, X } f
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
 import { useAdminData } from "@/context/AdminDataContext";
+import ProductSpecificationsEditor, { SpecPair } from "@/components/admin/ProductSpecificationsEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -35,6 +36,7 @@ export default function EditProductPage() {
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [specifications, setSpecifications] = useState<SpecPair[]>([]);
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -208,6 +210,16 @@ export default function EditProductPage() {
             is_wholesale_available: p.is_wholesale_available ?? true,
           });
 
+          if (p.specifications && typeof p.specifications === "object") {
+            const initialSpecs: SpecPair[] = Object.entries(p.specifications)
+              .filter(([k]) => k !== "subcategory_id" && k !== "id")
+              .map(([k, v]) => ({
+                key: k,
+                value: typeof v === "string" ? v : JSON.stringify(v),
+              }));
+            setSpecifications(initialSpecs);
+          }
+
           if (p.product_images) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setImages(p.product_images.map((img: any) => ({
@@ -362,10 +374,19 @@ export default function EditProductPage() {
 
     try {
       const cleanSlug = slugify(formData.slug || formData.name);
+      const specsObj: Record<string, string> = {};
+      specifications.forEach(({ key, value }) => {
+        const k = key.trim();
+        const v = value.trim();
+        if (k && v) {
+          specsObj[k] = v;
+        }
+      });
+
       const res = await fetch("/api/admin/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...formData, slug: cleanSlug, images }),
+        body: JSON.stringify({ id, ...formData, slug: cleanSlug, images, specifications: specsObj }),
       });
 
       const result = await res.json();
@@ -649,6 +670,20 @@ export default function EditProductPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                  Key Benefits & Highlights
+                </label>
+                <textarea
+                  name="benefits"
+                  rows={2}
+                  value={formData.benefits}
+                  onChange={handleChange}
+                  placeholder="e.g. Deeply hydrates, restores skin barrier, and soothes redness (appears in Product Highlights accordion)..."
+                  className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none resize-none"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
@@ -677,6 +712,12 @@ export default function EditProductPage() {
                 </div>
               </div>
             </div>
+
+            {/* Key-Value Product Specifications Editor */}
+            <ProductSpecificationsEditor
+              specifications={specifications}
+              onChange={setSpecifications}
+            />
 
             {/* Cloudinary Gallery */}
             <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">

@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
 import { useAdminData } from "@/context/AdminDataContext";
+import ProductSpecificationsEditor, { SpecPair } from "@/components/admin/ProductSpecificationsEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -56,6 +57,7 @@ export default function NewProductPage() {
   const [imageToDelete, setImageToDelete] = useState<{ index: number; url: string; public_id?: string } | null>(null);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [isCustomSlug, setIsCustomSlug] = useState(false);
+  const [specifications, setSpecifications] = useState<SpecPair[]>([]);
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -338,10 +340,19 @@ export default function NewProductPage() {
 
     try {
       const cleanSlug = slugify(formData.slug || formData.name);
+      const specsObj: Record<string, string> = {};
+      specifications.forEach(({ key, value }) => {
+        const k = key.trim();
+        const v = value.trim();
+        if (k && v) {
+          specsObj[k] = v;
+        }
+      });
+
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, slug: cleanSlug, images }),
+        body: JSON.stringify({ ...formData, slug: cleanSlug, images, specifications: specsObj }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
@@ -526,6 +537,20 @@ export default function NewProductPage() {
                   className="w-full p-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-sm text-[#1D211F] focus:bg-white focus:border-[#183D2B] outline-none resize-none" />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+                  Key Benefits & Highlights
+                </label>
+                <textarea
+                  name="benefits"
+                  rows={2}
+                  value={formData.benefits}
+                  onChange={handleChange}
+                  placeholder="e.g. Deeply hydrates, restores skin barrier, and soothes redness (appears in Product Highlights accordion)..."
+                  className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none resize-none"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">Ingredients (INCI)</label>
@@ -541,6 +566,12 @@ export default function NewProductPage() {
                 </div>
               </div>
             </div>
+
+            {/* Key-Value Product Specifications Editor */}
+            <ProductSpecificationsEditor
+              specifications={specifications}
+              onChange={setSpecifications}
+            />
 
             {/* Cloudinary Multi-Image Upload */}
             <div className="bg-white p-6 rounded-xl border border-[#DCCFB9]/60 shadow-xs space-y-4">

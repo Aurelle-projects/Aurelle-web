@@ -51,6 +51,24 @@ function cleanValue(val: unknown): string | null {
 }
 
 /**
+ * Case- and delimiter-agnostic lookup in specifications object.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSpecValue(specs: Record<string, any>, targetKey: string): string | null {
+  if (!specs || typeof specs !== "object") return null;
+  const normalizedTarget = targetKey.toLowerCase().replace(/[\s_-]+/g, "");
+  for (const [k, v] of Object.entries(specs)) {
+    const normalizedKey = k.toLowerCase().replace(/[\s_-]+/g, "");
+    if (normalizedKey === normalizedTarget) {
+      return cleanValue(
+        typeof v === "string" ? v : typeof v === "number" ? String(v) : null
+      );
+    }
+  }
+  return null;
+}
+
+/**
  * Extracts structured key-values from description if present (e.g. "Brand: ...\nNet volume: ...")
  */
 function parseDescriptionKeyValues(description: string): Record<string, string> {
@@ -90,7 +108,8 @@ function getProductHighlights(product: any): HighlightItem[] {
   // 1. Key Benefits
   const benefits =
     cleanValue(product.benefits) ||
-    cleanValue(specs.benefits) ||
+    getSpecValue(specs, "benefits") ||
+    getSpecValue(specs, "key_benefits") ||
     cleanValue(descKV["benefits"]);
   if (benefits) {
     items.push({
@@ -103,8 +122,8 @@ function getProductHighlights(product: any): HighlightItem[] {
 
   // 2. Skin Type / Suitable For
   const skinType =
-    cleanValue(specs.skin_type) ||
-    cleanValue(specs.suitable_for) ||
+    getSpecValue(specs, "skin_type") ||
+    getSpecValue(specs, "suitable_for") ||
     cleanValue(descKV["suitable for"]) ||
     cleanValue(descKV["skin types"]) ||
     cleanValue(descKV["skin type"]);
@@ -119,8 +138,8 @@ function getProductHighlights(product: any): HighlightItem[] {
 
   // 3. Main Ingredients
   let mainIngredients =
-    cleanValue(specs.key_ingredients) ||
-    cleanValue(specs.main_ingredients) ||
+    getSpecValue(specs, "key_ingredients") ||
+    getSpecValue(specs, "main_ingredients") ||
     cleanValue(descKV["key ingredients"]);
 
   if (!mainIngredients && product.ingredients && typeof product.ingredients === "string") {
@@ -158,8 +177,9 @@ function getProductHighlights(product: any): HighlightItem[] {
 
   // 4. Target Concerns / Purpose
   const concerns =
-    cleanValue(specs.concerns) ||
-    cleanValue(specs.skin_concerns) ||
+    getSpecValue(specs, "concerns") ||
+    getSpecValue(specs, "skin_concerns") ||
+    getSpecValue(specs, "target_concerns") ||
     cleanValue(descKV["skin concerns"]) ||
     cleanValue(descKV["skin concern"]) ||
     cleanValue(descKV["product purpose"]) ||
@@ -269,74 +289,69 @@ function getProductSpecifications(product: any): SpecificationItem[] {
     items.push({ label: "Product Type", value: subcategoryName });
   }
 
-  // 6. Size or Volume
-  let sizeOrVolume =
-    cleanValue(specs.size) ||
-    cleanValue(specs.volume) ||
-    cleanValue(specs.net_volume) ||
-    cleanValue(specs.net_weight) ||
-    cleanValue(descKV["net volume"]) ||
-    cleanValue(descKV["net weight"]);
+  // Track normalized labels already present to avoid duplication
+  const addedNormalizedLabels = new Set(
+    items.map((it) => it.label.toLowerCase().replace(/[\s_-]+/g, ""))
+  );
 
-  if (!sizeOrVolume && product.name) {
-    const sizeMatch = product.name.match(
-      /(\d+(?:\.\d+)?\s*(?:ml|g|fl\s*oz|oz|l))\b/i
-    );
-    if (sizeMatch && sizeMatch[1]) {
-      sizeOrVolume = sizeMatch[1].trim();
-    }
-  }
-
-  if (sizeOrVolume) {
-    items.push({ label: "Size / Volume", value: sizeOrVolume });
-  }
-
-  // 7. Country of Origin (strictly genuine data only)
-  const countryOfOrigin =
-    cleanValue(specs.country_of_origin) ||
-    cleanValue(specs.origin) ||
-    cleanValue(descKV["country of origin"]);
-
-  if (countryOfOrigin) {
-    items.push({ label: "Country of Origin", value: countryOfOrigin });
-  }
-
-  // 8. Ingredients (Full or reference list)
-  const ingredients = cleanValue(product.ingredients);
-  if (ingredients) {
-    items.push({ label: "Ingredients", value: ingredients });
-  }
-
-  // 9. Other authentic attributes in specifications JSON (filtering internal keys)
-  const internalKeys = new Set([
-    "subcategory_id",
-    "id",
-    "size",
-    "volume",
-    "net_volume",
-    "net_weight",
-    "country_of_origin",
-    "origin",
-    "benefits",
-    "skin_type",
-    "suitable_for",
-    "key_ingredients",
-    "main_ingredients",
-    "concerns",
-    "skin_concerns",
-    "purpose",
-  ]);
-
+  // 6. Direct Admin Key-Value Pairs from specifications JSON (excluding internal IDs)
   for (const [key, val] of Object.entries(specs)) {
-    if (internalKeys.has(key.toLowerCase())) continue;
+    const normKey = key.toLowerCase().replace(/[\s_-]+/g, "");
+    if (normKey === "subcategoryid" || normKey === "id") continue;
+
     const cleanV = cleanValue(
       typeof val === "string" ? val : typeof val === "number" ? String(val) : null
     );
     if (cleanV) {
-      const formattedLabel = key
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      items.push({ label: formattedLabel, value: cleanV });
+      items.push({ label: key.trim(), value: cleanV });
+      addedNormalizedLabels.add(normKey);
+    }
+  }
+
+  // 7. Size / Volume fallback if not already provided in admin specs
+  const hasSize =
+    addedNormalizedLabels.has("size") ||
+    addedNormalizedLabels.has("volume") ||
+    addedNormalizedLabels.has("sizevolume") ||
+    addedNormalizedLabels.has("netvolume") ||
+    addedNormalizedLabels.has("netweight");
+
+  if (!hasSize) {
+    let sizeOrVolume = cleanValue(descKV["net volume"]) || cleanValue(descKV["net weight"]);
+    if (!sizeOrVolume && product.name) {
+      const sizeMatch = product.name.match(
+        /(\d+(?:\.\d+)?\s*(?:ml|g|fl\s*oz|oz|l))\b/i
+      );
+      if (sizeMatch && sizeMatch[1]) {
+        sizeOrVolume = sizeMatch[1].trim();
+      }
+    }
+    if (sizeOrVolume) {
+      items.push({ label: "Size / Volume", value: sizeOrVolume });
+      addedNormalizedLabels.add("sizevolume");
+    }
+  }
+
+  // 8. Country of Origin fallback if not in admin specs
+  const hasOrigin =
+    addedNormalizedLabels.has("countryoforigin") || addedNormalizedLabels.has("origin");
+  if (!hasOrigin) {
+    const countryOfOrigin = cleanValue(descKV["country of origin"]);
+    if (countryOfOrigin) {
+      items.push({ label: "Country of Origin", value: countryOfOrigin });
+      addedNormalizedLabels.add("countryoforigin");
+    }
+  }
+
+  // 9. Ingredients (Full or reference list) fallback if not in admin specs
+  const hasIngredients =
+    addedNormalizedLabels.has("ingredients") ||
+    addedNormalizedLabels.has("keyingredients") ||
+    addedNormalizedLabels.has("formulation");
+  if (!hasIngredients) {
+    const ingredients = cleanValue(product.ingredients);
+    if (ingredients) {
+      items.push({ label: "Ingredients", value: ingredients });
     }
   }
 

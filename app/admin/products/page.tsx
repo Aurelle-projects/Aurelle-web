@@ -190,8 +190,11 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-                      <td className="py-2.5 px-3.5 text-[11px] font-medium text-[#1D211F]">
-                        {item.category_name}
+                      <td className="py-2.5 px-3.5 text-[11px] text-[#1D211F]">
+                        <div className="font-semibold">{item.category_name}</div>
+                        {item.subcategory_name && (
+                          <div className="text-[10px] text-[#5C6460] mt-0.5">{item.subcategory_name}</div>
+                        )}
                       </td>
 
                       <td className="py-2.5 px-3.5 font-bold text-[#183D2B]">

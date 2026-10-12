@@ -4,13 +4,25 @@
 
 /**
  * Generate a URL-safe slug from a string.
+ * - Converts to lowercase and trims whitespace
+ * - Replaces '&' with '-and-'
+ * - Removes accents / diacritics
+ * - Removes non-alphanumeric characters (except spaces and hyphens)
+ * - Converts all spaces and underscores to single hyphens
+ * - Removes leading and trailing hyphens
  */
 export function slugify(text: string): string {
+  if (!text) return "";
   return text
+    .toString()
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "-and-")
+    .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 

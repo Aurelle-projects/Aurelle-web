@@ -11,6 +11,7 @@ export interface ProductRow {
   retail_price: number;
   wholesale_price: number | null;
   category_name: string;
+  subcategory_name?: string | null;
   status: string;
   is_out_of_stock?: boolean;
   image_url?: string;
@@ -261,6 +262,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
         .select(`
           id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock,
           category:categories(name),
+          subcategory:subcategories(name),
           product_images(secure_url, is_primary)
         `)
         .order("created_at", { ascending: false });
@@ -279,6 +281,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             retail_price: p.retail_price,
             wholesale_price: p.wholesale_price,
             category_name: p.category?.name || "Unassigned",
+            subcategory_name: p.subcategory?.name || null,
             status: p.status || "published",
             is_out_of_stock: p.is_out_of_stock ?? false,
             image_url: primaryImg,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { slugify } from "@/utils/slug";
 import WholesaleProductDetailClient from "./WholesaleProductDetailClient";
 
 interface WholesaleProductPageProps {
@@ -106,8 +107,12 @@ export default async function WholesaleProductDetailPage({ params }: WholesalePr
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const decodedSlug = decodeURIComponent(slug).trim();
+  const cleanSlug = slugify(decodedSlug);
+
+  // Try clean slug first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: product, error } = await (supabase as any)
+  let { data: product, error } = await (supabase as any)
     .from("products")
     .select(`
       id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
@@ -119,12 +124,38 @@ export default async function WholesaleProductDetailPage({ params }: WholesalePr
       category:categories(name, slug),
       product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
     `)
-    .eq("slug", slug)
+    .eq("slug", cleanSlug)
     .eq("status", "published")
     .maybeSingle();
 
+  // Fallback: If not found, check decoded slug in case DB still has spaces
+  if (!product && decodedSlug !== cleanSlug) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: legacyProduct } = await (supabase as any)
+      .from("products")
+      .select(`
+        id, name, slug, sku, category_id, description, benefits, ingredients, usage_instructions,
+        retail_price, compare_at_price, wholesale_price, wholesale_moq,
+        wholesale_unit_enabled, wholesale_unit_price, wholesale_box_enabled,
+        wholesale_units_per_box, wholesale_box_price, wholesale_custom_quantity_enabled,
+        is_wholesale_available, is_out_of_stock, is_published, is_featured, is_best_seller, is_new_arrival,
+        brand:brands(name, slug),
+        category:categories(name, slug),
+        product_images(cloudinary_public_id, secure_url, alt_text, is_primary, sort_order)
+      `)
+      .eq("slug", decodedSlug)
+      .eq("status", "published")
+      .maybeSingle();
+    product = legacyProduct;
+  }
+
   if (error || !product) {
     notFound();
+  }
+
+  // If the requested URL was non-canonical (e.g. contained %20 or spaces), redirect to clean canonical URL
+  if (product.slug && (slug !== product.slug || slug.includes("%20") || slug.includes(" "))) {
+    redirect(`/wholesale/products/${product.slug}`);
   }
 
   // Fetch wholesale price tiers

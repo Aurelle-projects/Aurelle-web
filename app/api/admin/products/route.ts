@@ -2,6 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteFromCloudinary } from "@/lib/cloudinary/server";
 import { verifyAdminSession } from "@/lib/auth/adminSession";
+import { slugify } from "@/utils/slug";
+
+/**
+ * Ensures slug is unique in products table. Appends -2, -3 if conflict exists.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateUniqueProductSlug(supabase: any, baseSlug: string, excludeId?: string): Promise<string> {
+  const cleanBase = slugify(baseSlug) || "product";
+  let candidate = cleanBase;
+  let counter = 1;
+
+  while (counter <= 50) {
+    let query = supabase.from("products").select("id").eq("slug", candidate);
+    if (excludeId) {
+      query = query.neq("id", excludeId);
+    }
+    const { data } = await query.maybeSingle();
+    if (!data) {
+      return candidate;
+    }
+    counter += 1;
+    candidate = `${cleanBase}-${counter}`;
+  }
+
+  return `${cleanBase}-${Date.now().toString(36)}`;
+}
 
 // GET /api/admin/products — Lightweight list for dropdowns (id, name, slug)
 export async function GET() {
@@ -95,24 +121,30 @@ export async function POST(req: NextRequest) {
       category_id = catData?.id ?? null;
     }
 
-    // Specifications for subcategory metadata
-    const specifications = subcategory_id
-      ? { ...(incomingSpecs || {}), subcategory_id }
-      : (incomingSpecs || null);
+    // Specifications for subcategory metadata and key-value attributes
+    const specificationsPayload: Record<string, any> = {
+      ...(typeof incomingSpecs === "object" && incomingSpecs !== null ? incomingSpecs : {}),
+    };
+    if (subcategory_id) {
+      specificationsPayload.subcategory_id = subcategory_id;
+    }
+    const specifications = Object.keys(specificationsPayload).length > 0 ? specificationsPayload : null;
 
     // Auto-generate SKU if empty (products.sku is NOT NULL in DB)
     const autoSku = sku?.trim() || `AUR-${name.trim().slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Date.now().toString(36).toUpperCase()}`;
-    const autoSlug = slug?.trim() || name.trim().toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+    const cleanBaseSlug = slugify(slug?.trim() || name.trim());
+    const finalSlug = await generateUniqueProductSlug(supabase, cleanBaseSlug);
 
     // Insert product
     const { data: prodData, error: prodErr } = await supabase
       .from("products")
       .insert({
         name: name.trim(),
-        slug: autoSlug,
+        slug: finalSlug,
         sku: autoSku,
         brand_id: brand_id || null,
         category_id,
+        subcategory_id: subcategory_id || null,
         specifications,
         description: description || null,
         benefits: benefits || null,
@@ -242,11 +274,20 @@ export async function PATCH(req: NextRequest) {
       category_id = catData?.id ?? null;
     }
 
+    // Resolve URL-safe unique slug
+    let finalSlug: string | undefined = undefined;
+    if (slug !== undefined || name !== undefined) {
+      const candidateRaw = (slug !== undefined && slug !== null && slug !== "") ? slug : name;
+      if (candidateRaw) {
+        finalSlug = await generateUniqueProductSlug(supabase, slugify(candidateRaw), id);
+      }
+    }
+
     // Build update payload
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updatePayload: any = {
       name: name?.trim(),
-      slug,
+      ...(finalSlug ? { slug: finalSlug } : {}),
       sku,
       description: description || null,
       benefits: benefits || null,
@@ -284,9 +325,47 @@ export async function PATCH(req: NextRequest) {
       updatePayload.is_out_of_stock = !!is_out_of_stock;
     }
     if (subcategory_id !== undefined) {
-      updatePayload.specifications = subcategory_id
-        ? { ...(incomingSpecs || {}), subcategory_id }
-        : null;
+      updatePayload.subcategory_id = subcategory_id || null;
+    }
+
+    if (incomingSpecs !== undefined) {
+      const specificationsPayload: Record<string, any> = {
+        ...(typeof incomingSpecs === "object" && incomingSpecs !== null ? incomingSpecs : {}),
+      };
+      if (subcategory_id !== undefined) {
+        if (subcategory_id) {
+          specificationsPayload.subcategory_id = subcategory_id;
+        } else {
+          delete specificationsPayload.subcategory_id;
+        }
+      } else {
+        // preserve existing subcategory_id from DB if present
+        const { data: currentP } = await supabase
+          .from("products")
+          .select("subcategory_id, specifications")
+          .eq("id", id)
+          .maybeSingle();
+        const existingSubId = currentP?.subcategory_id || (currentP?.specifications as any)?.subcategory_id;
+        if (existingSubId) {
+          specificationsPayload.subcategory_id = existingSubId;
+        }
+      }
+      updatePayload.specifications = Object.keys(specificationsPayload).length > 0 ? specificationsPayload : null;
+    } else if (subcategory_id !== undefined) {
+      const { data: currentP } = await supabase
+        .from("products")
+        .select("specifications")
+        .eq("id", id)
+        .maybeSingle();
+      const currentSpecs = (currentP?.specifications && typeof currentP.specifications === "object")
+        ? { ...currentP.specifications }
+        : {};
+      if (subcategory_id) {
+        currentSpecs.subcategory_id = subcategory_id;
+      } else {
+        delete currentSpecs.subcategory_id;
+      }
+      updatePayload.specifications = Object.keys(currentSpecs).length > 0 ? currentSpecs : null;
     }
 
     const { error: prodErr } = await supabase

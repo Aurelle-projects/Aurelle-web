@@ -80,6 +80,24 @@ export default function ProductDetailClient({
   const [visibleReviewsCount, setVisibleReviewsCount] = useState(5);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("971501234567");
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.settings) {
+          const raw =
+            data.settings.social_whatsapp ||
+            data.settings.contact_phone ||
+            data.settings.store_phone ||
+            "";
+          const clean = raw.replace(/\D/g, "");
+          if (clean) setWhatsappNumber(clean);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (product?.id) {
@@ -706,11 +724,31 @@ export default function ProductDetailClient({
                 </button>
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 border border-gray-200 text-center space-y-1">
-                <p className="text-sm 2xl:text-base font-semibold text-[#1D211F]">Currently Out of Stock</p>
-                <p className="text-xs 2xl:text-sm text-[#5C6460]">
-                  This product is being restocked. Check back soon or browse related alternatives.
+              <div className="p-4 sm:p-5 2xl:p-6 bg-[#FAF8F5] border border-[#DCCFB9] rounded-none space-y-3.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F]">
+                    Currently Out of Stock
+                  </span>
+                </div>
+
+                <p className="text-xs 2xl:text-sm text-[#5C6460] leading-relaxed">
+                  This product is temporarily sold out and being restocked. Want to check estimated arrival or pre-order? Message us directly on WhatsApp for instant restock updates.
                 </p>
+
+                <a
+                  href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+                    `Hello Aurelle UAE, I want to enquire about restocking for:\n\n• Product: ${product.name}\n• SKU: ${product.sku || "N/A"}\n\nPlease notify me when available!`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-11 2xl:h-13 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs 2xl:text-sm uppercase tracking-wider rounded-none flex items-center justify-center gap-2.5 shadow-xs hover:shadow-md transition-all cursor-pointer"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" className="shrink-0">
+                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.214 8.214 0 012.41 5.82c0 4.54-3.7 8.24-8.24 8.24-1.45 0-2.87-.38-4.12-1.1l-.3-.17-3.12.82.83-3.04-.19-.31a8.232 8.232 0 01-1.26-4.44c0-4.54 3.7-8.24 8.24-8.24v.02zm-3.53 4.67c-.2 0-.41.02-.6.1-.21.09-.64.38-.64 1.15 0 .76.56 1.73.64 1.84.08.11 1.1 1.68 2.67 2.36 1.57.67 1.57.45 1.85.42.29-.02.92-.38 1.05-.74.13-.37.13-.68.09-.75-.04-.07-.15-.11-.32-.19-.17-.08-1.03-.51-1.19-.57-.16-.06-.28-.09-.39.09-.12.17-.45.57-.55.69-.1.11-.2.13-.37.04-.17-.08-.73-.27-1.39-.86-.51-.46-.86-1.03-.96-1.2-.1-.17-.01-.27.07-.35.08-.08.17-.2.26-.3.09-.1.12-.17.18-.28.06-.11.03-.21-.01-.3-.05-.08-.39-.95-.54-1.3-.14-.34-.29-.29-.39-.3z" />
+                  </svg>
+                  <span>Notify Me / Enquire on WhatsApp</span>
+                </a>
               </div>
             )}
 

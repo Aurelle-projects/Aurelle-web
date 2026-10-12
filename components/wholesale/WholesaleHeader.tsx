@@ -202,20 +202,20 @@ export default function WholesaleHeader({
     <>
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-xs border-b border-[#EFEAE0]/80">
         {/* Main Navbar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="h-16 md:h-20 flex items-center justify-between gap-4">
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-[#14231B] hover:text-[#183D2B] cursor-pointer"
-              aria-label="Open navigation menu"
-            >
-              <Menu size={22} />
-            </button>
+        <div className="max-w-7xl mx-auto px-2.5 min-[380px]:px-4 sm:px-6">
+          <div className="h-14 sm:h-16 md:h-20 flex items-center justify-between gap-1.5 sm:gap-4">
+            {/* Left: Mobile Menu Button & Brand Logo */}
+            <div className="flex items-center gap-1 min-[360px]:gap-2 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden p-1 min-[360px]:p-1.5 text-[#14231B] hover:text-[#183D2B] cursor-pointer rounded-sm hover:bg-neutral-100 transition-colors"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
+              </button>
 
-            {/* Brand Logo (from public/Aurelle-Logo.png, without wholesale badge) */}
-            <div className="flex items-center shrink-0">
+              {/* Brand Logo */}
               <Link href="/wholesale" className="flex items-center">
                 <Image
                   src="/Aurelle-Logo.png"
@@ -223,13 +223,13 @@ export default function WholesaleHeader({
                   width={160}
                   height={48}
                   priority
-                  className="h-9 sm:h-11 md:h-12 w-auto object-contain"
+                  className="h-7 min-[360px]:h-8 sm:h-10 md:h-12 w-auto object-contain"
                 />
               </Link>
             </div>
 
             {/* Desktop Navigation Links mapped from WHOLESALE_NAV_ITEMS */}
-            <nav className="hidden lg:flex items-center gap-6 xl:gap-7 text-[13px] font-medium text-[#14231B]">
+            <nav className="hidden lg:flex items-center gap-5 xl:gap-7 text-[13px] font-medium text-[#14231B]">
               {WHOLESALE_NAV_ITEMS.map((item) => {
                 if (!item.isDropdown) {
                   return (
@@ -296,39 +296,39 @@ export default function WholesaleHeader({
             </nav>
 
             {/* Actions: B2B Register, Login, Enquiry Buttons / Authenticated Wholesale State */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-3 shrink-0">
               {/* Wholesale Cart Icon */}
               <Link
                 href="/wholesale/cart"
-                className="relative p-2 text-[#14231B] hover:text-[#183D2B] transition-colors"
+                className="relative p-1.5 sm:p-2 text-[#14231B] hover:text-[#183D2B] transition-colors rounded-sm hover:bg-neutral-50"
                 title="Wholesale Cart"
               >
-                <ShoppingBag size={20} />
+                <ShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-[#14231B]" />
                 {wholesaleCart.itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#183D2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-[#183D2B] text-white text-[9px] sm:text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {wholesaleCart.itemCount}
                   </span>
                 )}
               </Link>
 
               {authLoading ? (
-                <div className="hidden sm:block w-28 h-8 bg-neutral-100 rounded-sm animate-pulse" />
+                <div className="w-16 sm:w-24 h-7 sm:h-8 bg-neutral-100 rounded-sm animate-pulse" />
               ) : currentUser && currentProfile?.role === "wholesale_customer" ? (
                 <div className="relative" ref={accountDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setAccountMenuOpen((prev) => !prev)}
-                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#183D2B]/10 hover:bg-[#183D2B]/15 text-[#183D2B] text-xs font-semibold border border-[#183D2B]/20 cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-2 sm:px-3 rounded-sm bg-[#183D2B]/10 hover:bg-[#183D2B]/15 text-[#183D2B] text-[11px] sm:text-xs font-semibold border border-[#183D2B]/20 cursor-pointer transition-colors"
                   >
-                    <User size={14} className="shrink-0 text-[#183D2B]" />
-                    <span className="max-w-[130px] md:max-w-[170px] truncate">
+                    <User size={13} className="shrink-0 text-[#183D2B]" />
+                    <span className="hidden min-[480px]:inline max-w-[100px] sm:max-w-[130px] md:max-w-[170px] truncate">
                       {currentProfile?.full_name || currentProfile?.company_name || currentUser.email || "Account"}
                     </span>
                     <span className="text-[9px] uppercase tracking-wider text-white px-1.5 py-0.5 rounded-xs font-bold shrink-0 bg-[#183D2B]">
                       B2B
                     </span>
                     <ChevronDown
-                      size={14}
+                      size={13}
                       className={`transition-transform duration-200 text-[#183D2B] ${
                         accountMenuOpen ? "rotate-180" : ""
                       }`}
@@ -398,21 +398,22 @@ export default function WholesaleHeader({
                 <>
                   <Link
                     href="/wholesale/login?redirect=/wholesale"
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors cursor-pointer"
+                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors cursor-pointer"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/wholesale/register"
-                    className="px-3.5 sm:px-4 py-2 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-xs font-bold uppercase tracking-wider transition-all text-center whitespace-nowrap"
+                    className="flex items-center justify-center h-8 sm:h-9 px-2 min-[360px]:px-2.5 sm:px-4 rounded-sm border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B]/5 text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold uppercase tracking-normal min-[360px]:tracking-wider transition-all text-center whitespace-nowrap cursor-pointer"
                   >
-                    Register B2B
+                    <span className="hidden min-[340px]:inline">Register B2B</span>
+                    <span className="min-[340px]:hidden">Register</span>
                   </Link>
                 </>
               )}
               <Link
                 href="/wholesale/contact"
-                className="px-4 sm:px-5 py-2 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-xs sm:text-xs font-bold uppercase tracking-wider transition-all shadow-xs hover:shadow-md text-center whitespace-nowrap"
+                className="flex items-center justify-center h-8 sm:h-9 px-2.5 min-[360px]:px-3 sm:px-5 rounded-sm bg-[#183D2B] hover:bg-[#102D20] text-white text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold uppercase tracking-normal min-[360px]:tracking-wider transition-all shadow-xs hover:shadow-md text-center whitespace-nowrap cursor-pointer"
               >
                 Enquiry
               </Link>

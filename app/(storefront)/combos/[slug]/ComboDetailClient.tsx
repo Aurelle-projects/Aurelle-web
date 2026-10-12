@@ -51,7 +51,7 @@ export default function ComboDetailClient({
   if (loading) {
     return (
       <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12 animate-pulse">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           <div className="h-4 w-48 bg-[#E9E4DC]" />
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             <div className="lg:col-span-7 aspect-[4/3] bg-[#E9E4DC]" />
@@ -177,8 +177,8 @@ export default function ComboDetailClient({
   };
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12 2xl:py-16">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="text-xs text-[#5C6460]">
           <ol className="flex items-center space-x-2">

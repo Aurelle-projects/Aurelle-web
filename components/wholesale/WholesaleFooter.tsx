@@ -87,7 +87,7 @@ export default function WholesaleFooter() {
 
   return (
     <footer className="bg-[#14231B] text-white pt-10 md:pt-12 pb-6 border-t border-[#DCCFB9]/20" role="contentinfo">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr] gap-6 lg:gap-8 pb-8">
           {/* Column 1: Original Logo & Company Info (Badge removed) */}
           <div className="flex flex-col pb-5 md:pb-0 border-b border-white/10 md:border-none">

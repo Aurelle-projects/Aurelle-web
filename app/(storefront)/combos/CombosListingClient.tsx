@@ -54,7 +54,7 @@ export default function CombosListingClient({ initialCombos }: CombosListingClie
 
   return (
     <div className="bg-[#FAF8F5] min-h-screen py-8 sm:py-12 md:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumbs */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-[#5C6460] mb-8 sm:mb-10">
           <Link href="/" className="hover:text-[#183D2B] transition-colors">

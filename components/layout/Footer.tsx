@@ -114,7 +114,7 @@ export default function Footer({ settings = {} }: FooterProps) {
   return (
     <footer className="bg-[#183D2B] text-white pt-8 md:pt-10 pb-5 border-t border-[#DCCFB9]/20" role="contentinfo">
       {/* ── Main Footer ──────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-0 md:gap-6 lg:gap-8 pb-6 md:pb-8">
         {/* Brand Column (full width of 2 cols on mobile) */}
           <div className="flex flex-col pb-5 md:pb-0 border-b border-white/10 md:border-none mb-1 md:mb-0">

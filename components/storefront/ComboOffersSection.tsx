@@ -54,7 +54,7 @@ export default function ComboOffersSection({ initialCombos }: ComboOffersSection
       className="py-6 sm:py-10 md:py-14 bg-[#FAF8F5] border-y border-[#EDE9DF]"
       aria-labelledby="curated-combos-heading"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-5 sm:mb-8 text-left">
           <p className="text-[14px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#183D2B] mb-1 sm:mb-1.5">

@@ -278,10 +278,10 @@ export default function ProductDetailClient({
   if (isLoading) {
     return (
       <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12 animate-pulse">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           <div className="h-4 w-48 bg-gray-200 rounded" />
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            <div className="lg:col-span-7 aspect-[3/4] bg-gray-200 rounded-none max-w-lg mx-auto w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 2xl:gap-16">
+            <div className="lg:col-span-7 aspect-[3/4] 2xl:aspect-[4/5] bg-gray-200 rounded-none max-w-lg mx-auto w-full" />
             <div className="lg:col-span-5 space-y-6">
               <div className="h-4 w-24 bg-gray-200 rounded" />
               <div className="h-8 w-3/4 bg-gray-200 rounded" />
@@ -347,10 +347,10 @@ export default function ProductDetailClient({
       : null;
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="bg-[#FAF8F5] min-h-screen py-8 md:py-12 2xl:py-16">
+      <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-10 2xl:space-y-14">
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="text-xs text-[#5C6460]">
+        <nav aria-label="Breadcrumb" className="text-xs 2xl:text-sm text-[#5C6460]">
           <ol className="flex items-center space-x-2">
             <li>
               <Link href="/" className="hover:text-[#183D2B] transition-colors">
@@ -438,18 +438,18 @@ export default function ProductDetailClient({
         </div>
 
         {/* ── Main Product Section ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 2xl:gap-14 items-start">
           {/* Left: Gallery (Col 7) */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
+          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4 2xl:gap-5">
             {/* Thumbnails */}
             {productImages.length > 1 && (
-              <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[560px] pb-2 md:pb-0 scrollbar-none">
+              <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[560px] 2xl:max-h-[640px] pb-2 md:pb-0 scrollbar-none">
                 {productImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedImageIdx(idx)}
-                    className={`relative w-16 h-20 md:w-20 md:h-24 shrink-0 rounded-none overflow-hidden border transition-all ${
+                    className={`relative w-16 h-20 md:w-20 md:h-24 2xl:w-24 2xl:h-28 shrink-0 rounded-none overflow-hidden border transition-all ${
                       selectedImageIdx === idx
                         ? "border-[#183D2B] ring-1 ring-[#183D2B]"
                         : "border-[#DCCFB9]/60 hover:border-[#183D2B]/50"
@@ -467,7 +467,7 @@ export default function ProductDetailClient({
             )}
 
             {/* Main Stage Image */}
-            <div className="flex-1 relative aspect-[3/4] bg-white rounded-none border border-[#DCCFB9]/60 overflow-hidden shadow-xs flex items-center justify-center">
+            <div className="flex-1 relative aspect-[3/4] 2xl:aspect-[4/5] bg-white rounded-none border border-[#DCCFB9]/60 overflow-hidden shadow-xs flex items-center justify-center min-h-[440px] lg:min-h-[520px] 2xl:min-h-[600px]">
               {primaryImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -482,45 +482,45 @@ export default function ProductDetailClient({
               )}
 
               {/* Status Badges */}
-              <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+              <div className="absolute top-3 left-3 2xl:top-4 2xl:left-4 flex flex-col gap-1.5 z-10">
                 {product.is_out_of_stock && (
-                  <span className="bg-[#1D211F]/90 text-white text-[10px] font-semibold tracking-wider px-2.5 py-1 uppercase rounded-none">
+                  <span className="bg-[#1D211F]/90 text-white text-[10px] 2xl:text-xs font-semibold tracking-wider px-2.5 py-1 uppercase rounded-none">
                     Out of Stock
                   </span>
                 )}
                 {discountPercent && !product.is_out_of_stock && (
-                  <span className="bg-red-700 text-white text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase">
+                  <span className="bg-red-700 text-white text-[10px] 2xl:text-xs font-bold tracking-wider px-2 py-0.5 uppercase">
                     SAVE {discountPercent}%
                   </span>
                 )}
                 {product.is_new_arrival && (
-                  <span className="bg-[#183D2B] text-white text-[10px] font-medium tracking-wider px-2 py-0.5 uppercase">
+                  <span className="bg-[#183D2B] text-white text-[10px] 2xl:text-xs font-medium tracking-wider px-2 py-0.5 uppercase">
                     New Arrival
                   </span>
                 )}
               </div>
 
               {/* Top-Right Wishlist & Share Action Buttons (Reference UX) */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+              <div className="absolute top-3 right-3 2xl:top-4 2xl:right-4 flex items-center gap-2 z-10">
                 <button
                   type="button"
                   onClick={handleToggleWishlist}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
+                  className="w-8 h-8 sm:w-9 sm:h-9 2xl:w-11 2xl:h-11 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
                   aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                 >
                   <Heart
                     size={17}
                     strokeWidth={1.8}
-                    className={isWishlisted ? "fill-[#183D2B] text-[#183D2B]" : "text-[#1D211F]"}
+                    className={`2xl:w-5 2xl:h-5 ${isWishlisted ? "fill-[#183D2B] text-[#183D2B]" : "text-[#1D211F]"}`}
                   />
                 </button>
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
+                  className="relative w-8 h-8 sm:w-9 sm:h-9 2xl:w-11 2xl:h-11 rounded-full bg-white/95 backdrop-blur-xs border border-[#DCCFB9]/60 flex items-center justify-center text-[#1D211F] hover:text-[#183D2B] shadow-xs transition-colors cursor-pointer"
                   aria-label="Share product"
                 >
-                  <Share2 size={15} strokeWidth={1.8} />
+                  <Share2 size={15} strokeWidth={1.8} className="2xl:w-4.5 2xl:h-4.5" />
                   {copiedShare && (
                     <span className="absolute -bottom-7 right-0 bg-[#1D211F] text-white text-[10px] py-0.5 px-1.5 rounded-xs whitespace-nowrap shadow-md">
                       Link copied!
@@ -546,14 +546,14 @@ export default function ProductDetailClient({
           </div>
 
           {/* Right: Product Buy Box (Col 5) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-5 2xl:space-y-6">
             <div className="hidden lg:block">
               {brandName && (
-                <span className="text-xs font-bold uppercase tracking-widest text-[#183D2B]">
+                <span className="text-xs 2xl:text-sm font-bold uppercase tracking-widest text-[#183D2B]">
                   {brandName}
                 </span>
               )}
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1D211F] mt-1 leading-tight tracking-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl 2xl:text-4xl font-bold text-[#1D211F] mt-1.5 leading-tight tracking-tight">
                 {product.name}
               </h1>
 
@@ -566,15 +566,15 @@ export default function ProductDetailClient({
                         <Star
                           key={s}
                           size={14}
-                          className={
+                          className={`2xl:w-4 2xl:h-4 ${
                             s <= Math.round(reviewSummary.averageRating)
                               ? "fill-amber-400 text-amber-400"
                               : "text-gray-300"
-                          }
+                          }`}
                         />
                       ))}
                     </div>
-                    <span className="text-xs text-[#5C6460]">
+                    <span className="text-xs 2xl:text-sm text-[#5C6460]">
                       <span className="font-semibold text-[#1D211F]">
                         {reviewSummary.averageRating.toFixed(1)}
                       </span>{" "}
@@ -583,12 +583,12 @@ export default function ProductDetailClient({
                     </span>
                   </div>
                 ) : product.is_out_of_stock ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 text-[10px] font-semibold tracking-wide border border-neutral-300">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 2xl:px-3 py-0.5 2xl:py-1 rounded-full bg-neutral-100 text-neutral-600 text-[10px] 2xl:text-xs font-semibold tracking-wide border border-neutral-300">
                     <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
                     <span>Out of Stock</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-semibold tracking-wide border border-emerald-200">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 2xl:px-3 py-0.5 2xl:py-1 rounded-full bg-emerald-50 text-emerald-800 text-[10px] 2xl:text-xs font-semibold tracking-wide border border-emerald-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span>In Stock — Ready to Dispatch</span>
                   </span>
@@ -596,78 +596,101 @@ export default function ProductDetailClient({
               </div>
 
               {product.sku && (
-                <p className="text-[11px] text-[#8E9590] mt-1">SKU: {product.sku}</p>
+                <p className="text-[11px] 2xl:text-xs text-[#8E9590] mt-1.5">SKU: {product.sku}</p>
               )}
             </div>
 
             {/* Price Box */}
-            <div className="border-y border-[#DCCFB9]/40 py-4 space-y-1">
+            <div className="border-y border-[#DCCFB9]/40 py-4 2xl:py-5 space-y-1.5">
               <div className="flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-bold text-[#1D211F] tracking-tight">
+                <span className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-[#1D211F] tracking-tight">
                   AED {currentPrice.toFixed(2)}
                 </span>
                 {originalPrice && originalPrice > currentPrice && (
-                  <span className="text-base text-[#8E9590] line-through font-medium">
+                  <span className="text-base 2xl:text-lg text-[#8E9590] line-through font-medium">
                     AED {originalPrice.toFixed(2)}
                   </span>
                 )}
+                {discountPercent && (
+                  <span className="text-xs 2xl:text-sm font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded-xs">
+                    SAVE {discountPercent}%
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-[#8E9590]">
+              <p className="text-xs 2xl:text-sm text-[#8E9590]">
                 Inclusive of 5% UAE VAT. Express courier delivery across all 7 Emirates.
               </p>
             </div>
 
             {/* Quick Description */}
             {product.description && (
-              <p className="text-sm text-[#5C6460] leading-relaxed line-clamp-3">
+              <p className="text-sm 2xl:text-base text-[#5C6460] leading-relaxed line-clamp-3 2xl:line-clamp-4">
                 {product.description}
               </p>
             )}
 
+            {/* UAE Express Delivery Promise Card (Reference Noon UX) */}
+            <div className="p-3.5 2xl:p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-sm flex items-start gap-3">
+              <div className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-full bg-[#183D2B] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <Truck size={17} className="2xl:w-5 2xl:h-5" />
+              </div>
+              <div className="text-xs 2xl:text-sm space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#183D2B] uppercase tracking-wide text-[11px] 2xl:text-xs bg-[#183D2B]/10 px-2 py-0.5 rounded-xs">
+                    UAE Express Delivery
+                  </span>
+                  <span className="text-emerald-800 font-semibold text-[11px] 2xl:text-xs">Dispatches in 24h</span>
+                </div>
+                <p className="text-[#5C6460] text-[11px] 2xl:text-xs leading-normal">
+                  Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.
+                </p>
+              </div>
+            </div>
+
             {/* Quantity Selector & Add to Cart */}
             {!product.is_out_of_stock ? (
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-1">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center border border-[#DCCFB9] rounded-none bg-white">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                       disabled={quantity <= 1}
-                      className="w-10 h-10 flex items-center justify-center text-[#5C6460] hover:text-[#183D2B] disabled:opacity-30 cursor-pointer"
+                      className="w-10 2xl:w-12 h-11 2xl:h-13 flex items-center justify-center text-[#5C6460] hover:text-[#183D2B] disabled:opacity-30 cursor-pointer"
                       aria-label="Decrease quantity"
                     >
-                      <Minus size={14} />
+                      <Minus size={15} />
                     </button>
-                    <span className="w-10 text-center text-sm font-semibold text-[#1D211F]">
+                    <span className="w-10 2xl:w-12 text-center text-sm 2xl:text-base font-semibold text-[#1D211F]">
                       {quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => q + 1)}
-                      className="w-10 h-10 flex items-center justify-center text-[#5C6460] hover:text-[#183D2B] cursor-pointer"
+                      className="w-10 2xl:w-12 h-11 2xl:h-13 flex items-center justify-center text-[#5C6460] hover:text-[#183D2B] cursor-pointer"
                       aria-label="Increase quantity"
                     >
-                      <Plus size={14} />
+                      <Plus size={15} />
                     </button>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    className={`flex-1 h-11 px-6 text-xs uppercase tracking-widest font-bold rounded-none flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    className={`flex-1 h-11 2xl:h-13 px-6 2xl:px-8 text-xs 2xl:text-sm uppercase tracking-widest font-bold rounded-none flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       added
                         ? "bg-[#183D2B] text-white"
-                        : "bg-[#183D2B] text-white hover:bg-[#102D20] active:scale-[0.99]"
+                        : "bg-[#183D2B] text-white hover:bg-[#102D20] active:scale-[0.99] shadow-sm hover:shadow-md"
                     }`}
                   >
                     {added ? (
                       <>
-                        <Check size={16} />
+                        <Check size={18} />
                         <span>Added to Cart</span>
                       </>
                     ) : (
                       <>
-                        <ShoppingBag size={16} />
+                        <ShoppingBag size={18} />
                         <span>Add to Cart</span>
                       </>
                     )}
@@ -677,48 +700,48 @@ export default function ProductDetailClient({
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="w-full h-11 border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs uppercase tracking-widest font-bold rounded-none transition-colors cursor-pointer"
+                  className="w-full h-11 2xl:h-13 border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs 2xl:text-sm uppercase tracking-widest font-bold rounded-none transition-colors cursor-pointer"
                 >
                   Buy Now with Express Checkout
                 </button>
               </div>
             ) : (
               <div className="p-4 bg-gray-50 border border-gray-200 text-center space-y-1">
-                <p className="text-sm font-semibold text-[#1D211F]">Currently Out of Stock</p>
-                <p className="text-xs text-[#5C6460]">
+                <p className="text-sm 2xl:text-base font-semibold text-[#1D211F]">Currently Out of Stock</p>
+                <p className="text-xs 2xl:text-sm text-[#5C6460]">
                   This product is being restocked. Check back soon or browse related alternatives.
                 </p>
               </div>
             )}
 
             {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#DCCFB9]/40 text-center">
-              <div className="flex flex-col items-center gap-1.5 p-2">
-                <Truck size={18} className="text-[#183D2B]" />
-                <span className="text-[11px] font-semibold text-[#1D211F]">Next-Day Delivery</span>
-                <span className="text-[10px] text-[#8E9590]">Across all UAE</span>
+            <div className="grid grid-cols-3 gap-2 2xl:gap-3.5 pt-4 2xl:pt-6 border-t border-[#DCCFB9]/40 text-center">
+              <div className="flex flex-col items-center gap-1.5 p-2.5 2xl:p-3.5 rounded-xs bg-[#FAF8F5]/80 border border-[#DCCFB9]/40">
+                <Truck size={20} className="text-[#183D2B] 2xl:w-6 2xl:h-6" />
+                <span className="text-[11px] 2xl:text-xs font-bold text-[#1D211F]">Next-Day Delivery</span>
+                <span className="text-[10px] 2xl:text-[11px] text-[#8E9590]">Across all UAE</span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 p-2">
-                <ShieldCheck size={18} className="text-[#183D2B]" />
-                <span className="text-[11px] font-semibold text-[#1D211F]">100% Genuine</span>
-                <span className="text-[10px] text-[#8E9590]">Direct from brand</span>
+              <div className="flex flex-col items-center gap-1.5 p-2.5 2xl:p-3.5 rounded-xs bg-[#FAF8F5]/80 border border-[#DCCFB9]/40">
+                <ShieldCheck size={20} className="text-[#183D2B] 2xl:w-6 2xl:h-6" />
+                <span className="text-[11px] 2xl:text-xs font-bold text-[#1D211F]">100% Genuine</span>
+                <span className="text-[10px] 2xl:text-[11px] text-[#8E9590]">Direct from brand</span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 p-2">
-                <RotateCcw size={18} className="text-[#183D2B]" />
-                <span className="text-[11px] font-semibold text-[#1D211F]">Easy Returns</span>
-                <span className="text-[10px] text-[#8E9590]">14-day policy</span>
+              <div className="flex flex-col items-center gap-1.5 p-2.5 2xl:p-3.5 rounded-xs bg-[#FAF8F5]/80 border border-[#DCCFB9]/40">
+                <RotateCcw size={20} className="text-[#183D2B] 2xl:w-6 2xl:h-6" />
+                <span className="text-[11px] 2xl:text-xs font-bold text-[#1D211F]">Easy Returns</span>
+                <span className="text-[10px] 2xl:text-[11px] text-[#8E9590]">14-day policy</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Product Information Tabs ────────────────────────────────────── */}
-        <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs">
-          <div className="flex border-b border-[#DCCFB9]/40 gap-6">
+        <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 2xl:p-10 shadow-xs space-y-6">
+          <div className="flex border-b border-[#DCCFB9]/40 gap-6 2xl:gap-8">
             <button
               type="button"
               onClick={() => setActiveTab("details")}
-              className={`pb-3 text-xs uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
+              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
                 activeTab === "details"
                   ? "border-[#183D2B] text-[#183D2B]"
                   : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
@@ -729,7 +752,7 @@ export default function ProductDetailClient({
             <button
               type="button"
               onClick={() => setActiveTab("ingredients")}
-              className={`pb-3 text-xs uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
+              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
                 activeTab === "ingredients"
                   ? "border-[#183D2B] text-[#183D2B]"
                   : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
@@ -740,7 +763,7 @@ export default function ProductDetailClient({
             <button
               type="button"
               onClick={() => setActiveTab("shipping")}
-              className={`pb-3 text-xs uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
+              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
                 activeTab === "shipping"
                   ? "border-[#183D2B] text-[#183D2B]"
                   : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
@@ -750,13 +773,13 @@ export default function ProductDetailClient({
             </button>
           </div>
 
-          <div className="pt-6 text-sm text-[#5C6460] leading-relaxed">
+          <div className="pt-2 text-sm 2xl:text-base text-[#5C6460] leading-relaxed">
             {activeTab === "details" && (
               <div className="space-y-4">
                 <p>{product.description || "No detailed description provided."}</p>
                 {product.benefits && (
                   <div className="pt-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#1D211F] mb-2">
+                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-2">
                       Key Benefits:
                     </h4>
                     <p className="whitespace-pre-line">{product.benefits}</p>
@@ -769,21 +792,21 @@ export default function ProductDetailClient({
               <div className="space-y-4">
                 {product.ingredients ? (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#1D211F] mb-1">
+                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-1.5">
                       Full Ingredients:
                     </h4>
-                    <p className="text-xs font-mono bg-[#FAF8F5] p-3 border border-[#DCCFB9]/40 rounded-sm">
+                    <p className="text-xs 2xl:text-sm font-mono bg-[#FAF8F5] p-3 2xl:p-4 border border-[#DCCFB9]/40 rounded-sm">
                       {product.ingredients}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-[#8E9590]">
+                  <p className="text-xs 2xl:text-sm text-[#8E9590]">
                     Ingredients list not specified for this product.
                   </p>
                 )}
                 {product.usage_instructions && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#1D211F] mb-1">
+                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-1.5">
                       How to Use:
                     </h4>
                     <p className="whitespace-pre-line">{product.usage_instructions}</p>
@@ -799,7 +822,7 @@ export default function ProductDetailClient({
                   Dubai, Abu Dhabi, Sharjah, and other Emirates within 24-48 business hours.
                 </p>
                 <p>
-                  Standard domestic shipping is AED 15 (Free on orders above AED 200). Cash on
+                  Standard domestic shipping is AED 20 (Free on orders above AED 199). Cash on
                   delivery (COD) and major cards accepted.
                 </p>
               </div>
@@ -808,11 +831,11 @@ export default function ProductDetailClient({
         </div>
 
         {/* ── Verified Customer Reviews Section ────────────────────────────── */}
-        <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs space-y-6">
+        <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 2xl:p-10 shadow-xs space-y-6 2xl:space-y-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#DCCFB9]/40 pb-4">
             <div>
-              <h3 className="text-lg font-bold text-[#1D211F] tracking-tight">Customer Reviews</h3>
-              <p className="text-xs text-[#8E9590]">
+              <h3 className="text-lg 2xl:text-2xl font-bold text-[#1D211F] tracking-tight">Customer Reviews</h3>
+              <p className="text-xs 2xl:text-sm text-[#8E9590]">
                 Verified reviews from verified Aurelle purchasers only.
               </p>
             </div>
@@ -820,9 +843,9 @@ export default function ProductDetailClient({
               type="button"
               onClick={handleRateClick}
               disabled={eligibilityChecking}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs font-bold uppercase tracking-wider rounded-none transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 2xl:px-5 py-2 2xl:py-2.5 border border-[#183D2B] text-[#183D2B] hover:bg-[#183D2B] hover:text-white text-xs 2xl:text-sm font-bold uppercase tracking-wider rounded-none transition-colors cursor-pointer disabled:opacity-50"
             >
-              <Edit3 size={13} />
+              <Edit3 size={14} />
               <span>{eligibilityChecking ? "Checking eligibility..." : "Write a Review"}</span>
             </button>
           </div>
@@ -906,7 +929,7 @@ export default function ProductDetailClient({
 
           {/* Reviews List */}
           {reviews.length === 0 ? (
-            <div className="py-8 text-center text-xs text-[#8E9590]">
+            <div className="py-8 text-center text-xs 2xl:text-sm text-[#8E9590]">
               No reviews have been submitted for this product yet. Be the first verified customer to leave feedback!
             </div>
           ) : (
@@ -922,11 +945,11 @@ export default function ProductDetailClient({
                           className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}
                         />
                       ))}
-                      <span className="text-[11px] font-semibold text-[#1D211F] ml-1">
+                      <span className="text-[11px] 2xl:text-xs font-semibold text-[#1D211F] ml-1">
                         {rev.customer_name || "Verified Customer"}
                       </span>
                     </div>
-                    <span className="text-[10px] text-[#8E9590]">
+                    <span className="text-[10px] 2xl:text-[11px] text-[#8E9590]">
                       {new Date(rev.created_at).toLocaleDateString("en-AE", {
                         month: "short",
                         day: "numeric",
@@ -934,7 +957,7 @@ export default function ProductDetailClient({
                       })}
                     </span>
                   </div>
-                  <p className="text-xs text-[#5C6460] leading-relaxed">{rev.body}</p>
+                  <p className="text-xs 2xl:text-sm text-[#5C6460] leading-relaxed">{rev.body}</p>
                 </div>
               ))}
 
@@ -943,7 +966,7 @@ export default function ProductDetailClient({
                   <button
                     type="button"
                     onClick={() => setVisibleReviewsCount((c) => c + 5)}
-                    className="text-xs font-bold text-[#183D2B] hover:underline uppercase tracking-wider"
+                    className="text-xs 2xl:text-sm font-bold text-[#183D2B] hover:underline uppercase tracking-wider"
                   >
                     View More Reviews ({reviews.length - visibleReviewsCount} remaining)
                   </button>
@@ -957,15 +980,15 @@ export default function ProductDetailClient({
         {relatedProducts.length > 0 && (
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[#1D211F] tracking-tight">You May Also Like</h3>
+              <h3 className="text-xl 2xl:text-2xl font-bold text-[#1D211F] tracking-tight">You May Also Like</h3>
               <Link
                 href={`/categories/${categorySlug || "all"}`}
-                className="text-xs font-bold text-[#183D2B] hover:underline uppercase tracking-wider"
+                className="text-xs 2xl:text-sm font-bold text-[#183D2B] hover:underline uppercase tracking-wider"
               >
                 View Category
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 2xl:gap-8">
               {relatedProducts.map((rel) => (
                 <ProductCard key={rel.id} product={rel} />
               ))}

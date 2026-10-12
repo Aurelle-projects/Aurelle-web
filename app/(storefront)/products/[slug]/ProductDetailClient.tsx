@@ -22,6 +22,7 @@ import {
   Share2,
 } from "lucide-react";
 import { toggleWishlist, isWishlisted as checkWishlisted } from "@/components/storefront/WishlistDrawer";
+import ProductAccordions from "@/components/product/ProductAccordions";
 
 interface ProductDetailClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -709,6 +710,9 @@ export default function ProductDetailClient({
                 <span className="text-[10px] text-[#8E9590]">14-day policy</span>
               </div>
             </div>
+
+            {/* Product Highlights & Specifications Accordions */}
+            <ProductAccordions product={product} />
           </div>
         </div>
 

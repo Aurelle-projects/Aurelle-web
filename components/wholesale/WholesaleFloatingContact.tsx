@@ -17,6 +17,7 @@ export default function WholesaleFloatingContact({
   const [isOpen, setIsOpen] = useState(false);
   const [phone, setPhone] = useState(initialPhone || "+971 50 123 4567");
   const [whatsappUrl, setWhatsappUrl] = useState(initialWhatsappUrl || "https://wa.me/971501234567");
+  const [whatsappUrl2, setWhatsappUrl2] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,6 +32,9 @@ export default function WholesaleFloatingContact({
             setPhone(formatWhatsAppDisplay(rawWa));
           } else if (s.contact_phone) {
             setPhone(s.contact_phone);
+          }
+          if (s.wholesale_whatsapp_2 && String(s.wholesale_whatsapp_2).trim()) {
+            setWhatsappUrl2(formatWhatsAppUrl(s.wholesale_whatsapp_2));
           }
         }
       })
@@ -87,6 +91,25 @@ export default function WholesaleFloatingContact({
               <MessageCircle size={22} className="fill-current" />
             </div>
           </a>
+
+          {/* Secondary WhatsApp Option (Line 2) */}
+          {whatsappUrl2 && (
+            <a
+              href={whatsappUrl2}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Chat on WhatsApp Desk 2"
+              className="group flex items-center gap-3 active:scale-95 transition-transform pointer-events-auto"
+            >
+              <span className="px-3 py-1.5 bg-white text-[#14231B] text-xs font-semibold rounded-full shadow-md border border-[#EFEAE0] whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
+                WhatsApp Desk (Line 2)
+              </span>
+              <div className="w-12 h-12 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-105">
+                <MessageCircle size={22} className="fill-current" />
+              </div>
+            </a>
+          )}
+
 
           {/* Direct Phone Call Option */}
           <a

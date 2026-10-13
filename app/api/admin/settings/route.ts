@@ -24,8 +24,11 @@ const SETTINGS_DEFAULTS = {
   social_tiktok: "https://tiktok.com/@aurelle.ae",
   social_whatsapp: "https://wa.me/971501234567",
   retail_whatsapp: "https://wa.me/971501234567",
+  retail_whatsapp_2: "",
   wholesale_whatsapp: "https://wa.me/971501234567",
+  wholesale_whatsapp_2: "",
 };
+
 
 export async function GET() {
   const isAdmin = await verifyAdminSession();
@@ -136,6 +139,12 @@ export async function POST(request: NextRequest) {
       updates.push({ key: "social_whatsapp", value: waVal });
       updates.push({ key: "retail_whatsapp", value: waVal });
     }
+    if ("retail_whatsapp_2" in body || "social_whatsapp_2" in body) {
+      const wa2Val = String(body.retail_whatsapp_2 || body.social_whatsapp_2 || "").trim();
+      updates.push({ key: "social_whatsapp_2", value: wa2Val });
+      updates.push({ key: "retail_whatsapp_2", value: wa2Val });
+    }
+
 
     // Upsert into site_settings with guaranteed non-null value
     for (const u of updates) {

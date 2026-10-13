@@ -35,7 +35,9 @@ interface StoreSettingsState {
   social_tiktok: string;
   social_whatsapp: string;
   retail_whatsapp: string;
+  retail_whatsapp_2: string;
   wholesale_whatsapp: string;
+  wholesale_whatsapp_2: string;
 }
 
 const DEFAULT_SETTINGS: StoreSettingsState = {
@@ -57,8 +59,11 @@ const DEFAULT_SETTINGS: StoreSettingsState = {
   social_tiktok: "https://tiktok.com/@aurelle.ae",
   social_whatsapp: "https://wa.me/971501234567",
   retail_whatsapp: "https://wa.me/971501234567",
+  retail_whatsapp_2: "",
   wholesale_whatsapp: "https://wa.me/971501234567",
+  wholesale_whatsapp_2: "",
 };
+
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<StoreSettingsState>(DEFAULT_SETTINGS);
@@ -102,7 +107,9 @@ export default function AdminSettingsPage() {
             social_tiktok: s.social_tiktok || DEFAULT_SETTINGS.social_tiktok,
             social_whatsapp: s.social_whatsapp || DEFAULT_SETTINGS.social_whatsapp,
             retail_whatsapp: s.retail_whatsapp || s.social_whatsapp || DEFAULT_SETTINGS.retail_whatsapp,
-            wholesale_whatsapp: s.wholesale_whatsapp || s.social_whatsapp || DEFAULT_SETTINGS.wholesale_whatsapp,
+            retail_whatsapp_2: s.retail_whatsapp_2 || s.social_whatsapp_2 || "",
+            wholesale_whatsapp: s.wholesale_whatsapp || DEFAULT_SETTINGS.wholesale_whatsapp,
+            wholesale_whatsapp_2: s.wholesale_whatsapp_2 || "",
           });
         }
       } catch (err: any) {
@@ -149,8 +156,11 @@ export default function AdminSettingsPage() {
         social_tiktok: String(settings.social_tiktok || "").trim(),
         social_whatsapp: String(settings.social_whatsapp || settings.retail_whatsapp || "").trim(),
         retail_whatsapp: String(settings.retail_whatsapp || settings.social_whatsapp || "").trim(),
+        retail_whatsapp_2: String(settings.retail_whatsapp_2 || "").trim(),
         wholesale_whatsapp: String(settings.wholesale_whatsapp || "").trim(),
+        wholesale_whatsapp_2: String(settings.wholesale_whatsapp_2 || "").trim(),
       };
+
 
       const res = await fetch("/api/admin/settings", {
         method: "POST",
@@ -570,11 +580,28 @@ export default function AdminSettingsPage() {
                         retail_whatsapp: v,
                       }));
                     }}
+                    placeholder="https://wa.me/971562096388 or +971 56 209 6388"
+                    className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
+                  />
+                  <p className="text-[10px] text-[#5C6460] mt-1">
+                    Primary storefront footer, top announcement Help &amp; restock enquiry.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                    Retail WhatsApp 2 (Secondary Number)
+                  </label>
+                  <input
+                    type="text"
+                    name="retail_whatsapp_2"
+                    value={settings.retail_whatsapp_2}
+                    onChange={handleChange}
                     placeholder="https://wa.me/971501234567 or +971 50 123 4567"
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
                   />
                   <p className="text-[10px] text-[#5C6460] mt-1">
-                    Storefront footer and out-of-stock restock enquiry.
+                    Alternate retail customer support number.
                   </p>
                 </div>
 
@@ -591,9 +618,27 @@ export default function AdminSettingsPage() {
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
                   />
                   <p className="text-[10px] text-[#5C6460] mt-1">
-                    Wholesale floating button, footer &amp; B2B contact desk.
+                    Primary wholesale floating button, footer &amp; B2B contact desk.
                   </p>
                 </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                    Wholesale WhatsApp 2 (Secondary Number)
+                  </label>
+                  <input
+                    type="text"
+                    name="wholesale_whatsapp_2"
+                    value={settings.wholesale_whatsapp_2}
+                    onChange={handleChange}
+                    placeholder="https://wa.me/971501234567 or +971 50 123 4567"
+                    className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
+                  />
+                  <p className="text-[10px] text-[#5C6460] mt-1">
+                    Alternate wholesale commercial trade desk number.
+                  </p>
+                </div>
+
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">

@@ -22,7 +22,7 @@ import {
   Share2,
 } from "lucide-react";
 import { toggleWishlist, isWishlisted as checkWishlisted } from "@/components/storefront/WishlistDrawer";
-import ProductAccordions from "@/components/product/ProductAccordions";
+import ProductOverview from "@/components/product/ProductOverview";
 
 interface ProductDetailClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +48,6 @@ export default function ProductDetailClient({
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "ingredients" | "shipping">("details");
 
   // Reviews state (real database reviews only)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -789,106 +788,11 @@ export default function ProductDetailClient({
                 <span className="text-[10px] 2xl:text-[11px] text-[#8E9590]">14-day policy</span>
               </div>
             </div>
-
-            {/* Product Highlights & Specifications Accordions */}
-            <ProductAccordions product={product} />
           </div>
         </div>
 
-        {/* ── Product Information Tabs ────────────────────────────────────── */}
-        <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 2xl:p-10 shadow-xs space-y-6">
-          <div className="flex border-b border-[#DCCFB9]/40 gap-6 2xl:gap-8">
-            <button
-              type="button"
-              onClick={() => setActiveTab("details")}
-              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === "details"
-                  ? "border-[#183D2B] text-[#183D2B]"
-                  : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
-              }`}
-            >
-              Description & Benefits
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("ingredients")}
-              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === "ingredients"
-                  ? "border-[#183D2B] text-[#183D2B]"
-                  : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
-              }`}
-            >
-              Ingredients & Usage
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("shipping")}
-              className={`pb-3 2xl:pb-4 text-xs 2xl:text-sm uppercase tracking-widest font-bold border-b-2 transition-all cursor-pointer ${
-                activeTab === "shipping"
-                  ? "border-[#183D2B] text-[#183D2B]"
-                  : "border-transparent text-[#8E9590] hover:text-[#1D211F]"
-              }`}
-            >
-              Shipping & Returns
-            </button>
-          </div>
-
-          <div className="pt-2 text-sm 2xl:text-base text-[#5C6460] leading-relaxed">
-            {activeTab === "details" && (
-              <div className="space-y-4">
-                <p>{product.description || "No detailed description provided."}</p>
-                {product.benefits && (
-                  <div className="pt-2">
-                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-2">
-                      Key Benefits:
-                    </h4>
-                    <p className="whitespace-pre-line">{product.benefits}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "ingredients" && (
-              <div className="space-y-4">
-                {product.ingredients ? (
-                  <div>
-                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-1.5">
-                      Full Ingredients:
-                    </h4>
-                    <p className="text-xs 2xl:text-sm font-mono bg-[#FAF8F5] p-3 2xl:p-4 border border-[#DCCFB9]/40 rounded-sm">
-                      {product.ingredients}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs 2xl:text-sm text-[#8E9590]">
-                    Ingredients list not specified for this product.
-                  </p>
-                )}
-                {product.usage_instructions && (
-                  <div>
-                    <h4 className="text-xs 2xl:text-sm font-bold uppercase tracking-wider text-[#1D211F] mb-1.5">
-                      How to Use:
-                    </h4>
-                    <p className="whitespace-pre-line">{product.usage_instructions}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "shipping" && (
-              <div className="space-y-3">
-                <p>
-                  Orders placed before 2:00 PM GST are processed same day. Delivery across
-                  Dubai, Abu Dhabi, Sharjah, and other Emirates within 24-48 business hours.
-                </p>
-                <p>
-                  Standard domestic shipping is AED 20 (Free on orders above AED 199). Cash on
-                  delivery (COD) and major cards accepted.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* ── Product Overview (Noon-style Description / Highlights / Specifications) ── */}
+        <ProductOverview product={product} />
 
         {/* ── Verified Customer Reviews Section ────────────────────────────── */}
         <div className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 2xl:p-10 shadow-xs space-y-6 2xl:space-y-8">

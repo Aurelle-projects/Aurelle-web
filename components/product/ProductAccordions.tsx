@@ -10,7 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 
-interface HighlightItem {
+export interface HighlightItem {
   id: string;
   label: string;
   value: string;
@@ -18,7 +18,7 @@ interface HighlightItem {
   icon: React.ComponentType<any>;
 }
 
-interface SpecificationItem {
+export interface SpecificationItem {
   label: string;
   value: string;
 }
@@ -94,7 +94,7 @@ function parseDescriptionKeyValues(description: string): Record<string, string> 
  * Extracts available product highlights based solely on real product data.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getProductHighlights(product: any): HighlightItem[] {
+export function getProductHighlights(product: any): HighlightItem[] {
   if (!product) return [];
 
   const desc = product.description || "";
@@ -236,7 +236,7 @@ function getProductHighlights(product: any): HighlightItem[] {
  * Extracts available product specifications in label-value format.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getProductSpecifications(product: any): SpecificationItem[] {
+export function getProductSpecifications(product: any): SpecificationItem[] {
   if (!product) return [];
 
   const desc = product.description || "";

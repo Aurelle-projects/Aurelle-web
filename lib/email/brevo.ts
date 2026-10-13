@@ -88,73 +88,259 @@ async function sendBrevoEmail({
   }
 }
 
-// ── Shared HTML wrapper ────────────────────────────────────────────
+// ── Shared HTML wrapper (Enterprise Amazon / Noon E-Commerce Standard) ────────
 
 const baseStyles = `
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F5EF; margin: 0; padding: 30px; }
-  .container { max-width: 560px; margin: 0 auto; background: #ffffff; padding: 40px 36px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-  .brand { text-align: center; font-family: Georgia, serif; font-size: 26px; color: #183D2B; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 28px; }
-  .divider { border: none; border-top: 1px solid #EDE9DF; margin: 24px 0; }
-  .footer { font-size: 12px; color: #8C938F; text-align: center; margin-top: 32px; line-height: 1.6; }
-  .btn { display: inline-block; padding: 12px 28px; background: #183D2B; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 4px; letter-spacing: 0.5px; }
+  /* Resets */
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; min-width: 100%; background-color: #F6F4EE; }
+  
+  /* Prevent dark-mode auto-inversion */
+  :root {
+    color-scheme: light;
+    supported-color-schemes: light;
+  }
+  
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; max-width: 100% !important; }
+    .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .mobile-stack { display: block !important; width: 100% !important; max-width: 100% !important; padding-right: 0 !important; padding-left: 0 !important; }
+  }
 `;
 
-function emailWrapper(body: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
+function emailWrapper(body: string, previewText?: string): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
+  const logoUrl = `${siteUrl}/Aurelle-Logo.png`;
+  const currentYear = new Date().getFullYear();
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>${baseStyles}</style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <title>Aurelle</title>
+    <!--[if mso]>
+    <noscript>
+      <xml>
+        <o:OfficeDocumentSettings>
+          <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings>
+      </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+      ${baseStyles}
+    </style>
   </head>
-  <body>
-    <div class="container">
-      <div class="brand">AURELLE</div>
-      ${body}
-      <hr class="divider">
-      <div class="footer">
-        &copy; ${new Date().getFullYear()} Aurelle. All rights reserved.<br/>
-        Luxury beauty, skincare and wellness essentials.
-      </div>
-    </div>
+  <body bgcolor="#F6F4EE" style="margin:0; padding:0; background-color:#F6F4EE; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
+    ${
+      previewText
+        ? `<div style="display:none; font-size:1px; color:#F6F4EE; line-height:1px; max-height:0px; max-width:0px; opacity:0; overflow:hidden;">
+            ${previewText}
+          </div>`
+        : ""
+    }
+
+    <!-- 100% Full-Width Outer Canvas (Ivory Tone) -->
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#F6F4EE" style="background-color:#F6F4EE; table-layout:fixed;">
+      <tr>
+        <td align="center" style="padding:28px 12px;">
+          
+          <!-- Main 600px Card Container (Amazon / Noon Standard) -->
+          <table class="email-container" width="600" border="0" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF" style="max-width:600px; width:100%; background-color:#FFFFFF; border-radius:12px; border:1px solid #E6E1D6; box-shadow:0 4px 24px rgba(24,61,43,0.06); overflow:hidden;">
+            
+            <!-- ── HEADER STRIP: Official OG Logo + Luxury Tagline ── -->
+            <tr>
+              <td align="center" bgcolor="#FFFFFF" style="padding:32px 30px 22px; border-bottom:2px solid #183D2B; background-color:#FFFFFF;">
+                <a href="${siteUrl}" target="_blank" style="text-decoration:none; display:inline-block;">
+                  <img
+                    src="${logoUrl}"
+                    alt="AURELLE"
+                    width="155"
+                    height="78"
+                    border="0"
+                    style="display:block; width:155px; height:auto; max-width:155px; margin:0 auto; outline:none; border:none; font-family:Georgia, serif; font-size:26px; font-weight:bold; color:#183D2B; letter-spacing:3px;"
+                  />
+                </a>
+                <p style="margin:10px 0 0; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#7B857F; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                  DUBAI &bull; UAE LUXURY COSMETICS &bull; OFFICIAL
+                </p>
+              </td>
+            </tr>
+
+            <!-- ── DYNAMIC BODY CONTENT ── -->
+            <tr>
+              <td class="mobile-padding" bgcolor="#FFFFFF" style="padding:36px 36px 32px; background-color:#FFFFFF;">
+                ${body}
+              </td>
+            </tr>
+
+            <!-- ── TRUST PILLARS BAR (Noon / Amazon E-Commerce Standard) ── -->
+            <tr>
+              <td bgcolor="#FAF8F5" style="padding:18px 24px; border-top:1px solid #EDE9DF; background-color:#FAF8F5;">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" style="font-size:11px; font-weight:600; color:#5C6460; line-height:1.6; text-align:center;">
+                      <span style="color:#183D2B; font-weight:700;">&#10003; 100% Authentic Products</span>
+                      &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                      <span style="color:#183D2B; font-weight:700;">Fast UAE Delivery</span>
+                      &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                      <span style="color:#183D2B; font-weight:700;">24/7 WhatsApp Concierge</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- ── ENTERPRISE FOOTER ── -->
+            <tr>
+              <td bgcolor="#183D2B" style="padding:32px 30px; background-color:#183D2B; text-align:center; color:#E8DCC4;">
+                <p style="margin:0 0 12px; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#FFFFFF;">
+                  AURELLE COSMETICS TRADING FZ-LLC
+                </p>
+                
+                <!-- Quick Navigation Links -->
+                <p style="margin:0 0 16px; font-size:12px; color:#D5CBB8;">
+                  <a href="${siteUrl}/shop" style="color:#FFFFFF; text-decoration:none; font-weight:600;">Shop All</a> &nbsp;|&nbsp;
+                  <a href="${siteUrl}/track-order" style="color:#FFFFFF; text-decoration:none; font-weight:600;">Track Order</a> &nbsp;|&nbsp;
+                  <a href="${siteUrl}/refund-policy" style="color:#FFFFFF; text-decoration:none; font-weight:600;">Returns &amp; Refunds</a> &nbsp;|&nbsp;
+                  <a href="https://wa.me/971562096388" style="color:#25D366; text-decoration:none; font-weight:600;">WhatsApp</a>
+                </p>
+
+                <p style="margin:0 0 8px; font-size:11px; line-height:1.5; color:#A7B6AC;">
+                  Need assistance? Our concierge is available 24/7 at <a href="mailto:care@aurelle.ae" style="color:#FFFFFF; text-decoration:underline;">care@aurelle.ae</a> or WhatsApp at <a href="https://wa.me/971562096388" style="color:#FFFFFF; text-decoration:underline;">+971 56 209 6388</a>.
+                </p>
+
+                <p style="margin:16px 0 0; font-size:10px; color:#8A9E92; border-top:1px solid rgba(232, 220, 196, 0.15); padding-top:14px; line-height:1.5;">
+                  &copy; ${currentYear} Aurelle Cosmetics Trading FZ-LLC. All rights reserved.<br />
+                  Dubai Silicon Oasis, Dubai, United Arab Emirates.
+                </p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`;
 }
 
-// ── 1. Welcome Email ───────────────────────────────────────────────
+// ── 1. Welcome Email (Redesigned Editorial Luxury Layout) ───────────
 
 export async function sendWelcomeEmail(
   email: string,
   fullName?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const displayName = fullName?.trim() || "there";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const displayName = fullName?.trim() || "Valued Member";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
 
   const htmlContent = emailWrapper(`
-    <div style="text-align:center; margin-bottom:8px;">
-      <span style="font-size:40px;">&#127807;</span>
+    <!-- Status Tag -->
+    <div style="text-align:center; margin-bottom:16px;">
+      <span style="display:inline-block; padding:5px 14px; background-color:#F0F7F3; color:#183D2B; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-radius:20px; border:1px solid #D1E5DA;">
+        MEMBERSHIP CONFIRMED
+      </span>
     </div>
-    <h1 style="text-align:center; font-size:20px; font-weight:700; color:#1D211F; margin:0 0 12px;">
-      Welcome to Aurelle, ${displayName}!
+
+    <!-- Main Headline -->
+    <h1 style="text-align:center; font-family:Georgia, serif; font-size:24px; font-weight:700; color:#1D211F; margin:0 0 14px; letter-spacing:0.3px;">
+      Welcome to Aurelle, ${displayName}
     </h1>
-    <p style="font-size:14px; color:#5C6460; line-height:1.7; text-align:center; margin:0 0 24px;">
-      Your account has been created successfully. We are thrilled to have you join the Aurelle family &mdash;
-      your destination for luxury beauty, skincare, and wellness essentials.
+
+    <!-- Editorial Welcome Narrative -->
+    <p style="font-size:14px; color:#4A524D; line-height:1.7; text-align:center; margin:0 auto 28px; max-width:480px;">
+      Your personal account is now active. We are delighted to welcome you to our community &mdash; your destination for verified luxury beauty, clinical skincare, and fine fragrances across the United Arab Emirates.
     </p>
-    <div style="text-align:center; margin-bottom:28px;">
-      <a href="${siteUrl}/shop" class="btn">Start Shopping</a>
+
+    <!-- 3 Value Pillars (Amazon / Noon Standard) -->
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px; background-color:#FAF8F5; border:1px solid #EDE9DF; border-radius:8px; overflow:hidden;">
+      <tr>
+        <td style="padding:16px 18px; border-bottom:1px solid #EDE9DF;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="32" valign="middle" style="font-size:18px;">🚚</td>
+              <td valign="middle" style="padding-left:10px;">
+                <p style="margin:0; font-size:12px; font-weight:700; color:#1D211F;">Next-Day UAE Delivery</p>
+                <p style="margin:2px 0 0; font-size:11px; color:#6B726E;">Prompt dispatch across Dubai, Abu Dhabi, Sharjah &amp; all Emirates.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px 18px; border-bottom:1px solid #EDE9DF;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="32" valign="middle" style="font-size:18px;">🛡️</td>
+              <td valign="middle" style="padding-left:10px;">
+                <p style="margin:0; font-size:12px; font-weight:700; color:#1D211F;">100% Authentic Guarantee</p>
+                <p style="margin:2px 0 0; font-size:11px; color:#6B726E;">Every formulation is sourced directly from verified global brand partners.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px 18px;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="32" valign="middle" style="font-size:18px;">💬</td>
+              <td valign="middle" style="padding-left:10px;">
+                <p style="margin:0; font-size:12px; font-weight:700; color:#1D211F;">24/7 Dedicated Concierge</p>
+                <p style="margin:2px 0 0; font-size:11px; color:#6B726E;">Live assistance via WhatsApp for skincare regimens and order inquiries.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Primary Call to Action Button -->
+    <div style="text-align:center; margin-bottom:30px;">
+      <a href="${siteUrl}/shop" target="_blank" style="background-color:#183D2B; color:#ffffff; padding:15px 38px; text-decoration:none; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:6px; display:inline-block; box-shadow:0 2px 10px rgba(24,61,43,0.18);">
+        EXPLORE THE COLLECTION &rarr;
+      </a>
     </div>
-    <div style="background:#F7F5EF; border-radius:6px; padding:16px 20px;">
-      <p style="font-size:13px; color:#5C6460; margin:0; line-height:1.6;">
-        <strong style="color:#183D2B;">Your account details</strong><br/>
-        Email: <span style="color:#1D211F;">${email}</span>
-      </p>
-    </div>
-  `);
+
+    <!-- Account Details Card -->
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF; border:1px solid #EDE9DF; border-radius:8px; overflow:hidden;">
+      <tr>
+        <td style="padding:16px 20px; background-color:#F7F5EF; border-bottom:1px solid #EDE9DF;">
+          <p style="margin:0; font-size:11px; font-weight:700; color:#183D2B; text-transform:uppercase; letter-spacing:1px;">
+            Your Registered Account Details
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:18px 20px; font-size:12px; color:#5C6460; line-height:1.7;">
+          <p style="margin:0 0 6px;"><strong>Member Name:</strong> <span style="color:#1D211F;">${displayName}</span></p>
+          <p style="margin:0 0 6px;"><strong>Email Address:</strong> <span style="color:#1D211F;">${email}</span></p>
+          <p style="margin:0 0 6px;"><strong>Account Status:</strong> <span style="color:#183D2B; font-weight:600;">Verified Retail Member</span></p>
+          <p style="margin:0;"><strong>Member Benefits:</strong> <span style="color:#1D211F;">Fast checkout, saved UAE addresses &amp; real-time tracking</span></p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 20px; background-color:#FAF8F5; border-top:1px solid #EDE9DF; text-align:center;">
+          <a href="${siteUrl}/account?tab=orders" style="color:#183D2B; font-size:12px; font-weight:700; text-decoration:none; margin-right:16px;">
+            View My Orders &rarr;
+          </a>
+          <a href="${siteUrl}/account?tab=addresses" style="color:#183D2B; font-size:12px; font-weight:700; text-decoration:none;">
+            Manage Addresses &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+  `, `Welcome to Aurelle, ${displayName}! Your luxury cosmetics account is confirmed.`);
 
   return sendBrevoEmail({
     to: [{ email, name: fullName || undefined }],
-    subject: "Welcome to Aurelle - Your account is ready",
+    subject: `Welcome to Aurelle — Your Account is Ready, ${displayName}`,
     htmlContent,
   });
 }
@@ -177,7 +363,7 @@ export async function sendOrderConfirmationEmail(
     paymentMethod,
   } = data;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayName = customerName?.trim() || "Valued Customer";
 
   const itemRows = items
@@ -305,7 +491,7 @@ export async function sendAdminOrderNotificationEmail(
     paymentMethod,
   } = data;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
 
   const itemRows = items
     .map(
@@ -417,7 +603,7 @@ export async function sendOrderDeliveredReviewEmail(
   data: DeliveredEmailData
 ): Promise<{ success: boolean; error?: string }> {
   const { orderNumber, customerName, customerEmail, items, orderId } = data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayName = customerName?.trim() || "Valued Customer";
   const token = createReviewToken(orderId, customerEmail);
 
@@ -530,7 +716,7 @@ export async function sendAdminWholesaleEnquiryNotificationEmail(
     message,
   } = data;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayEmail = email && !email.includes("@wholesale.aurelle.ae") ? email : "Not provided";
   const cleanPhone = (whatsapp || phone).replace(/\D/g, "");
 
@@ -621,7 +807,7 @@ export async function sendClientWholesaleEnquiryConfirmationEmail(
     return { success: false, error: "No valid client email provided." };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayName = contactPerson?.trim() || "Valued Partner";
 
   const htmlContent = emailWrapper(`
@@ -705,7 +891,7 @@ export async function sendWholesaleApplicationReceivedEmail(data: {
   contactPerson: string;
 }): Promise<{ success: boolean; error?: string }> {
   const { email, companyName, contactPerson } = data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayName = contactPerson?.trim() || "Valued Partner";
 
   const htmlContent = emailWrapper(`
@@ -751,7 +937,7 @@ export async function sendWholesaleApprovalEmail(data: {
   contactPerson: string;
 }): Promise<{ success: boolean; error?: string }> {
   const { email, companyName, contactPerson } = data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurelle.ae";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
   const displayName = contactPerson?.trim() || "Valued Partner";
   const destinationUrl = `${siteUrl}/login?redirect=/wholesale`;
 

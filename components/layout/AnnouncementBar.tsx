@@ -54,7 +54,7 @@ export default function AnnouncementBar() {
     if (!announcement?.text) return [];
     return announcement.text
       .split("|")
-      .map((m) => m.trim().replace(/,([^\s])/g, ", "))
+      .map((m) => m.trim().replace(/,\s*/g, ", "))
       .filter(Boolean);
   }, [announcement?.text]);
 

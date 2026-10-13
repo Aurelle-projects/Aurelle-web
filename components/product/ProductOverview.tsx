@@ -35,52 +35,52 @@ function BulletText({ text }: { text: string }) {
   if (text.includes("**")) {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return (
-      <span className="font-bold text-[#1D211F]">
+      <strong className="font-bold text-[#1D211F]" style={{ fontWeight: 700 }}>
         {parts.map((part, i) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
-              <strong key={i} className="font-bold text-[#1D211F]">
+              <span key={i} className="font-extrabold text-[#1D211F]" style={{ fontWeight: 800 }}>
                 {part.slice(2, -2)}
-              </strong>
+              </span>
             );
           }
           return <span key={i}>{part}</span>;
         })}
-      </span>
+      </strong>
     );
   }
 
-  // 2. Noon highlights pattern: "Label: Details" -> Label in bold, full line in bold
+  // 2. Noon highlights pattern: "Label: Details" -> Full line in bold
   const colonMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{1,40}):\s*(.+)$/);
   if (colonMatch && colonMatch[1] && colonMatch[2]) {
     const label = colonMatch[1].trim();
     const value = colonMatch[2].trim();
     if (!/\b\d+$/.test(label)) {
       return (
-        <span className="font-bold text-[#1D211F]">
-          <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
-          <span>{value}</span>
-        </span>
+        <strong className="font-bold text-[#1D211F]" style={{ fontWeight: 700 }}>
+          <span className="font-extrabold text-[#1D211F]" style={{ fontWeight: 800 }}>{label}:</span>{" "}
+          <span style={{ fontWeight: 700 }}>{value}</span>
+        </strong>
       );
     }
   }
 
-  // 3. Dash separated: "Label - Details" -> Label in bold, full line in bold
+  // 3. Dash separated: "Label - Details" -> Full line in bold
   const dashMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{2,40})\s*[-–—]\s*(.+)$/);
   if (dashMatch && dashMatch[1] && dashMatch[2]) {
     const label = dashMatch[1].trim();
     const value = dashMatch[2].trim();
     if (!/\b\d+$/.test(label)) {
       return (
-        <span className="font-bold text-[#1D211F]">
-          <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
-          <span>{value}</span>
-        </span>
+        <strong className="font-bold text-[#1D211F]" style={{ fontWeight: 700 }}>
+          <span className="font-extrabold text-[#1D211F]" style={{ fontWeight: 800 }}>{label}:</span>{" "}
+          <span style={{ fontWeight: 700 }}>{value}</span>
+        </strong>
       );
     }
   }
 
-  return <span className="font-bold text-[#1D211F]">{text}</span>;
+  return <strong className="font-bold text-[#1D211F]" style={{ fontWeight: 700 }}>{text}</strong>;
 }
 
 /** Formats multi-paragraph description with full bold text and markdown support */
@@ -93,7 +93,11 @@ function FormattedDescription({ text }: { text: string }) {
       {paragraphs.map((p, pIdx) => {
         const lines = p.split(/\r?\n/).filter((l) => l.trim().length > 0);
         return (
-          <p key={pIdx} className="text-[15px] sm:text-base 2xl:text-[17px] text-[#1D211F] font-bold leading-relaxed">
+          <p
+            key={pIdx}
+            className="text-[15px] sm:text-base 2xl:text-[17px] text-[#1D211F] font-bold leading-relaxed"
+            style={{ fontWeight: 700 }}
+          >
             {lines.map((line, lIdx) => (
               <React.Fragment key={lIdx}>
                 {lIdx > 0 && <br />}
@@ -113,7 +117,8 @@ function ReadMoreToggle({ expanded, onClick }: { expanded: boolean; onClick: () 
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className="mt-2.5 inline-flex items-center gap-1.5 text-sm 2xl:text-[15px] font-semibold text-[#183D2B] hover:text-[#143223] underline decoration-[#183D2B]/40 hover:decoration-[#183D2B] cursor-pointer"
+      className="mt-2.5 inline-flex items-center gap-1.5 text-sm 2xl:text-[15px] font-bold text-[#183D2B] hover:text-[#143223] underline decoration-[#183D2B]/40 hover:decoration-[#183D2B] cursor-pointer"
+      style={{ fontWeight: 700 }}
     >
       {expanded ? <Minus size={15} strokeWidth={2.5} /> : <Plus size={15} strokeWidth={2.5} />}
       <span>{expanded ? "Read less" : "Read more"}</span>
@@ -194,7 +199,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
           <h2 className="text-xl sm:text-2xl 2xl:text-3xl font-bold text-[#1D211F] tracking-tight">
             Product Overview
           </h2>
-          <p className="text-sm 2xl:text-base text-[#6B726E] mt-1">
+          <p className="text-sm 2xl:text-base text-[#1D211F] font-bold mt-1" style={{ fontWeight: 700 }}>
             Key highlights, detailed specifications, and usage instructions
           </p>
         </div>
@@ -207,7 +212,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
             <h3 className={headingClass}>Highlights</h3>
             <ul className="space-y-3 list-none p-0 m-0">
               {visibleBullets.map((b, idx) => (
-                <li key={idx} className={`${bodyClass} flex items-start gap-3`}>
+                <li key={idx} className={`${bodyClass} flex items-start gap-3`} style={{ fontWeight: 700 }}>
                   <span
                     className="mt-[9px] w-2 h-2 rounded-full bg-[#183D2B] shrink-0"
                     aria-hidden="true"
@@ -242,12 +247,18 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5">
+                      <strong
+                        className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5"
+                        style={{ fontWeight: 700 }}
+                      >
                         {item.label}
-                      </span>
-                      <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
+                      </strong>
+                      <strong
+                        className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words"
+                        style={{ fontWeight: 700 }}
+                      >
                         {item.value}
-                      </span>
+                      </strong>
                     </div>
                   ))}
                 </div>
@@ -261,12 +272,18 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5">
+                      <strong
+                        className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5"
+                        style={{ fontWeight: 700 }}
+                      >
                         {item.label}
-                      </span>
-                      <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
+                      </strong>
+                      <strong
+                        className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words"
+                        style={{ fontWeight: 700 }}
+                      >
                         {item.value}
-                      </span>
+                      </strong>
                     </div>
                   ))}
                 </div>
@@ -323,8 +340,11 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
         {ingredients && (
           <div>
             <h3 className={headingClass}>Ingredients</h3>
-            <p className="text-sm sm:text-[15px] 2xl:text-base text-[#1D211F] font-bold leading-relaxed bg-[#FAF8F5] p-5 border border-[#DCCFB9]/50">
-              {ingredients}
+            <p
+              className="text-sm sm:text-[15px] 2xl:text-base text-[#1D211F] font-bold leading-relaxed bg-[#FAF8F5] p-5 border border-[#DCCFB9]/50"
+              style={{ fontWeight: 700 }}
+            >
+              <strong style={{ fontWeight: 700 }}>{ingredients}</strong>
             </p>
           </div>
         )}
@@ -334,7 +354,11 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
           <h3 className={headingClass}>Shipping &amp; Returns</h3>
           <ul className="space-y-3 list-none p-0 m-0">
             {shippingBullets.map((line, idx) => (
-              <li key={idx} className={`${bodyClass} flex items-start gap-3`}>
+              <li
+                key={idx}
+                className={`${bodyClass} flex items-start gap-3`}
+                style={{ fontWeight: 700 }}
+              >
                 <span
                   className="mt-[9px] w-2 h-2 rounded-full bg-[#183D2B] shrink-0"
                   aria-hidden="true"

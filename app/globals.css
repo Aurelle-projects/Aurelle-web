@@ -17,26 +17,47 @@
   --font-primary: var(--font-sans), "Plus Jakarta Sans", sans-serif;
 }
 
+/* ─── Global Strict Light Theme Lock ───────────────────────────────────── */
+/* Completely disables Chromium, Samsung Internet, Android & iOS auto-dark mode */
+:root {
+  color-scheme: only light !important;
+  supported-color-schemes: light !important;
+}
+
+html {
+  color-scheme: only light !important;
+  background-color: #FFFFFF !important;
+  color: #1D211F !important;
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  color-scheme: only light !important;
+  background-color: #FFFFFF !important;
+  color: #1D211F !important;
+  font-family: var(--font-sans), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Form controls & dialogs lock */
+input,
+textarea,
+select,
+button,
+dialog,
+[role="dialog"] {
+  color-scheme: only light !important;
+}
+
 /* ─── Base Styles ────────────────────────────────────────────────────────── */
 @layer base {
   *,
   *::before,
   *::after {
     box-sizing: border-box;
-  }
-
-  html {
-    scroll-behavior: auto;
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    font-family: var(--font-sans), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #1D211F;
-    background-color: #FFFFFF;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
   }
 
   ::selection {

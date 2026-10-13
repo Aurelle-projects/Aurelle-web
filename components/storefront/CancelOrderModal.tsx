@@ -81,7 +81,10 @@ export default function CancelOrderModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#FAF8F5] border border-[#DCCFB9] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div
+        className="bg-[#FAF8F5] border border-[#DCCFB9] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        style={{ colorScheme: "only light", backgroundColor: "#FAF8F5", color: "#1D211F" }}
+      >
         {/* Header */}
         <div className="bg-white px-6 py-5 border-b border-[#DCCFB9]/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">

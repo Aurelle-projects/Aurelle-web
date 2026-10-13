@@ -301,6 +301,7 @@ export default function AccountAuthModal({
     >
       <div
         className="relative w-full max-w-sm rounded-2xl bg-white px-6 py-6 shadow-2xl sm:px-8 border border-[#EDE9DF]/60 transition-all cursor-default"
+        style={{ colorScheme: "only light", backgroundColor: "#FFFFFF", color: "#1D211F" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

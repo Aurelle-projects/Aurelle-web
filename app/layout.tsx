@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-// ─── Viewport: Prevent iPhone Auto-Zoom on Input Focus ────────────────────────
+// ─── Viewport: Prevent iPhone Auto-Zoom on Input Focus & Lock Light Theme ───────
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  colorScheme: "only light",
+  themeColor: "#FFFFFF",
 };
 
 // ─── Fonts: Haute Parfumerie & Luxury Cosmetics Typography ────────────────────
@@ -328,10 +330,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="light"
+      style={{ colorScheme: "only light" }}
       className={`${plusJakarta.variable} ${cormorant.variable} ${playfairDisplay.variable}`}
       suppressHydrationWarning
     >
       <head>
+        <meta name="color-scheme" content="only light" />
+        <meta name="supported-color-schemes" content="light" />
+        <meta name="theme-color" content="#FFFFFF" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -342,6 +349,9 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         style={{
+          colorScheme: "only light",
+          backgroundColor: "#FFFFFF",
+          color: "#1D211F",
           fontFamily: "var(--font-sans), -apple-system, sans-serif",
         }}
       >

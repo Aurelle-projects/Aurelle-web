@@ -329,12 +329,22 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {displayProducts.map((product, idx) => {
-            const images = product.product_images ?? [];
-            const image = images.find((item) => item.is_primary) ?? images[0];
+            const sortedImages = (product.product_images ?? []).slice().sort((a, b) => {
+              if (a.is_primary && !b.is_primary) return -1;
+              if (!a.is_primary && b.is_primary) return 1;
+              return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+            });
+            const firstImg = sortedImages[0] ?? null;
+            const secondImg = sortedImages[1] ?? null;
             const imageUrl =
-              image?.secure_url ||
-              (image?.cloudinary_public_id
-                ? getProductImageUrl(image.cloudinary_public_id, "medium")
+              firstImg?.secure_url ||
+              (firstImg?.cloudinary_public_id
+                ? getProductImageUrl(firstImg.cloudinary_public_id, "medium")
+                : null);
+            const secondaryImageUrl =
+              secondImg?.secure_url ||
+              (secondImg?.cloudinary_public_id
+                ? getProductImageUrl(secondImg.cloudinary_public_id, "medium")
                 : null);
             const isOnSale = Boolean(
               product.compare_at_price && product.compare_at_price > product.retail_price
@@ -343,15 +353,30 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
             return (
               <article key={`${product.id}-${idx}`} className="group relative w-[170px] sm:w-[220px] shrink-0 flex flex-col">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F5F5F5]">
-                  <Link href={`/products/${product.slug}`} prefetch={true} className="relative block w-full h-full">
+                  <Link href={`/products/${product.slug}`} prefetch={true} className="relative block w-full h-full overflow-hidden">
                     {imageUrl ? (
-                      <Image
-                        src={imageUrl}
-                        alt={image?.alt_text || product.name}
-                        fill
-                        sizes="(max-width: 640px) 170px, 220px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
+                      <>
+                        <Image
+                          src={imageUrl}
+                          alt={firstImg?.alt_text || product.name}
+                          fill
+                          sizes="(max-width: 640px) 170px, 220px"
+                          className={`object-cover transition-all duration-500 ease-out ${
+                            secondaryImageUrl
+                              ? "group-hover:opacity-0 group-hover:scale-105"
+                              : "group-hover:scale-105"
+                          }`}
+                        />
+                        {secondaryImageUrl && (
+                          <Image
+                            src={secondaryImageUrl}
+                            alt={secondImg?.alt_text || `${product.name} alternate view`}
+                            fill
+                            sizes="(max-width: 640px) 170px, 220px"
+                            className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-105 transition-all duration-500 ease-out"
+                          />
+                        )}
+                      </>
                     ) : (
                       <div className="flex h-full items-center justify-center text-3xl font-bold text-[#183D2B]/20">
                         {product.name.charAt(0)}

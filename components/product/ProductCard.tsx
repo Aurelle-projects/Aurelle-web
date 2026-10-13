@@ -100,26 +100,37 @@ export default function ProductCard({
     return () => window.removeEventListener("wishlist-change", onWishlistChange);
   }, [product.id]);
 
-  const images = product.product_images ?? [];
-  const primaryImage =
-    images.find((img) => img.is_primary) ??
-    images[0] ??
-    null;
+  // ── Sorted product images resolution (Primary first, then second image for hover effect) ──
+  const sortedImages = (product.product_images ?? []).slice().sort((a, b) => {
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+
+  const firstImg = sortedImages[0] ?? null;
+  const secondImg = sortedImages[1] ?? null;
 
   const legacyImages = product.images ?? [];
-  const primaryLegacyImage =
-    legacyImages.find((img) => img.is_primary) ??
-    legacyImages[0] ??
-    null;
+  const firstLegacy = legacyImages[0] ?? null;
+  const secondLegacy = legacyImages[1] ?? null;
 
   const imageUrl =
-    primaryImage?.secure_url ??
-    (primaryImage?.cloudinary_public_id
-      ? getProductImageUrl(primaryImage.cloudinary_public_id, "medium")
-      : primaryLegacyImage?.url ?? null);
+    firstImg?.secure_url ??
+    (firstImg?.cloudinary_public_id
+      ? getProductImageUrl(firstImg.cloudinary_public_id, "medium")
+      : firstLegacy?.url ?? null);
+
+  const secondaryImageUrl =
+    secondImg?.secure_url ??
+    (secondImg?.cloudinary_public_id
+      ? getProductImageUrl(secondImg.cloudinary_public_id, "medium")
+      : secondLegacy?.url ?? null);
 
   const imageAlt =
-    primaryImage?.alt_text ?? primaryLegacyImage?.alt ?? `${product.name} product image`;
+    firstImg?.alt_text ?? firstLegacy?.alt ?? `${product.name} product image`;
+
+  const secondaryAlt =
+    secondImg?.alt_text ?? secondLegacy?.alt ?? `${product.name} alternate view`;
 
   const isOnSale =
     Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);
@@ -131,22 +142,40 @@ export default function ProductCard({
   return (
     <div className="group flex flex-col rounded-none" aria-label={product.name}>
       {/* ── Top Image Container (Elevated Portrait Aspect Ratio, White Canvas) ── */}
-      <div className="relative aspect-[3/4] w-full bg-gray-200 overflow-hidden rounded-none flex items-center justify-center">
+      <div className="relative aspect-[3/4] w-full bg-[#FAF8F5] overflow-hidden rounded-none flex items-center justify-center">
         <Link
           href={productLink}
           prefetch={true}
-          className="relative w-full h-full block"
+          className="relative w-full h-full block overflow-hidden"
           tabIndex={-1}
           aria-hidden="true"
         >
           {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={imageAlt}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 25vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
+            <>
+              {/* Primary Image */}
+              <Image
+                src={imageUrl}
+                alt={imageAlt}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 25vw"
+                className={`object-cover transition-all duration-500 ease-out ${
+                  secondaryImageUrl
+                    ? "group-hover:opacity-0 group-hover:scale-105"
+                    : "group-hover:scale-105"
+                }`}
+              />
+
+              {/* Second Image (Smooth Crossfade & Subtle Zoom on Hover) */}
+              {secondaryImageUrl && (
+                <Image
+                  src={secondaryImageUrl}
+                  alt={secondaryAlt}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 25vw"
+                  className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-105 transition-all duration-500 ease-out"
+                />
+              )}
+            </>
           ) : (
             <div
               className="w-full h-full flex items-center justify-center text-4xl font-extrabold text-[#183D2B]/10 uppercase"

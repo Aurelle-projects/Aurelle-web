@@ -18,6 +18,8 @@ const PUBLIC_KEYS = [
   "social_facebook",
   "social_tiktok",
   "social_whatsapp",
+  "retail_whatsapp",
+  "wholesale_whatsapp",
   "store_email",
   "store_phone",
   "city",
@@ -39,6 +41,8 @@ const DEFAULTS: Record<string, any> = {
   social_facebook: "https://facebook.com/aurelle.ae",
   social_tiktok: "https://tiktok.com/@aurelle.ae",
   social_whatsapp: "https://wa.me/971501234567",
+  retail_whatsapp: "https://wa.me/971501234567",
+  wholesale_whatsapp: "https://wa.me/971501234567",
 };
 
 export async function GET() {

@@ -23,6 +23,8 @@ const SETTINGS_DEFAULTS = {
   social_facebook: "https://facebook.com/aurelle.ae",
   social_tiktok: "https://tiktok.com/@aurelle.ae",
   social_whatsapp: "https://wa.me/971501234567",
+  retail_whatsapp: "https://wa.me/971501234567",
+  wholesale_whatsapp: "https://wa.me/971501234567",
 };
 
 export async function GET() {
@@ -128,6 +130,11 @@ export async function POST(request: NextRequest) {
     }
     if (body.contact_phone) {
       updates.push({ key: "store_phone", value: String(body.contact_phone).trim() });
+    }
+    if (body.social_whatsapp || body.retail_whatsapp) {
+      const waVal = String(body.social_whatsapp || body.retail_whatsapp).trim();
+      updates.push({ key: "social_whatsapp", value: waVal });
+      updates.push({ key: "retail_whatsapp", value: waVal });
     }
 
     // Upsert into site_settings with guaranteed non-null value

@@ -34,6 +34,8 @@ interface StoreSettingsState {
   social_facebook: string;
   social_tiktok: string;
   social_whatsapp: string;
+  retail_whatsapp: string;
+  wholesale_whatsapp: string;
 }
 
 const DEFAULT_SETTINGS: StoreSettingsState = {
@@ -54,6 +56,8 @@ const DEFAULT_SETTINGS: StoreSettingsState = {
   social_facebook: "https://facebook.com/aurelle.ae",
   social_tiktok: "https://tiktok.com/@aurelle.ae",
   social_whatsapp: "https://wa.me/971501234567",
+  retail_whatsapp: "https://wa.me/971501234567",
+  wholesale_whatsapp: "https://wa.me/971501234567",
 };
 
 export default function AdminSettingsPage() {
@@ -97,6 +101,8 @@ export default function AdminSettingsPage() {
             social_facebook: s.social_facebook || DEFAULT_SETTINGS.social_facebook,
             social_tiktok: s.social_tiktok || DEFAULT_SETTINGS.social_tiktok,
             social_whatsapp: s.social_whatsapp || DEFAULT_SETTINGS.social_whatsapp,
+            retail_whatsapp: s.retail_whatsapp || s.social_whatsapp || DEFAULT_SETTINGS.retail_whatsapp,
+            wholesale_whatsapp: s.wholesale_whatsapp || s.social_whatsapp || DEFAULT_SETTINGS.wholesale_whatsapp,
           });
         }
       } catch (err: any) {
@@ -141,7 +147,9 @@ export default function AdminSettingsPage() {
         social_instagram: String(settings.social_instagram || "").trim(),
         social_facebook: String(settings.social_facebook || "").trim(),
         social_tiktok: String(settings.social_tiktok || "").trim(),
-        social_whatsapp: String(settings.social_whatsapp || "").trim(),
+        social_whatsapp: String(settings.social_whatsapp || settings.retail_whatsapp || "").trim(),
+        retail_whatsapp: String(settings.retail_whatsapp || settings.social_whatsapp || "").trim(),
+        wholesale_whatsapp: String(settings.wholesale_whatsapp || "").trim(),
       };
 
       const res = await fetch("/api/admin/settings", {
@@ -416,10 +424,10 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                    Contact Phone / WhatsApp *
+                    Retail Contact Phone *
                   </label>
                   <input
                     type="text"
@@ -430,6 +438,23 @@ export default function AdminSettingsPage() {
                     placeholder="+971 50 123 4567"
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none focus:bg-white focus:ring-1 focus:ring-[#183D2B]"
                   />
+                  <p className="text-[10px] text-[#5C6460] mt-1">Retail storefront phone</p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                    Wholesale WhatsApp Desk *
+                  </label>
+                  <input
+                    type="text"
+                    name="wholesale_whatsapp"
+                    value={settings.wholesale_whatsapp}
+                    onChange={handleChange}
+                    required
+                    placeholder="+971 50 123 4567"
+                    className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none focus:bg-white focus:ring-1 focus:ring-[#183D2B]"
+                  />
+                  <p className="text-[10px] text-[#5C6460] mt-1">Wholesale Trade Desk</p>
                 </div>
 
                 <div>
@@ -445,6 +470,7 @@ export default function AdminSettingsPage() {
                     placeholder="care@aurelle.ae"
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none focus:bg-white focus:ring-1 focus:ring-[#183D2B]"
                   />
+                  <p className="text-[10px] text-[#5C6460] mt-1">General support email</p>
                 </div>
 
                 <div>
@@ -459,6 +485,7 @@ export default function AdminSettingsPage() {
                     placeholder="trade@aurelle.ae"
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none focus:bg-white focus:ring-1 focus:ring-[#183D2B]"
                   />
+                  <p className="text-[10px] text-[#5C6460] mt-1">Wholesale team email</p>
                 </div>
               </div>
             </div>
@@ -529,16 +556,43 @@ export default function AdminSettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                 <div>
                   <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
-                    WhatsApp Link / Number
+                    Retail WhatsApp (Storefront &amp; Chat)
                   </label>
                   <input
                     type="text"
                     name="social_whatsapp"
                     value={settings.social_whatsapp}
-                    onChange={handleChange}
-                    placeholder="https://wa.me/971501234567"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSettings((prev) => ({
+                        ...prev,
+                        social_whatsapp: v,
+                        retail_whatsapp: v,
+                      }));
+                    }}
+                    placeholder="https://wa.me/971501234567 or +971 50 123 4567"
                     className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
                   />
+                  <p className="text-[10px] text-[#5C6460] mt-1">
+                    Storefront footer and out-of-stock restock enquiry.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1D211F] uppercase tracking-wider mb-1">
+                    Wholesale WhatsApp (Trade Desk &amp; B2B)
+                  </label>
+                  <input
+                    type="text"
+                    name="wholesale_whatsapp"
+                    value={settings.wholesale_whatsapp}
+                    onChange={handleChange}
+                    placeholder="https://wa.me/971501234567 or +971 50 123 4567"
+                    className="w-full h-9 px-3 bg-[#FAF8F5] border border-[#DCCFB9] rounded-md text-xs text-[#1D211F] outline-none"
+                  />
+                  <p className="text-[10px] text-[#5C6460] mt-1">
+                    Wholesale floating button, footer &amp; B2B contact desk.
+                  </p>
                 </div>
 
                 <div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Phone, MapPin, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { formatWhatsAppUrl } from "@/utils/whatsapp";
 
 interface FooterProps {
   settings?: Record<string, unknown>;
@@ -104,12 +105,11 @@ export default function Footer({ settings = {} }: FooterProps) {
   const instagram = (settings["social_instagram"] as string) || "https://instagram.com/aurelle.ae";
   const facebook = (settings["social_facebook"] as string) || "https://facebook.com/aurelle.ae";
   const tiktok = (settings["social_tiktok"] as string) || "https://tiktok.com/@aurelle.ae";
-  const rawWhatsapp = (settings["social_whatsapp"] as string) || "";
-  const whatsapp = rawWhatsapp
-    ? rawWhatsapp.startsWith("http")
-      ? rawWhatsapp
-      : `https://wa.me/${rawWhatsapp.replace(/[^0-9]/g, "")}`
-    : `https://wa.me/${contactPhone.replace(/[^0-9]/g, "") || "971501234567"}`;
+  const rawWhatsapp =
+    (settings["retail_whatsapp"] as string) ||
+    (settings["social_whatsapp"] as string) ||
+    contactPhone;
+  const whatsapp = formatWhatsAppUrl(rawWhatsapp);
 
   return (
     <footer className="bg-[#183D2B] text-white pt-8 md:pt-10 pb-5 border-t border-[#DCCFB9]/20" role="contentinfo">

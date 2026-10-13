@@ -75,15 +75,37 @@ const WHOLESALE_SUPPORT_SECTIONS = [
   { href: "/wholesale#contact", label: "Contact Us" },
 ];
 
-export default function WholesaleFooter() {
-  const contactEmail = "wholesale@aurelle.ae";
-  const contactPhone = "+971 50 123 4567";
-  const contactAddress = "Dubai, United Arab Emirates";
+import { useEffect } from "react";
+import { formatWhatsAppUrl, formatWhatsAppDisplay } from "@/utils/whatsapp";
 
-  const instagram = "https://instagram.com/aurelle.ae";
-  const facebook = "https://facebook.com/aurelle.ae";
-  const tiktok = "https://tiktok.com/@aurelle.ae";
-  const whatsapp = "https://wa.me/971501234567";
+interface WholesaleFooterProps {
+  initialSettings?: Record<string, any>;
+}
+
+export default function WholesaleFooter({ initialSettings }: WholesaleFooterProps) {
+  const [settings, setSettings] = useState<Record<string, any>>(initialSettings || {});
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const s = data?.settings || data;
+        if (s) setSettings(s);
+      })
+      .catch(() => {});
+  }, []);
+
+  const contactEmail = settings.trade_email || settings.contact_email || "wholesale@aurelle.ae";
+  const contactPhone = settings.wholesale_whatsapp
+    ? formatWhatsAppDisplay(settings.wholesale_whatsapp)
+    : settings.contact_phone || "+971 50 123 4567";
+  const contactAddress = settings.contact_address || "Dubai, United Arab Emirates";
+
+  const instagram = settings.social_instagram || "https://instagram.com/aurelle.ae";
+  const facebook = settings.social_facebook || "https://facebook.com/aurelle.ae";
+  const tiktok = settings.social_tiktok || "https://tiktok.com/@aurelle.ae";
+  const rawWa = settings.wholesale_whatsapp || settings.social_whatsapp || settings.contact_phone;
+  const whatsapp = formatWhatsAppUrl(rawWa);
 
   return (
     <footer className="bg-[#14231B] text-white pt-10 md:pt-12 pb-6 border-t border-[#DCCFB9]/20" role="contentinfo">

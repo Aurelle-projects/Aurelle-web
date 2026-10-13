@@ -89,6 +89,7 @@ export default function ProductDetailClient({
       .then((data) => {
         if (data?.settings) {
           const raw =
+            data.settings.retail_whatsapp ||
             data.settings.social_whatsapp ||
             data.settings.contact_phone ||
             data.settings.store_phone ||

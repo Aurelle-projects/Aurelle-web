@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { formatWhatsAppUrl, formatWhatsAppDisplay } from "@/utils/whatsapp";
 import {
   Building2,
   Phone,
@@ -55,6 +56,28 @@ export default function WholesaleContactClient({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [siteSettings, setSiteSettings] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const s = data?.settings || data;
+        if (s) setSiteSettings(s);
+      })
+      .catch(() => {});
+  }, []);
+
+  const rawWa = siteSettings.wholesale_whatsapp || siteSettings.social_whatsapp || siteSettings.contact_phone;
+  const whatsappUrl = formatWhatsAppUrl(rawWa, "Hello Aurelle Wholesale Team, I have a commercial requirement.");
+  const displayWa = siteSettings.wholesale_whatsapp
+    ? formatWhatsAppDisplay(siteSettings.wholesale_whatsapp)
+    : siteSettings.contact_phone || "+971 50 123 4567";
+  const displayPhone = siteSettings.contact_phone || displayWa;
+  const cleanPhone = displayPhone.replace(/[^0-9+]/g, "") || "971501234567";
+  const displayEmail = siteSettings.trade_email || siteSettings.contact_email || "wholesale@aurelle.ae";
+  const displayHours = siteSettings.operating_hours || "Mon – Sat, 9:00 AM – 6:00 PM GST";
 
   // Dynamic products filtered by the chosen category
   const availableProducts = useMemo(() => {
@@ -219,10 +242,10 @@ export default function WholesaleContactClient({
                 </div>
               </div>
               <p className="text-sm font-semibold text-[#14231B] tracking-wide pt-1">
-                +971 50 123 4567
+                {displayWa}
               </p>
               <a
-                href="https://wa.me/971501234567"
+                href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
@@ -249,13 +272,13 @@ export default function WholesaleContactClient({
               </div>
               <div className="pt-1">
                 <a
-                  href="tel:+971501234567"
+                  href={`tel:${cleanPhone}`}
                   className="text-sm font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
                 >
-                  +971 50 123 4567
+                  {displayPhone}
                 </a>
                 <p className="text-[11px] text-[#8E9590] mt-0.5">
-                  Mon – Sat, 9:00 AM – 6:00 PM GST
+                  {displayHours}
                 </p>
               </div>
             </div>
@@ -277,10 +300,10 @@ export default function WholesaleContactClient({
               </div>
               <div className="pt-1">
                 <a
-                  href="mailto:wholesale@aurelle.ae"
+                  href={`mailto:${displayEmail}`}
                   className="text-sm font-semibold text-[#14231B] hover:text-[#183D2B] transition-colors"
                 >
-                  wholesale@aurelle.ae
+                  {displayEmail}
                 </a>
               </div>
             </div>

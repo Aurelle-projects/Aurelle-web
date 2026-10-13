@@ -57,6 +57,21 @@ export default function WholesaleEnquiryModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [wholesaleWa, setWholesaleWa] = useState("971501234567");
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const s = data?.settings || data;
+        const raw = s?.wholesale_whatsapp || s?.social_whatsapp || s?.contact_phone;
+        if (raw) {
+          const digits = raw.replace(/[^0-9]/g, "");
+          if (digits) setWholesaleWa(digits);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Sync initialQuantity when modal opens or product changes
   useEffect(() => {
@@ -249,7 +264,7 @@ export default function WholesaleEnquiryModal({
                       Done
                     </button>
                     <a
-                      href={`https://wa.me/971559998765?text=${encodeURIComponent(
+                      href={`https://wa.me/${wholesaleWa}?text=${encodeURIComponent(
                         `Hi Aurelle Wholesale Team, I just submitted an enquiry for ${product.name} (Quantity: ${quantity} units).`
                       )}`}
                       target="_blank"

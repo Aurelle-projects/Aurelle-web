@@ -3,17 +3,39 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Phone, MessageCircle, X, Headphones } from "lucide-react";
 
+import { formatWhatsAppUrl, formatWhatsAppDisplay } from "@/utils/whatsapp";
+
 interface WholesaleFloatingContactProps {
   phone?: string;
   whatsappUrl?: string;
 }
 
 export default function WholesaleFloatingContact({
-  phone = "+971 50 123 4567",
-  whatsappUrl = "https://wa.me/971501234567",
+  phone: initialPhone,
+  whatsappUrl: initialWhatsappUrl,
 }: WholesaleFloatingContactProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [phone, setPhone] = useState(initialPhone || "+971 50 123 4567");
+  const [whatsappUrl, setWhatsappUrl] = useState(initialWhatsappUrl || "https://wa.me/971501234567");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        const s = data?.settings || data;
+        if (s) {
+          const rawWa = s.wholesale_whatsapp || s.social_whatsapp || s.contact_phone;
+          if (rawWa) {
+            setWhatsappUrl(formatWhatsAppUrl(rawWa));
+            setPhone(formatWhatsAppDisplay(rawWa));
+          } else if (s.contact_phone) {
+            setPhone(s.contact_phone);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Close when clicking outside
   useEffect(() => {
@@ -34,7 +56,7 @@ export default function WholesaleFloatingContact({
     };
   }, [isOpen]);
 
-  const cleanPhone = phone.replace(/\s+/g, "");
+  const cleanPhone = phone.replace(/[^0-9+]/g, "") || "971501234567";
 
   return (
     <div

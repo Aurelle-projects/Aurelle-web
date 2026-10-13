@@ -90,11 +90,11 @@ function FormattedDescription({ text }: { text: string }) {
   const paragraphs = text.split(/\r?\n\r?\n/).filter((p) => p.trim().length > 0);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3.5">
       {paragraphs.map((p, pIdx) => {
         const lines = p.split(/\r?\n/).filter((l) => l.trim().length > 0);
         return (
-          <p key={pIdx} className="text-sm 2xl:text-[15px] text-[#3F4643] leading-relaxed">
+          <p key={pIdx} className="text-[15px] sm:text-base 2xl:text-[17px] text-[#2C3330] leading-relaxed">
             {lines.map((line, lIdx) => (
               <React.Fragment key={lIdx}>
                 {lIdx > 0 && <br />}
@@ -114,16 +114,16 @@ function ReadMoreToggle({ expanded, onClick }: { expanded: boolean; onClick: () 
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className="mt-2 inline-flex items-center gap-1.5 text-[13px] 2xl:text-sm font-semibold text-[#183D2B] hover:text-[#143223] underline decoration-[#183D2B]/40 hover:decoration-[#183D2B] cursor-pointer"
+      className="mt-2.5 inline-flex items-center gap-1.5 text-sm 2xl:text-[15px] font-semibold text-[#183D2B] hover:text-[#143223] underline decoration-[#183D2B]/40 hover:decoration-[#183D2B] cursor-pointer"
     >
-      {expanded ? <Minus size={14} strokeWidth={2.5} /> : <Plus size={14} strokeWidth={2.5} />}
+      {expanded ? <Minus size={15} strokeWidth={2.5} /> : <Plus size={15} strokeWidth={2.5} />}
       <span>{expanded ? "Read less" : "Read more"}</span>
     </button>
   );
 }
 
 const HIGHLIGHTS_PREVIEW_COUNT = 4;
-const DESCRIPTION_PREVIEW_CHARS = 380;
+const DESCRIPTION_PREVIEW_CHARS = 420;
 
 export default function ProductOverview({ product }: ProductOverviewProps) {
   const [descExpanded, setDescExpanded] = useState(false);
@@ -181,8 +181,8 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
     : defaultShippingBullets;
 
   const headingClass =
-    "text-base 2xl:text-lg font-bold text-[#1D211F] tracking-tight mb-3 flex items-center gap-2";
-  const bodyClass = "text-sm 2xl:text-[15px] text-[#3F4643] leading-relaxed";
+    "text-lg 2xl:text-xl font-bold text-[#1D211F] tracking-tight mb-3.5 flex items-center gap-2";
+  const bodyClass = "text-[15px] sm:text-base 2xl:text-[17px] text-[#2C3330] leading-relaxed";
 
   return (
     <section
@@ -190,27 +190,27 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
       className="bg-white rounded-none border border-[#DCCFB9]/60 p-6 md:p-8 2xl:p-10 shadow-xs"
       data-testid="pdp-overview"
     >
-      <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#DCCFB9]/40">
+      <div className="flex items-center justify-between pb-4 mb-7 border-b border-[#DCCFB9]/40">
         <div>
-          <h2 className="text-lg 2xl:text-xl font-bold text-[#1D211F] tracking-tight">
+          <h2 className="text-xl sm:text-2xl 2xl:text-3xl font-bold text-[#1D211F] tracking-tight">
             Product Overview
           </h2>
-          <p className="text-xs 2xl:text-[13px] text-[#8E9590] mt-0.5">
+          <p className="text-sm 2xl:text-base text-[#6B726E] mt-1">
             Key highlights, detailed specifications, and usage instructions
           </p>
         </div>
       </div>
 
-      <div className="max-w-4xl 2xl:max-w-5xl space-y-9">
+      <div className="max-w-4xl 2xl:max-w-5xl space-y-10">
         {/* ── 1. Highlights (Noon style: bold feature label, bullet list) ── */}
         {bullets.length > 0 && (
           <div>
             <h3 className={headingClass}>Highlights</h3>
-            <ul className="space-y-2.5 list-none p-0 m-0">
+            <ul className="space-y-3 list-none p-0 m-0">
               {visibleBullets.map((b, idx) => (
-                <li key={idx} className={`${bodyClass} flex items-start gap-2.5`}>
+                <li key={idx} className={`${bodyClass} flex items-start gap-3`}>
                   <span
-                    className="mt-[8px] w-1.5 h-1.5 rounded-full bg-[#183D2B] shrink-0"
+                    className="mt-[9px] w-2 h-2 rounded-full bg-[#183D2B] shrink-0"
                     aria-hidden="true"
                   />
                   <span>
@@ -239,14 +239,14 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                   {leftColSpecs.map((item, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start justify-between gap-3 py-2.5 px-4 ${
+                      className={`flex items-start justify-between gap-4 py-3 px-4.5 ${
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-xs 2xl:text-[13px] text-[#6B726E] font-medium shrink-0 w-2/5">
+                      <span className="text-sm 2xl:text-[15px] text-[#5C6460] font-medium shrink-0 w-2/5">
                         {item.label}
                       </span>
-                      <span className="text-xs 2xl:text-[13px] font-bold text-[#1D211F] text-right w-3/5 break-words">
+                      <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
                         {item.value}
                       </span>
                     </div>
@@ -258,14 +258,14 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                   {rightColSpecs.map((item, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start justify-between gap-3 py-2.5 px-4 ${
+                      className={`flex items-start justify-between gap-4 py-3 px-4.5 ${
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-xs 2xl:text-[13px] text-[#6B726E] font-medium shrink-0 w-2/5">
+                      <span className="text-sm 2xl:text-[15px] text-[#5C6460] font-medium shrink-0 w-2/5">
                         {item.label}
                       </span>
-                      <span className="text-xs 2xl:text-[13px] font-bold text-[#1D211F] text-right w-3/5 break-words">
+                      <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
                         {item.value}
                       </span>
                     </div>
@@ -296,7 +296,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
               )}
             </>
           ) : (
-            <p className="text-sm text-[#8E9590]">No detailed description provided.</p>
+            <p className="text-[15px] text-[#8E9590]">No detailed description provided.</p>
           )}
         </div>
 
@@ -324,7 +324,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
         {ingredients && (
           <div>
             <h3 className={headingClass}>Ingredients</h3>
-            <p className="text-[13px] 2xl:text-sm text-[#3F4643] leading-relaxed bg-[#FAF8F5] p-4 border border-[#DCCFB9]/40">
+            <p className="text-sm sm:text-[15px] 2xl:text-base text-[#2C3330] leading-relaxed bg-[#FAF8F5] p-5 border border-[#DCCFB9]/50">
               {ingredients}
             </p>
           </div>
@@ -333,11 +333,11 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
         {/* ── 6. Shipping & Returns (All points bold lead-in titles) ──────── */}
         <div>
           <h3 className={headingClass}>Shipping &amp; Returns</h3>
-          <ul className="space-y-2.5 list-none p-0 m-0">
+          <ul className="space-y-3 list-none p-0 m-0">
             {shippingBullets.map((line, idx) => (
-              <li key={idx} className={`${bodyClass} flex items-start gap-2.5`}>
+              <li key={idx} className={`${bodyClass} flex items-start gap-3`}>
                 <span
-                  className="mt-[8px] w-1.5 h-1.5 rounded-full bg-[#183D2B] shrink-0"
+                  className="mt-[9px] w-2 h-2 rounded-full bg-[#183D2B] shrink-0"
                   aria-hidden="true"
                 />
                 <span>

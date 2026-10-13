@@ -18,6 +18,7 @@ import {
   Home,
   X,
   AlertCircle,
+  Truck,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import AccountAuthModal from "@/components/auth/AccountAuthModal";
@@ -938,16 +939,25 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
                     </div>
                   )}
 
-                  {/* Shipping Destination */}
-                  {ord.shipping_address && (
-                    <div className="pt-2 text-[11px] text-[#5C6460] flex items-center gap-1.5 border-t border-[#EDE9DF]/40">
-                      <MapPin size={12} className="text-[#183D2B] shrink-0" />
-                      <span>
-                        Delivering to: {ord.shipping_address.streetAddress || ord.shipping_address.addressLine1 || ord.shipping_address.address_line1},{" "}
-                        {ord.shipping_address.emirate || ord.shipping_address.city || "Dubai"}
-                      </span>
-                    </div>
-                  )}
+                  {/* Shipping Destination & Track Order Button */}
+                  <div className="pt-2 text-[11px] text-[#5C6460] flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-[#EDE9DF]/40">
+                    {ord.shipping_address ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <MapPin size={12} className="text-[#183D2B] shrink-0" />
+                        <span className="truncate">
+                          Delivering to: {ord.shipping_address.streetAddress || ord.shipping_address.addressLine1 || ord.shipping_address.address_line1},{" "}
+                          {ord.shipping_address.emirate || ord.shipping_address.city || "Dubai"}
+                        </span>
+                      </div>
+                    ) : <div />}
+                    <Link
+                      href={`/track-order?orderNumber=${encodeURIComponent(ord.order_number)}&email=${encodeURIComponent(user?.email || profile?.email || "")}`}
+                      className="text-[11px] px-3 py-1 bg-[#183D2B]/10 hover:bg-[#183D2B] text-[#183D2B] hover:text-white rounded font-bold uppercase tracking-wider transition-colors shrink-0 flex items-center justify-center gap-1.5 self-start sm:self-auto"
+                    >
+                      <Truck size={12} />
+                      <span>Track Order</span>
+                    </Link>
+                  </div>
                 </div>
               ))
             )}

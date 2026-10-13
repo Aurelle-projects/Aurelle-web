@@ -74,6 +74,7 @@ const FOOTER_SHOP = [
 ];
 
 const FOOTER_CUSTOMER_CARE = [
+  { href: "/track-order", label: "Track Your Order" },
   { href: "/about", label: "About Aurelle" },
   { href: "/contact", label: "Contact Us" },
   { href: "/shop?filter=brands", label: "Shop by Brand" },

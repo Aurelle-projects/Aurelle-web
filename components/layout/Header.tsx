@@ -1251,6 +1251,18 @@ export default function Header({
                   <ul className="flex flex-col gap-0.5 list-none p-0 m-0">
                     <li>
                       <Link
+                        href="/track-order"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setMobileDropdownOpen(null);
+                        }}
+                        className="block px-3.5 py-2 text-[13px] font-semibold text-[#183D2B] rounded-lg bg-emerald-50/60 hover:bg-emerald-100/60 transition-colors"
+                      >
+                        Track Your Order
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
                         href="/about"
                         onClick={() => {
                           setMobileMenuOpen(false);

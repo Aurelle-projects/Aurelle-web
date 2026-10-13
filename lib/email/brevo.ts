@@ -267,8 +267,9 @@ export async function sendOrderConfirmationEmail(
       </tr>
     </table>
 
-    <div style="text-align:center;">
-      <a href="${siteUrl}/account" class="btn">View My Orders</a>
+    <div style="text-align:center; margin-top:28px; margin-bottom:8px;">
+      <a href="${siteUrl}/track-order?orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(customerEmail)}" class="btn" style="background:#183D2B; color:#ffffff; padding:14px 32px; text-decoration:none; font-size:13px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.5px; text-transform:uppercase;">Track Your Order</a>
+      <p style="margin:12px 0 0; font-size:12px; color:#8C938F;">No login required. View live courier dispatch and delivery updates anytime.</p>
     </div>
   `);
 

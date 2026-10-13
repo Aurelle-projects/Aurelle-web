@@ -60,6 +60,18 @@ export default function AccountAuthModal({
     setConfirmPassword("");
   }, [open, initialMode, defaultEmail, defaultFullName]);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   // Handle Login & Signup
@@ -281,17 +293,21 @@ export default function AccountAuthModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1D211F]/50 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1D211F]/50 backdrop-blur-xs p-4 cursor-pointer"
       role="dialog"
       aria-modal="true"
       aria-labelledby="account-auth-title"
+      onClick={onClose}
     >
-      <div className="relative w-full max-w-sm rounded-2xl bg-white px-6 py-6 shadow-2xl sm:px-8 border border-[#EDE9DF]/60 transition-all">
+      <div
+        className="relative w-full max-w-sm rounded-2xl bg-white px-6 py-6 shadow-2xl sm:px-8 border border-[#EDE9DF]/60 transition-all cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1.5 text-[#5C6460] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-[#5C6460] hover:bg-[#F7F5EF] hover:text-[#183D2B] transition-colors cursor-pointer z-20"
           aria-label="Close account dialog"
         >
           <X size={18} />

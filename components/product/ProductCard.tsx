@@ -294,7 +294,7 @@ export default function ProductCard({
         <Link
           href={productLink}
           prefetch={true}
-          className="text-[13px] sm:text-[14px] 2xl:text-[15px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-1"
+          className="text-[13px] sm:text-[14px] 2xl:text-[15px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-bold leading-snug line-clamp-1"
         >
           {product.name}
         </Link>

@@ -251,7 +251,7 @@ export default function AllProductsSection({ initialProducts }: AllProductsSecti
                     </button>
                   )}
                 </div>
-                <Link href={`/products/${product.slug}`} prefetch={true} className="block truncate px-1 pt-2 text-sm text-[#1D211F]">{product.name}</Link>
+                <Link href={`/products/${product.slug}`} prefetch={true} className="block truncate px-1 pt-2 text-sm font-bold text-[#1D211F]">{product.name}</Link>
                 <div className="flex items-baseline gap-2 px-1 pb-4 pt-1">
                   <span className="text-sm font-semibold text-[#1D211F]">{formatPrice(product.retail_price)}</span>
                   {onSale && <span className="text-xs text-[#8E9590] line-through">{formatPrice(product.compare_at_price as number)}</span>}

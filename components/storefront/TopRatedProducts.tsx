@@ -467,7 +467,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                   <Link
                     href={`/products/${product.slug}`}
                     prefetch={true}
-                    className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-normal leading-snug line-clamp-2 min-h-[2.25rem] sm:min-h-0 sm:line-clamp-1"
+                    className="text-[13px] sm:text-[14px] text-[#1D211F] hover:text-[#183D2B] transition-colors font-bold leading-snug line-clamp-2 min-h-[2.25rem] sm:min-h-0 sm:line-clamp-1"
                   >
                     {product.name}
                   </Link>

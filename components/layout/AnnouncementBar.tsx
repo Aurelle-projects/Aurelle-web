@@ -73,7 +73,7 @@ export default function AnnouncementBar() {
           <span className="text-white/25 text-[10px]" aria-hidden="true">|</span>
 
           <Link
-            href="/account/orders"
+            href="/account?tab=orders"
             className="text-white/85 hover:text-white transition-colors font-medium"
           >
             Track Order

@@ -35,7 +35,7 @@ function BulletText({ text }: { text: string }) {
   if (text.includes("**")) {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return (
-      <>
+      <span className="font-bold text-[#1D211F]">
         {parts.map((part, i) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
@@ -46,45 +46,44 @@ function BulletText({ text }: { text: string }) {
           }
           return <span key={i}>{part}</span>;
         })}
-      </>
+      </span>
     );
   }
 
-  // 2. Noon highlights pattern: "Label: Details" -> Label in bold
-  // Be careful to NOT split on times like "before 2:00 PM" (verify label does not end with digit)
+  // 2. Noon highlights pattern: "Label: Details" -> Label in bold, full line in bold
   const colonMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{1,40}):\s*(.+)$/);
   if (colonMatch && colonMatch[1] && colonMatch[2]) {
     const label = colonMatch[1].trim();
     const value = colonMatch[2].trim();
     if (!/\b\d+$/.test(label)) {
       return (
-        <>
+        <span className="font-bold text-[#1D211F]">
           <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
           <span>{value}</span>
-        </>
+        </span>
       );
     }
   }
 
-  // 3. Dash separated: "Label - Details" -> Label: in bold
+  // 3. Dash separated: "Label - Details" -> Label in bold, full line in bold
   const dashMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{2,40})\s*[-–—]\s*(.+)$/);
   if (dashMatch && dashMatch[1] && dashMatch[2]) {
     const label = dashMatch[1].trim();
     const value = dashMatch[2].trim();
     if (!/\b\d+$/.test(label)) {
       return (
-        <>
+        <span className="font-bold text-[#1D211F]">
           <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
           <span>{value}</span>
-        </>
+        </span>
       );
     }
   }
 
-  return <>{text}</>;
+  return <span className="font-bold text-[#1D211F]">{text}</span>;
 }
 
-/** Formats multi-paragraph description with bold lead-ins and markdown support */
+/** Formats multi-paragraph description with full bold text and markdown support */
 function FormattedDescription({ text }: { text: string }) {
   if (!text) return null;
   const paragraphs = text.split(/\r?\n\r?\n/).filter((p) => p.trim().length > 0);
@@ -94,7 +93,7 @@ function FormattedDescription({ text }: { text: string }) {
       {paragraphs.map((p, pIdx) => {
         const lines = p.split(/\r?\n/).filter((l) => l.trim().length > 0);
         return (
-          <p key={pIdx} className="text-[15px] sm:text-base 2xl:text-[17px] text-[#2C3330] leading-relaxed">
+          <p key={pIdx} className="text-[15px] sm:text-base 2xl:text-[17px] text-[#1D211F] font-bold leading-relaxed">
             {lines.map((line, lIdx) => (
               <React.Fragment key={lIdx}>
                 {lIdx > 0 && <br />}
@@ -182,7 +181,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
 
   const headingClass =
     "text-lg 2xl:text-xl font-bold text-[#1D211F] tracking-tight mb-3.5 flex items-center gap-2";
-  const bodyClass = "text-[15px] sm:text-base 2xl:text-[17px] text-[#2C3330] leading-relaxed";
+  const bodyClass = "text-[15px] sm:text-base 2xl:text-[17px] text-[#1D211F] font-bold leading-relaxed";
 
   return (
     <section
@@ -228,7 +227,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
           </div>
         )}
 
-        {/* ── 2. Specifications (Noon style: 2-column alternating table with bold values) ── */}
+        {/* ── 2. Specifications (Noon style: 2-column alternating table with bold labels and bold values) ── */}
         {specifications.length > 0 && (
           <div>
             <h3 className={headingClass}>Specifications</h3>
@@ -243,7 +242,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-sm 2xl:text-[15px] text-[#5C6460] font-medium shrink-0 w-2/5">
+                      <span className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5">
                         {item.label}
                       </span>
                       <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
@@ -262,7 +261,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
                         idx % 2 === 0 ? "bg-[#FAF8F5]/80" : "bg-white"
                       }`}
                     >
-                      <span className="text-sm 2xl:text-[15px] text-[#5C6460] font-medium shrink-0 w-2/5">
+                      <span className="text-sm 2xl:text-[15px] text-[#1D211F] font-bold shrink-0 w-2/5">
                         {item.label}
                       </span>
                       <span className="text-[14px] sm:text-[15px] 2xl:text-base font-bold text-[#1D211F] text-right w-3/5 break-words">
@@ -324,7 +323,7 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
         {ingredients && (
           <div>
             <h3 className={headingClass}>Ingredients</h3>
-            <p className="text-sm sm:text-[15px] 2xl:text-base text-[#2C3330] leading-relaxed bg-[#FAF8F5] p-5 border border-[#DCCFB9]/50">
+            <p className="text-sm sm:text-[15px] 2xl:text-base text-[#1D211F] font-bold leading-relaxed bg-[#FAF8F5] p-5 border border-[#DCCFB9]/50">
               {ingredients}
             </p>
           </div>

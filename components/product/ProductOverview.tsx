@@ -26,6 +26,7 @@ function splitIntoBullets(text: string | null | undefined): string[] {
  * - Markdown **bold** parsed properly
  * - "Label: Value" format renders Label: in bold (Noon style)
  * - "Label - Value" format renders Label: in bold
+ * - Protects against splitting times like "2:00 PM"
  */
 function BulletText({ text }: { text: string }) {
   if (!text) return null;
@@ -50,11 +51,12 @@ function BulletText({ text }: { text: string }) {
   }
 
   // 2. Noon highlights pattern: "Label: Details" -> Label in bold
-  const colonIdx = text.indexOf(":");
-  if (colonIdx > 1 && colonIdx <= 45) {
-    const label = text.slice(0, colonIdx).trim();
-    const value = text.slice(colonIdx + 1).trim();
-    if (label && value) {
+  // Be careful to NOT split on times like "before 2:00 PM" (verify label does not end with digit)
+  const colonMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{1,40}):\s*(.+)$/);
+  if (colonMatch && colonMatch[1] && colonMatch[2]) {
+    const label = colonMatch[1].trim();
+    const value = colonMatch[2].trim();
+    if (!/\b\d+$/.test(label)) {
       return (
         <>
           <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
@@ -65,14 +67,18 @@ function BulletText({ text }: { text: string }) {
   }
 
   // 3. Dash separated: "Label - Details" -> Label: in bold
-  const dashMatch = text.match(/^([A-Za-z0-9\s]{3,35})\s*[-–—]\s*(.+)$/);
+  const dashMatch = text.match(/^([A-Za-z][A-Za-z0-9\s/&'’–-]{2,40})\s*[-–—]\s*(.+)$/);
   if (dashMatch && dashMatch[1] && dashMatch[2]) {
-    return (
-      <>
-        <strong className="font-bold text-[#1D211F]">{dashMatch[1].trim()}:</strong>{" "}
-        <span>{dashMatch[2].trim()}</span>
-      </>
-    );
+    const label = dashMatch[1].trim();
+    const value = dashMatch[2].trim();
+    if (!/\b\d+$/.test(label)) {
+      return (
+        <>
+          <strong className="font-bold text-[#1D211F]">{label}:</strong>{" "}
+          <span>{value}</span>
+        </>
+      );
+    }
   }
 
   return <>{text}</>;
@@ -155,6 +161,24 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
   const usage: string = (product.usage_instructions || "").trim();
   const usageIsLong = usage.length > 260 || usage.split("\n").length > 4;
   const ingredients: string = (product.ingredients || "").trim();
+
+  // ── Shipping & Returns bullets (Admin configurable or Noon-style defaults where every line is bold) ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const specs = typeof product.specifications === "object" && product.specifications !== null
+    ? (product.specifications as Record<string, any>)
+    : {};
+  const customShipping = specs.shipping_policy || specs.shipping_returns || specs.shipping_info;
+
+  const defaultShippingBullets = [
+    "Same-Day Dispatch: Orders placed before 2:00 PM GST are processed the same day.",
+    "Express UAE Delivery: Delivery across Dubai, Abu Dhabi, Sharjah & all 7 Emirates within 24–48 business hours.",
+    "Flexible Payment: Cash on Delivery (COD) and all major credit/debit cards accepted.",
+    "Easy Returns: 14-day hassle-free return policy for unused, unopened items.",
+  ];
+
+  const shippingBullets: string[] = customShipping
+    ? splitIntoBullets(customShipping)
+    : defaultShippingBullets;
 
   const headingClass =
     "text-base 2xl:text-lg font-bold text-[#1D211F] tracking-tight mb-3 flex items-center gap-2";
@@ -306,16 +330,11 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
           </div>
         )}
 
-        {/* ── 6. Shipping & Returns ──────────────────────────────────────── */}
+        {/* ── 6. Shipping & Returns (All points bold lead-in titles) ──────── */}
         <div>
           <h3 className={headingClass}>Shipping &amp; Returns</h3>
           <ul className="space-y-2.5 list-none p-0 m-0">
-            {[
-              "Orders placed before 2:00 PM GST are processed the same day.",
-              "Delivery across Dubai, Abu Dhabi, Sharjah & all 7 Emirates within 24–48 business hours.",
-              "Cash on Delivery (COD) and all major cards accepted.",
-              "Easy Returns: 14-day return policy.",
-            ].map((line, idx) => (
+            {shippingBullets.map((line, idx) => (
               <li key={idx} className={`${bodyClass} flex items-start gap-2.5`}>
                 <span
                   className="mt-[8px] w-1.5 h-1.5 rounded-full bg-[#183D2B] shrink-0"

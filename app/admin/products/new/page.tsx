@@ -359,6 +359,9 @@ export default function NewProductPage() {
       specsObj.delivery_badge = deliverySettings.badge.trim() || DEFAULT_DELIVERY_SETTINGS.badge;
       specsObj.delivery_dispatch = deliverySettings.dispatch.trim() || DEFAULT_DELIVERY_SETTINGS.dispatch;
       specsObj.delivery_note = deliverySettings.note.trim() || DEFAULT_DELIVERY_SETTINGS.note;
+      if (deliverySettings.shipping_policy?.trim()) {
+        specsObj.shipping_policy = deliverySettings.shipping_policy.trim();
+      }
 
       const res = await fetch("/api/admin/products", {
         method: "POST",

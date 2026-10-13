@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { Truck, Check, Eye } from "lucide-react";
+import { Truck, Eye } from "lucide-react";
 
 export interface DeliveryPromiseSettings {
   enabled: boolean;
   badge: string;
   dispatch: string;
   note: string;
+  shipping_policy?: string;
 }
 
 export const DEFAULT_DELIVERY_SETTINGS: DeliveryPromiseSettings = {
@@ -15,6 +16,7 @@ export const DEFAULT_DELIVERY_SETTINGS: DeliveryPromiseSettings = {
   badge: "UAE Express Delivery",
   dispatch: "Dispatches in 24h",
   note: "Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.",
+  shipping_policy: "",
 };
 
 interface ProductDeliveryPromiseEditorProps {
@@ -30,7 +32,7 @@ export default function ProductDeliveryPromiseEditor({
     onChange({ ...settings, enabled });
   }
 
-  function handleFieldChange(field: "badge" | "dispatch" | "note", value: string) {
+  function handleFieldChange(field: "badge" | "dispatch" | "note" | "shipping_policy", value: string) {
     onChange({ ...settings, [field]: value });
   }
 
@@ -47,10 +49,10 @@ export default function ProductDeliveryPromiseEditor({
           </div>
           <div>
             <h2 className="text-sm font-bold text-[#1D211F] uppercase tracking-wider">
-              Delivery & Dispatch Promise Box
+              Delivery &amp; Dispatch Promise Box
             </h2>
             <p className="text-[11px] text-[#5C6460]">
-              The green trust card displayed directly under this product&apos;s description.
+              The green trust card &amp; shipping information displayed on this product&apos;s page.
             </p>
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function ProductDeliveryPromiseEditor({
           {/* Delivery Note / Details */}
           <div>
             <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-              Delivery Description / Note
+              Delivery Description / Note (Green Card)
             </label>
             <textarea
               rows={2}
@@ -126,7 +128,24 @@ export default function ProductDeliveryPromiseEditor({
               className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none resize-none focus:bg-white focus:border-[#183D2B]"
             />
             <p className="text-[10px] text-[#8E9590] mt-1">
-              Coverage notice, shipping timeline, and free delivery threshold.
+              Coverage notice, shipping timeline, and free delivery threshold on the product card.
+            </p>
+          </div>
+
+          {/* Custom Shipping & Returns Policy Bullets */}
+          <div>
+            <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
+              Custom Shipping &amp; Returns Bullets (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={settings.shipping_policy || ""}
+              onChange={(e) => handleFieldChange("shipping_policy", e.target.value)}
+              placeholder="Leave blank for standard UAE delivery terms, or enter custom points (e.g. 'Express Delivery: 24h across UAE', 'Easy Returns: 14-day policy')..."
+              className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none resize-none focus:bg-white focus:border-[#183D2B]"
+            />
+            <p className="text-[10px] text-[#8E9590] mt-1">
+              Overrides the default points under &ldquo;Shipping &amp; Returns&rdquo; in the product overview. Use &ldquo;Title: Details&rdquo; format to bold the title.
             </p>
           </div>
 

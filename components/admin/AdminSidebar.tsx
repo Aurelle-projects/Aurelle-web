@@ -19,6 +19,7 @@ import {
   LogOut,
   RotateCw,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 
 interface NavItem {
@@ -63,9 +64,11 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/categories", label: "Category & Subcategory", icon: Layers, smallFont: true },
       { href: "/admin/brands", label: "Brands", icon: Tag, smallFont: true },
       { href: "/admin/hero", label: "Home Management", icon: Sliders, smallFont: true },
+      { href: "/admin/about", label: "About Us Page", icon: BookOpen, smallFont: true },
       { href: "/admin/reviews", label: "Reviews", icon: MessageSquare, smallFont: true },
     ],
   },
+
   {
     title: "SYSTEM",
     items: [

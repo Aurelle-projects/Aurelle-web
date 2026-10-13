@@ -643,7 +643,7 @@ export default function ProductDetailClient({
 
             {/* Quick Description */}
             {product.description && (
-              <p className="text-sm 2xl:text-base text-[#5C6460] leading-relaxed line-clamp-3 2xl:line-clamp-4">
+              <p className="text-sm 2xl:text-base font-bold text-[#1D211F] leading-relaxed line-clamp-3 2xl:line-clamp-4">
                 {product.description}
               </p>
             )}

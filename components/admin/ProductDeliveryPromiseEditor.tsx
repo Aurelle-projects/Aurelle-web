@@ -13,9 +13,9 @@ export interface DeliveryPromiseSettings {
 
 export const DEFAULT_DELIVERY_SETTINGS: DeliveryPromiseSettings = {
   enabled: true,
-  badge: "UAE Express Delivery",
-  dispatch: "Dispatches in 24h",
-  note: "Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.",
+  badge: "UAE Normal Delivery",
+  dispatch: "1 to 3 Working Days",
+  note: "Free Shipping Dubai,Sharjah,Ajman,Ras Al Khaimah on AED 249+",
   shipping_policy: "",
 };
 
@@ -89,11 +89,11 @@ export default function ProductDeliveryPromiseEditor({
                 type="text"
                 value={settings.badge}
                 onChange={(e) => handleFieldChange("badge", e.target.value)}
-                placeholder="UAE Express Delivery"
+                placeholder="UAE Normal Delivery"
                 className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-bold text-[#183D2B] outline-none focus:bg-white focus:border-[#183D2B]"
               />
               <p className="text-[10px] text-[#8E9590] mt-1">
-                e.g. &ldquo;UAE Express Delivery&rdquo;, &ldquo;Dubai Express&rdquo;, &ldquo;Authentic Import&rdquo;
+                e.g. &ldquo;UAE Normal Delivery&rdquo;, &ldquo;Same-Day Dubai&rdquo;, &ldquo;Express Delivery&rdquo;
               </p>
             </div>
 
@@ -106,11 +106,11 @@ export default function ProductDeliveryPromiseEditor({
                 type="text"
                 value={settings.dispatch}
                 onChange={(e) => handleFieldChange("dispatch", e.target.value)}
-                placeholder="Dispatches in 24h"
+                placeholder="1 to 3 Working Days"
                 className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-semibold text-emerald-800 outline-none focus:bg-white focus:border-[#183D2B]"
               />
               <p className="text-[10px] text-[#8E9590] mt-1">
-                e.g. &ldquo;Dispatches in 24h&rdquo;, &ldquo;Same-Day Dispatch&rdquo;, &ldquo;In Stock in UAE&rdquo;
+                e.g. &ldquo;1 to 3 Working Days&rdquo;, &ldquo;Dispatches in 24h&rdquo;, &ldquo;Same-Day Dispatch&rdquo;
               </p>
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function ProductDeliveryPromiseEditor({
               rows={2}
               value={settings.note}
               onChange={(e) => handleFieldChange("note", e.target.value)}
-              placeholder="Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED."
+              placeholder="Free Shipping Dubai,Sharjah,Ajman,Ras Al Khaimah on AED 249+"
               className="w-full p-3 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs text-[#1D211F] outline-none resize-none focus:bg-white focus:border-[#183D2B]"
             />
             <p className="text-[10px] text-[#8E9590] mt-1">

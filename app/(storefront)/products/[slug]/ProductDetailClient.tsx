@@ -655,11 +655,19 @@ export default function ProductDetailClient({
               const isEnabled = dSpecs.delivery_enabled !== false;
               if (!isEnabled) return null;
 
-              const badge = dSpecs.delivery_badge || "UAE Express Delivery";
-              const dispatch = dSpecs.delivery_dispatch || "Dispatches in 24h";
+              const badge =
+                dSpecs.delivery_badge && dSpecs.delivery_badge !== "UAE Express Delivery"
+                  ? dSpecs.delivery_badge
+                  : "UAE Normal Delivery";
+              const dispatch =
+                dSpecs.delivery_dispatch && dSpecs.delivery_dispatch !== "Dispatches in 24h"
+                  ? dSpecs.delivery_dispatch
+                  : "1 to 3 Working Days";
               const note =
-                dSpecs.delivery_note ||
-                "Delivering across Dubai, Abu Dhabi, Sharjah & all 7 Emirates. Free shipping on orders ≥ 199 AED.";
+                dSpecs.delivery_note && !dSpecs.delivery_note.includes("199 AED")
+                  ? dSpecs.delivery_note
+                  : "Free Shipping Dubai,Sharjah,Ajman,Ras Al Khaimah on AED 249+";
+
 
               return (
                 <div className="p-3.5 2xl:p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-sm flex items-start gap-3">

@@ -174,11 +174,12 @@ export default function ProductOverview({ product }: ProductOverviewProps) {
   const customShipping = specs.shipping_policy || specs.shipping_returns || specs.shipping_info;
 
   const defaultShippingBullets = [
-    "Same-Day Dispatch: Orders placed before 2:00 PM GST are processed the same day.",
-    "Express UAE Delivery: Delivery across Dubai, Abu Dhabi, Sharjah & all 7 Emirates within 24–48 business hours.",
+    "UAE Normal Delivery: Delivery across Dubai, Sharjah, Ajman & Ras Al Khaimah within 1 to 3 working days.",
+    "Free Delivery Threshold: Free shipping on orders of AED 249 and above.",
     "Flexible Payment: Cash on Delivery (COD) and all major credit/debit cards accepted.",
     "Easy Returns: 14-day hassle-free return policy for unused, unopened items.",
   ];
+
 
   const shippingBullets: string[] = customShipping
     ? splitIntoBullets(customShipping)

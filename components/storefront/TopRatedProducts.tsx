@@ -341,11 +341,16 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
               (firstImg?.cloudinary_public_id
                 ? getProductImageUrl(firstImg.cloudinary_public_id, "medium")
                 : null);
-            const secondaryImageUrl =
+            let secondaryImageUrl =
               secondImg?.secure_url ||
               (secondImg?.cloudinary_public_id
                 ? getProductImageUrl(secondImg.cloudinary_public_id, "medium")
                 : null);
+
+            if (secondaryImageUrl === imageUrl) {
+              secondaryImageUrl = null;
+            }
+
             const isOnSale = Boolean(
               product.compare_at_price && product.compare_at_price > product.retail_price
             );
@@ -373,7 +378,7 @@ export default function TopRatedProducts({ products = [] }: TopRatedProductsProp
                             alt={secondImg?.alt_text || `${product.name} alternate view`}
                             fill
                             sizes="(max-width: 640px) 170px, 220px"
-                            className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-105 transition-all duration-500 ease-out"
+                            className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-105 transition-all duration-500 ease-out pointer-events-none"
                           />
                         )}
                       </>

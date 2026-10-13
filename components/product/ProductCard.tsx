@@ -114,23 +114,37 @@ export default function ProductCard({
   const firstLegacy = legacyImages[0] ?? null;
   const secondLegacy = legacyImages[1] ?? null;
 
+  const resolveLegacyUrl = (img: unknown): string | null => {
+    if (!img) return null;
+    if (typeof img === "string") return img;
+    if (typeof img === "object" && img !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (img as any).url ?? (img as any).secure_url ?? null;
+    }
+    return null;
+  };
+
   const imageUrl =
     firstImg?.secure_url ??
     (firstImg?.cloudinary_public_id
       ? getProductImageUrl(firstImg.cloudinary_public_id, "medium")
-      : firstLegacy?.url ?? null);
+      : resolveLegacyUrl(firstLegacy));
 
-  const secondaryImageUrl =
+  let secondaryImageUrl =
     secondImg?.secure_url ??
     (secondImg?.cloudinary_public_id
       ? getProductImageUrl(secondImg.cloudinary_public_id, "medium")
-      : secondLegacy?.url ?? null);
+      : resolveLegacyUrl(secondLegacy));
+
+  if (secondaryImageUrl === imageUrl) {
+    secondaryImageUrl = null;
+  }
 
   const imageAlt =
-    firstImg?.alt_text ?? firstLegacy?.alt ?? `${product.name} product image`;
+    firstImg?.alt_text ?? (typeof firstLegacy === "object" && firstLegacy !== null ? (firstLegacy as any).alt : null) ?? `${product.name} product image`;
 
   const secondaryAlt =
-    secondImg?.alt_text ?? secondLegacy?.alt ?? `${product.name} alternate view`;
+    secondImg?.alt_text ?? (typeof secondLegacy === "object" && secondLegacy !== null ? (secondLegacy as any).alt : null) ?? `${product.name} alternate view`;
 
   const isOnSale =
     Boolean(product.compare_at_price && product.compare_at_price > product.retail_price);

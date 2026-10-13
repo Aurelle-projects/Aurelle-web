@@ -18,7 +18,9 @@ import {
   AlertCircle,
   ArrowRight,
   ShoppingBag,
+  X,
 } from "lucide-react";
+import CancelOrderModal from "./CancelOrderModal";
 
 interface OrderItem {
   id: string;
@@ -37,6 +39,7 @@ interface TrackedOrder {
   status: string;
   paymentStatus: string;
   paymentMethodLabel: string;
+  isPaidOnline?: boolean;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
@@ -75,12 +78,13 @@ function getStatusIndex(status: string): number {
 
 export default function TrackOrderClient() {
   const searchParams = useSearchParams();
-
   const [orderNumber, setOrderNumber] = useState(searchParams?.get("orderNumber") || "");
   const [email, setEmail] = useState(searchParams?.get("email") || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancellationAlert, setCancellationAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Auto-search if parameters are in the URL (e.g. from confirmation email)
   useEffect(() => {
@@ -222,6 +226,19 @@ export default function TrackOrderClient() {
         {/* Order Details Result */}
         {order && (
           <div className="space-y-6">
+            {cancellationAlert && (
+              <div
+                className={`p-4 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  cancellationAlert.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-red-50 border-red-200 text-red-800"
+                }`}
+              >
+                <CheckCircle2 size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+                <span className="font-medium">{cancellationAlert.message}</span>
+              </div>
+            )}
+
             {/* Order Overview Header Card */}
             <div className="bg-white p-6 sm:p-8 rounded-xl border border-[#DCCFB9]/70 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DCCFB9]/40 pb-5">
@@ -253,11 +270,22 @@ export default function TrackOrderClient() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-xs px-3 py-1 bg-[#FAF8F5] border border-[#DCCFB9] text-[#1D211F] rounded-md font-semibold flex items-center gap-1.5">
                     <CreditCard size={13} className="text-[#183D2B]" />
                     <span>{order.paymentMethodLabel}</span>
                   </span>
+
+                  {!isCancelled && order.status !== "shipped" && order.status !== "delivered" && (
+                    <button
+                      type="button"
+                      onClick={() => setCancelModalOpen(true)}
+                      className="text-xs px-3 py-1 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white border border-red-200/80 rounded-md font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <X size={13} />
+                      <span>Cancel Order</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -479,6 +507,23 @@ export default function TrackOrderClient() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Cancel Order Modal */}
+        {order && cancelModalOpen && (
+          <CancelOrderModal
+            isOpen={cancelModalOpen}
+            onClose={() => setCancelModalOpen(false)}
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            total={order.total}
+            isPaidOnline={order.isPaidOnline}
+            guestEmail={email || order.shippingAddress?.email}
+            onSuccess={(result) => {
+              setCancellationAlert({ message: result.message, type: "success" });
+              performSearch(order.orderNumber, email || order.shippingAddress?.email || "");
+            }}
+          />
         )}
       </div>
     </div>

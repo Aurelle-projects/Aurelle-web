@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import AccountAuthModal from "@/components/auth/AccountAuthModal";
+import CancelOrderModal from "@/components/storefront/CancelOrderModal";
 
 export interface Address {
   id: string;
@@ -76,6 +77,8 @@ export interface Order {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   shipping_address: any;
   notes?: string;
+  stripe_checkout_session_id?: string;
+  stripe_payment_intent_id?: string;
   created_at: string;
   order_items?: OrderItem[];
 }
@@ -91,6 +94,7 @@ export interface Review {
 
 interface Profile {
   id: string;
+  email?: string | null;
   full_name?: string | null;
   phone?: string | null;
   role?: string | null;
@@ -164,6 +168,8 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
   // Orders state
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [cancelOrderTarget, setCancelOrderTarget] = useState<Order | null>(null);
+  const [cancellationAlert, setCancellationAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Addresses state
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -809,6 +815,19 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
         {/* ── TAB 2: RECENT ORDERS ─────────────────────────── */}
         {activeTab === "orders" && (
           <div className="space-y-4">
+            {cancellationAlert && (
+              <div
+                className={`p-4 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  cancellationAlert.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-red-50 border-red-200 text-red-800"
+                }`}
+              >
+                <Check size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+                <span className="font-medium">{cancellationAlert.message}</span>
+              </div>
+            )}
+
             {loadingOrders ? (
               <div className="bg-white rounded-sm border border-[#EDE9DF] p-12 text-center">
                 <div className="w-8 h-8 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
@@ -950,13 +969,25 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
                         </span>
                       </div>
                     ) : <div />}
-                    <Link
-                      href={`/track-order?orderNumber=${encodeURIComponent(ord.order_number)}&email=${encodeURIComponent(user?.email || profile?.email || "")}`}
-                      className="text-[11px] px-3 py-1 bg-[#183D2B]/10 hover:bg-[#183D2B] text-[#183D2B] hover:text-white rounded font-bold uppercase tracking-wider transition-colors shrink-0 flex items-center justify-center gap-1.5 self-start sm:self-auto"
-                    >
-                      <Truck size={12} />
-                      <span>Track Order</span>
-                    </Link>
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                      {ord.status !== "shipped" && ord.status !== "delivered" && ord.status !== "cancelled" && ord.status !== "refunded" && (
+                        <button
+                          type="button"
+                          onClick={() => setCancelOrderTarget(ord)}
+                          className="text-[11px] px-3 py-1 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white border border-red-200/80 rounded font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <X size={12} />
+                          <span>Cancel Order</span>
+                        </button>
+                      )}
+                      <Link
+                        href={`/track-order?orderNumber=${encodeURIComponent(ord.order_number)}&email=${encodeURIComponent(user?.email || profile?.email || "")}`}
+                        className="text-[11px] px-3 py-1 bg-[#183D2B]/10 hover:bg-[#183D2B] text-[#183D2B] hover:text-white rounded font-bold uppercase tracking-wider transition-colors shrink-0 flex items-center justify-center gap-1.5"
+                      >
+                        <Truck size={12} />
+                        <span>Track Order</span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))
@@ -1610,6 +1641,27 @@ function AccountContent({ initialUser, initialProfile }: RetailAccountClientProp
             </form>
           </div>
         </div>
+      )}
+
+      {/* Cancel Order Modal */}
+      {cancelOrderTarget && (
+        <CancelOrderModal
+          isOpen={Boolean(cancelOrderTarget)}
+          onClose={() => setCancelOrderTarget(null)}
+          orderId={cancelOrderTarget.id}
+          orderNumber={cancelOrderTarget.order_number}
+          total={Number(cancelOrderTarget.total)}
+          isPaidOnline={
+            cancelOrderTarget.payment_status === "paid" ||
+            Boolean(cancelOrderTarget.stripe_payment_intent_id) ||
+            Boolean(cancelOrderTarget.stripe_checkout_session_id)
+          }
+          guestEmail={user?.email || profile?.email || ""}
+          onSuccess={(res) => {
+            setCancellationAlert({ message: res.message, type: "success" });
+            fetchOrders(false);
+          }}
+        />
       )}
     </div>
   );

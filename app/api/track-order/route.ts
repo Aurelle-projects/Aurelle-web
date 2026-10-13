@@ -119,12 +119,19 @@ export async function GET(req: NextRequest) {
       paymentMethodLabel = "Normal Payment (Cash on Delivery)";
     }
 
+    const isPaidOnline =
+      paymentMethodLabel.includes("Online") ||
+      String(order.payment_status).toLowerCase() === "paid" ||
+      Boolean(order.stripe_payment_intent_id) ||
+      Boolean(order.stripe_checkout_session_id);
+
     const formattedOrder = {
       id: order.id,
       orderNumber: order.order_number,
       status: order.status || "processing",
       paymentStatus: order.payment_status || "pending",
       paymentMethodLabel,
+      isPaidOnline,
       subtotal: Number(order.subtotal || 0),
       discountAmount: Number(order.discount_amount || 0),
       taxAmount: Number(order.tax_amount || 0),

@@ -797,6 +797,91 @@ export async function sendWholesaleApprovalEmail(data: {
   });
 }
 
+// ── 9. Order Cancellation & Refund Email (to customer) ───────────────
+
+export interface OrderCancelledEmailData {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  reason: string;
+  total: number;
+  isOnlinePayment: boolean;
+  refundTimeline?: string;
+}
+
+export async function sendOrderCancelledEmail(
+  data: OrderCancelledEmailData
+): Promise<{ success: boolean; error?: string }> {
+  const {
+    orderNumber,
+    customerName,
+    customerEmail,
+    reason,
+    total,
+    isOnlinePayment,
+    refundTimeline = "5 to 7 UAE banking days",
+  } = data;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aurellecosmeticshop.com";
+  const displayName = customerName?.trim() || "Valued Customer";
+
+  const refundDetailsHtml = isOnlinePayment
+    ? `
+      <div style="background:#F0F7F3; border-left:4px solid #183D2B; padding:14px 18px; border-radius:4px; margin-bottom:20px;">
+        <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Automated Card Refund Initiated</p>
+        <p style="margin:6px 0 0; font-size:16px; font-weight:700; color:#1D211F;">AED ${Number(total).toFixed(2)}</p>
+        <p style="margin:6px 0 0; font-size:12px; color:#5C6460; line-height:1.5;">
+          A full refund has been initiated via Stripe back to your original payment card. The funds will reflect in your bank account within <strong>${refundTimeline}</strong>.
+        </p>
+      </div>`
+    : `
+      <div style="background:#FAF8F5; border-left:4px solid #7C8B82; padding:14px 18px; border-radius:4px; margin-bottom:20px;">
+        <p style="margin:0; font-size:12px; color:#183D2B; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Normal Payment (Cash on Delivery)</p>
+        <p style="margin:6px 0 0; font-size:13px; color:#5C6460; line-height:1.5;">
+          No payment was collected for this order. No charges will be made.
+        </p>
+      </div>`;
+
+  const htmlContent = emailWrapper(`
+    <div style="background:#FFF5F5; border-left:4px solid #C53030; padding:14px 18px; border-radius:4px; margin-bottom:24px;">
+      <p style="margin:0; font-size:12px; color:#C53030; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Order Cancelled</p>
+      <p style="margin:4px 0 0; font-size:20px; font-weight:700; color:#1D211F; letter-spacing:0.5px;">${orderNumber}</p>
+    </div>
+
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 16px;">
+      Dear ${displayName},
+    </p>
+    <p style="font-size:14px; color:#5C6460; line-height:1.7; margin:0 0 20px;">
+      Your cancellation request for Order <strong>${orderNumber}</strong> has been successfully processed. This order will not be dispatched.
+    </p>
+
+    <div style="background:#FAF8F5; border:1px solid #EDE9DF; border-radius:6px; padding:16px 20px; margin-bottom:20px;">
+      <p style="font-size:12px; font-weight:700; color:#183D2B; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px;">Cancellation Details</p>
+      <p style="font-size:13px; color:#1D211F; margin:0 0 4px;"><strong>Reason:</strong> ${reason}</p>
+      <p style="font-size:13px; color:#1D211F; margin:0;"><strong>Date:</strong> ${new Date().toLocaleDateString("en-AE", { year: "numeric", month: "short", day: "numeric" })}</p>
+    </div>
+
+    ${refundDetailsHtml}
+
+    <p style="font-size:13px; color:#5C6460; line-height:1.6; margin:0 0 24px;">
+      If you changed your mind or need any assistance with another order, our concierge team is always available.
+    </p>
+
+    <div style="text-align:center; margin-bottom:24px;">
+      <a href="${siteUrl}/shop" class="btn" style="background:#183D2B; color:#ffffff; padding:12px 28px; text-decoration:none; font-size:13px; font-weight:700; border-radius:4px; display:inline-block; letter-spacing:0.5px;">
+        Continue Shopping
+      </a>
+    </div>
+  `);
+
+  return sendBrevoEmail({
+    to: [{ email: customerEmail, name: displayName }],
+    subject: `Order ${orderNumber} Cancelled & Refund Initiated — Aurelle`,
+    htmlContent,
+  });
+}
+
+
 
 
 

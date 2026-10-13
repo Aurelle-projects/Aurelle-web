@@ -1,8 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import ProductCard from "@/components/product/ProductCard";
-import { AURELLE_CATEGORIES } from "@/lib/categories/data";
+import { AURELLE_CATEGORIES, findCategoryBySlug } from "@/lib/categories/data";
 import { createClient } from "@/lib/supabase/server";
 import { ChevronRight, ArrowLeft, Package } from "lucide-react";
 
@@ -12,21 +12,108 @@ interface CategoryPageProps {
 
 const SITE_URL = "https://aurellecosmeticshop.com";
 
+interface ResolvedCategory {
+  id?: string;
+  name: string;
+  slug: string;
+  description: string;
+  sort_order: number;
+  image_url?: string | null;
+  image_public_id?: string | null;
+  subcategories: Array<{ name: string; slug: string }>;
+}
+
+async function resolveCategory(rawSlug: string): Promise<ResolvedCategory | null> {
+  if (!rawSlug || rawSlug === "all") return null;
+
+  // 1. Try static definition helper (handles known aliases and subcategories)
+  const staticCat = findCategoryBySlug(rawSlug);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any;
+
+  // 2. Query DB directly for exact slug or matched slug
+  let dbCat: any = null;
+  try {
+    const { data } = await supabase
+      .from("categories")
+      .select("id, name, slug, description, image_url, image_public_id, sort_order")
+      .or(`slug.eq.${rawSlug},slug.eq.${staticCat?.slug || rawSlug}`)
+      .maybeSingle();
+    dbCat = data;
+  } catch {}
+
+  // 3. Normalized slug check if still not found (e.g. skincare-bodycare vs skincare-body-care)
+  if (!staticCat && !dbCat) {
+    const norm = rawSlug.toLowerCase().replace(/[^a-z0-9]/g, "");
+    try {
+      const { data: allCats } = await supabase
+        .from("categories")
+        .select("id, name, slug, description, image_url, image_public_id, sort_order");
+      dbCat = allCats?.find(
+        (c: any) => c.slug?.toLowerCase().replace(/[^a-z0-9]/g, "") === norm
+      );
+    } catch {}
+  }
+
+  if (!staticCat && !dbCat) {
+    return null;
+  }
+
+  const name = dbCat?.name || staticCat?.name || rawSlug;
+  const slug = dbCat?.slug || staticCat?.slug || rawSlug;
+  const description =
+    dbCat?.description ||
+    staticCat?.description ||
+    `Shop authentic ${name} online at Aurelle UAE. Express delivery across Dubai, Abu Dhabi, Sharjah & all Emirates.`;
+  const sort_order = dbCat?.sort_order ?? staticCat?.sort_order ?? 1;
+
+  // Fetch subcategories from DB if category ID is available
+  let subcategories: Array<{ name: string; slug: string }> = [];
+  if (dbCat?.id) {
+    try {
+      const { data: subs } = await supabase
+        .from("subcategories")
+        .select("name, slug")
+        .eq("category_id", dbCat.id)
+        .order("sort_order", { ascending: true });
+      if (subs && subs.length > 0) {
+        subcategories = subs;
+      }
+    } catch {}
+  }
+
+  if (subcategories.length === 0 && staticCat?.subcategories) {
+    subcategories = staticCat.subcategories.map((s) => ({ name: s.name, slug: s.slug }));
+  }
+
+  return {
+    id: dbCat?.id,
+    name,
+    slug,
+    description,
+    sort_order,
+    image_url: dbCat?.image_url || staticCat?.image_url,
+    image_public_id: dbCat?.image_public_id || staticCat?.image_public_id,
+    subcategories,
+  };
+}
+
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const category = AURELLE_CATEGORIES.find((c) => c.slug === slug);
+  const category = await resolveCategory(slug);
+
   if (!category) {
     return {
-      title: "Category Not Found | Aurelle Cosmetics UAE",
+      title: "Shop All Categories | Aurelle Cosmetics UAE",
       robots: { index: false, follow: false },
     };
   }
 
   const title = `${category.name} | Buy Online Dubai & UAE | Aurelle`;
   const description = `Shop authentic ${category.name} online at Aurelle UAE. ${category.description} Express delivery across Dubai, Abu Dhabi, Sharjah & all Emirates. Cash on delivery available.`;
-  const pageUrl = `${SITE_URL}/categories/${slug}`;
-
-  const subcatKeywords = category.subcategories?.map((s) => s.name) || [];
+  const pageUrl = `${SITE_URL}/categories/${category.slug}`;
+  const subcatKeywords = category.subcategories.map((s) => s.name);
 
   return {
     title,
@@ -70,43 +157,48 @@ export async function generateMetadata({ params }: CategoryPageProps) {
 
 export default async function CategoryDetailPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const staticCategory = AURELLE_CATEGORIES.find((c) => c.slug === slug);
+  const category = await resolveCategory(slug);
 
-  if (!staticCategory) {
-    notFound();
+  // If no category found anywhere, redirect gracefully to /shop instead of broken 404
+  if (!category) {
+    redirect("/shop");
   }
 
-  const category = staticCategory;
+  // Determine category banner image
+  let categoryImage: string | null = category.image_url || null;
+  if (!categoryImage && category.image_public_id) {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
+    categoryImage = `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_800,h_550,c_fill,g_auto/${category.image_public_id}`;
+  }
 
-  // Load saved category image if available
-  let categoryImage: string | null = null;
-  try {
-    const fs = await import("fs");
-    const path = await import("path");
-    const catPath = path.join(process.cwd(), "data", "categories.json");
-    if (fs.existsSync(catPath)) {
-      const savedList = JSON.parse(fs.readFileSync(catPath, "utf-8"));
-      const matched = savedList.find((s: { slug: string }) => s.slug === slug);
-      if (matched) {
-        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
-        categoryImage = matched.image_public_id
-          ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_800,h_550,c_fill,g_auto/${matched.image_public_id}`
-          : matched.image_url || null;
+  // Load saved fallback from categories.json if still null
+  if (!categoryImage) {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const catPath = path.join(process.cwd(), "data", "categories.json");
+      if (fs.existsSync(catPath)) {
+        const savedList = JSON.parse(fs.readFileSync(catPath, "utf-8"));
+        const matched = savedList.find(
+          (s: { slug: string }) =>
+            s.slug === category.slug || s.slug === slug
+        );
+        if (matched) {
+          const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "korjax8u";
+          categoryImage = matched.image_public_id
+            ? `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto,w_800,h_550,c_fill,g_auto/${matched.image_public_id}`
+            : matched.image_url || null;
+        }
       }
-    }
-  } catch { }
+    } catch {}
+  }
 
-  // Fetch real products from DB for this category — no mock fallback
+  // Fetch real products from DB for this category
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let products: any[] = [];
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any;
-    const { data: dbCat } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", slug)
-      .maybeSingle();
 
     let query = supabase
       .from("products")
@@ -119,10 +211,10 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
       `)
       .eq("status", "published");
 
-    if (dbCat?.id) {
-      query = query.eq("category_id", dbCat.id);
+    if (category.id) {
+      query = query.eq("category_id", category.id);
     } else {
-      query = query.eq("category.slug", slug);
+      query = query.or(`category.slug.eq.${category.slug},category.slug.eq.${slug}`);
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -130,13 +222,13 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     if (!error && data) {
       products = data;
     }
-  } catch { }
+  } catch {}
 
   const categorySchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `${category.name} | Aurelle Cosmetics UAE`,
-    url: `${SITE_URL}/categories/${slug}`,
+    url: `${SITE_URL}/categories/${category.slug}`,
     description: category.description,
     breadcrumb: {
       "@context": "https://schema.org",
@@ -158,7 +250,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
           "@type": "ListItem",
           position: 3,
           name: category.name,
-          item: `${SITE_URL}/categories/${slug}`,
+          item: `${SITE_URL}/categories/${category.slug}`,
         },
       ],
     },
@@ -174,117 +266,119 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
       />
       <div className="bg-[#FAF8F5] min-h-screen py-10 md:py-12">
         <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#5C6460]">
-          <Link href="/" className="hover:text-[#183D2B] transition-colors">
-            Home
-          </Link>
-          <ChevronRight size={13} />
-          <Link href="/shop" className="hover:text-[#183D2B] transition-colors">
-            Shop
-          </Link>
-          <ChevronRight size={13} />
-          <span className="font-semibold text-[#1D211F]">{category.name}</span>
-        </nav>
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#5C6460]">
+            <Link href="/" className="hover:text-[#183D2B] transition-colors">
+              Home
+            </Link>
+            <ChevronRight size={13} />
+            <Link href="/shop" className="hover:text-[#183D2B] transition-colors">
+              Shop
+            </Link>
+            <ChevronRight size={13} />
+            <span className="font-semibold text-[#1D211F]">{category.name}</span>
+          </nav>
 
-        {/* Category Hero Banner */}
-        <div className="bg-white rounded-3xl border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs overflow-hidden">
-          <div className="flex flex-col md:flex-row items-stretch justify-between gap-6">
-            <div className="flex-1 flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#183D2B] bg-[#183D2B]/[0.06] px-3 py-1 rounded-full">
-                    Aurelle Category #{category.sort_order}
-                  </span>
-                  <Link
-                    href="/shop"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5C6460] hover:text-[#183D2B] px-3.5 py-1.5 rounded-full border border-[#DCCFB9] hover:border-[#183D2B] transition-colors shrink-0"
-                  >
-                    <ArrowLeft size={13} />
-                    <span>Back to Shop</span>
-                  </Link>
-                </div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#1D211F] mt-2 tracking-tight">
-                  {category.name}
-                </h1>
-                <p className="text-sm text-[#5C6460] max-w-xl mt-3 leading-relaxed">
-                  {category.description}
-                </p>
-              </div>
-
-              {/* Subcategories Filter Chips */}
-              <div className="pt-4 border-t border-[#DCCFB9]/30">
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#5C6460] mb-2">
-                  Subcategories:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {category.subcategories.map((sub) => (
+          {/* Category Hero Banner */}
+          <div className="bg-white rounded-3xl border border-[#DCCFB9]/60 p-6 md:p-8 shadow-xs overflow-hidden">
+            <div className="flex flex-col md:flex-row items-stretch justify-between gap-6">
+              <div className="flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#183D2B] bg-[#183D2B]/[0.06] px-3 py-1 rounded-full">
+                      Aurelle Category #{category.sort_order}
+                    </span>
                     <Link
-                      key={sub.slug}
-                      href={`/shop?category=${category.slug}&sub=${sub.slug}`}
-                      className="px-3 py-1 bg-[#F7F5EF] hover:bg-[#183D2B] hover:text-white text-xs font-semibold text-[#1D211F] rounded-lg border border-[#DCCFB9]/50 transition-colors"
+                      href="/shop"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5C6460] hover:text-[#183D2B] px-3.5 py-1.5 rounded-full border border-[#DCCFB9] hover:border-[#183D2B] transition-colors shrink-0"
                     >
-                      {sub.name}
+                      <ArrowLeft size={13} />
+                      <span>Back to Shop</span>
                     </Link>
-                  ))}
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#1D211F] mt-2 tracking-tight">
+                    {category.name}
+                  </h1>
+                  <p className="text-sm text-[#5C6460] max-w-xl mt-3 leading-relaxed">
+                    {category.description}
+                  </p>
                 </div>
+
+                {/* Subcategories Filter Chips */}
+                {category.subcategories.length > 0 && (
+                  <div className="pt-4 border-t border-[#DCCFB9]/30">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#5C6460] mb-2">
+                      Subcategories:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {category.subcategories.map((sub) => (
+                        <Link
+                          key={sub.slug}
+                          href={`/shop?category=${encodeURIComponent(category.slug)}&sub=${encodeURIComponent(sub.slug)}`}
+                          className="px-3 py-1 bg-[#F7F5EF] hover:bg-[#183D2B] hover:text-white text-xs font-semibold text-[#1D211F] rounded-lg border border-[#DCCFB9]/50 transition-colors"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {categoryImage && (
+                <div className="relative w-full md:w-72 lg:w-80 h-52 md:h-auto rounded-2xl overflow-hidden shrink-0 border border-[#DCCFB9]/50 shadow-xs">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={categoryImage}
+                    alt={category.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Products Grid */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-serif font-bold text-[#1D211F]">
+                Available Products ({products.length})
+              </h2>
+              <Link
+                href={`/shop?category=${encodeURIComponent(category.slug)}`}
+                className="text-xs font-bold text-[#183D2B] hover:underline"
+              >
+                View in Shop Filter →
+              </Link>
             </div>
 
-            {categoryImage && (
-              <div className="relative w-full md:w-72 lg:w-80 h-52 md:h-auto rounded-2xl overflow-hidden shrink-0 border border-[#DCCFB9]/50 shadow-xs">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={categoryImage}
-                  alt={category.name}
-                  className="w-full h-full object-cover"
-                />
+            {products.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-[#DCCFB9]/60 py-16 text-center">
+                <Package size={40} className="mx-auto mb-3 text-[#8E9590]" />
+                <p className="font-semibold text-[#1D211F]">No products in this category yet</p>
+                <p className="text-xs text-[#8E9590] mt-1">
+                  Products will appear here once added from the admin panel.
+                </p>
+                <Link
+                  href="/shop"
+                  className="inline-flex items-center gap-1.5 mt-5 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-full hover:bg-[#102D20] transition-colors"
+                >
+                  Browse All Products
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {products.map((prod) => (
+                  <ProductCard
+                    key={prod.id}
+                    product={prod}
+                  />
+                ))}
               </div>
             )}
           </div>
         </div>
-
-        {/* Products Grid */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-serif font-bold text-[#1D211F]">
-              Available Products ({products.length})
-            </h2>
-            <Link
-              href={`/shop?category=${category.slug}`}
-              className="text-xs font-bold text-[#183D2B] hover:underline"
-            >
-              View in Shop Filter →
-            </Link>
-          </div>
-
-          {products.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#DCCFB9]/60 py-16 text-center">
-              <Package size={40} className="mx-auto mb-3 text-[#8E9590]" />
-              <p className="font-semibold text-[#1D211F]">No products in this category yet</p>
-              <p className="text-xs text-[#8E9590] mt-1">
-                Products will appear here once added from the admin panel.
-              </p>
-              <Link
-                href="/shop"
-                className="inline-flex items-center gap-1.5 mt-5 px-5 py-2.5 bg-[#183D2B] text-white text-xs font-bold rounded-full hover:bg-[#102D20] transition-colors"
-              >
-                Browse All Products
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {products.map((prod) => (
-                <ProductCard
-                  key={prod.id}
-                  product={prod}
-                />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 }

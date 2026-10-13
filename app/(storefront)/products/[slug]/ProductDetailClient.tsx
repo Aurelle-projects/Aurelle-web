@@ -387,7 +387,7 @@ export default function ProductDetailClient({
                 <li>/</li>
                 <li>
                   <Link
-                    href={`/categories/${categorySlug}`}
+                    href={categorySlug ? `/categories/${categorySlug}` : "/shop"}
                     className="hover:text-[#183D2B] transition-colors"
                   >
                     {categoryName}
@@ -946,7 +946,7 @@ export default function ProductDetailClient({
             <div className="flex items-center justify-between">
               <h3 className="text-xl 2xl:text-2xl font-bold text-[#1D211F] tracking-tight">You May Also Like</h3>
               <Link
-                href={`/categories/${categorySlug || "all"}`}
+                href={categorySlug ? `/categories/${categorySlug}` : "/shop"}
                 className="text-xs 2xl:text-sm font-bold text-[#183D2B] hover:underline uppercase tracking-wider"
               >
                 View Category

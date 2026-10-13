@@ -155,3 +155,42 @@ export const AURELLE_CATEGORIES: CategoryDefinition[] = [
     ],
   },
 ];
+
+/**
+ * Finds a category by slug with support for normalized slugs, common DB aliases, and subcategories.
+ */
+export function findCategoryBySlug(slug: string): CategoryDefinition | undefined {
+  if (!slug) return undefined;
+  const clean = slug.toLowerCase().trim();
+  const norm = clean.replace(/[^a-z0-9]/g, "");
+
+  // 1. Direct match
+  const direct = AURELLE_CATEGORIES.find((c) => c.slug === clean);
+  if (direct) return direct;
+
+  // 2. Normalized match (e.g. skincare-bodycare vs skincare-body-care)
+  const normMatch = AURELLE_CATEGORIES.find(
+    (c) => c.slug.replace(/[^a-z0-9]/g, "") === norm
+  );
+  if (normMatch) return normMatch;
+
+  // 3. Known DB aliases
+  if (clean === "skincare-bodycare" || clean === "skincare" || clean === "bodycare") {
+    return AURELLE_CATEGORIES.find((c) => c.slug === "skincare-body-care");
+  }
+  if (clean === "perfumes-and-fragrances" || clean === "perfumes" || clean === "fragrances") {
+    return AURELLE_CATEGORIES.find((c) => c.slug === "perfumes-fragrances");
+  }
+  if (clean === "makeup" || clean === "cosmetics") {
+    return AURELLE_CATEGORIES.find((c) => c.slug === "cosmetics-makeup");
+  }
+
+  // 4. Subcategory slug match -> parent category
+  for (const cat of AURELLE_CATEGORIES) {
+    if (cat.subcategories.some((s) => s.slug === clean || s.slug.replace(/[^a-z0-9]/g, "") === norm)) {
+      return cat;
+    }
+  }
+
+  return undefined;
+}

@@ -616,14 +616,14 @@ function CheckoutContent() {
 
                     <div>
                       <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                        Area / District (Optional)
+                        Area / Street (Optional)
                       </label>
                       <input
                         type="text"
                         name="area"
                         value={formData.area}
                         onChange={handleChange}
-                        placeholder="Enter Area"
+                        placeholder="Enter Area / Street"
                         className="w-full h-11 sm:h-10 px-3.5 bg-[#F0ECE3] sm:bg-[#F7F5EF] border-0 sm:border border-[#EDE9DF] rounded-lg sm:rounded-md text-xs text-[#1D211F] outline-none focus:ring-1 focus:ring-[#183D2B] sm:focus:ring-0 sm:focus:border-[#183D2B] focus:bg-white transition-colors"
                       />
                     </div>

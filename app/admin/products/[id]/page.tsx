@@ -15,6 +15,9 @@ import ProductDeliveryPromiseEditor, {
   DeliveryPromiseSettings,
   DEFAULT_DELIVERY_SETTINGS,
 } from "@/components/admin/ProductDeliveryPromiseEditor";
+import ProductLinkedVariantsEditor, {
+  LinkedVariantsSettings,
+} from "@/components/admin/ProductLinkedVariantsEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -42,6 +45,10 @@ export default function EditProductPage() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [specifications, setSpecifications] = useState<SpecPair[]>([]);
   const [deliverySettings, setDeliverySettings] = useState<DeliveryPromiseSettings>(DEFAULT_DELIVERY_SETTINGS);
+  const [linkedVariantsSettings, setLinkedVariantsSettings] = useState<LinkedVariantsSettings>({
+    size_label: "",
+    variants: [],
+  });
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -226,8 +233,20 @@ export default function EditProductPage() {
               shipping_policy: sObj.shipping_policy ?? "",
             });
 
+            setLinkedVariantsSettings({
+              size_label: sObj.size_label ?? "",
+              variants: Array.isArray(sObj.linked_variants) ? sObj.linked_variants : [],
+            });
+
             const initialSpecs: SpecPair[] = Object.entries(p.specifications)
-              .filter(([k]) => k !== "subcategory_id" && k !== "id" && !k.startsWith("delivery_"))
+              .filter(
+                ([k]) =>
+                  k !== "subcategory_id" &&
+                  k !== "id" &&
+                  !k.startsWith("delivery_") &&
+                  k !== "size_label" &&
+                  k !== "linked_variants"
+              )
               .map(([k, v]) => ({
                 key: k,
                 value: typeof v === "string" ? v : JSON.stringify(v),
@@ -405,6 +424,12 @@ export default function EditProductPage() {
       specsObj.delivery_note = deliverySettings.note.trim() || DEFAULT_DELIVERY_SETTINGS.note;
       if (deliverySettings.shipping_policy?.trim()) {
         specsObj.shipping_policy = deliverySettings.shipping_policy.trim();
+      }
+
+      // Linked size variants
+      if (linkedVariantsSettings.size_label.trim() || linkedVariantsSettings.variants.length > 0) {
+        specsObj.size_label = linkedVariantsSettings.size_label.trim();
+        specsObj.linked_variants = linkedVariantsSettings.variants;
       }
 
       const res = await fetch("/api/admin/products", {
@@ -741,6 +766,15 @@ export default function EditProductPage() {
             <ProductDeliveryPromiseEditor
               settings={deliverySettings}
               onChange={setDeliverySettings}
+            />
+
+            {/* Linked Sizes & Bottle Volumes (Searchable Dropdown) */}
+            <ProductLinkedVariantsEditor
+              settings={linkedVariantsSettings}
+              onChange={setLinkedVariantsSettings}
+              currentProductId={id}
+              currentBrandId={formData.brand_id}
+              currentProductName={formData.name}
             />
 
             {/* Key-Value Product Specifications Editor */}

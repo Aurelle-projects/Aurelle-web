@@ -25,6 +25,9 @@ import ProductDeliveryPromiseEditor, {
   DeliveryPromiseSettings,
   DEFAULT_DELIVERY_SETTINGS,
 } from "@/components/admin/ProductDeliveryPromiseEditor";
+import ProductLinkedVariantsEditor, {
+  LinkedVariantsSettings,
+} from "@/components/admin/ProductLinkedVariantsEditor";
 
 interface UploadedImage {
   public_id: string;
@@ -63,6 +66,10 @@ export default function NewProductPage() {
   const [isCustomSlug, setIsCustomSlug] = useState(false);
   const [specifications, setSpecifications] = useState<SpecPair[]>([]);
   const [deliverySettings, setDeliverySettings] = useState<DeliveryPromiseSettings>(DEFAULT_DELIVERY_SETTINGS);
+  const [linkedVariantsSettings, setLinkedVariantsSettings] = useState<LinkedVariantsSettings>({
+    size_label: "",
+    variants: [],
+  });
 
   // Quick-add subcategory modal state
   const [showQuickSubModal, setShowQuickSubModal] = useState(false);
@@ -363,6 +370,12 @@ export default function NewProductPage() {
         specsObj.shipping_policy = deliverySettings.shipping_policy.trim();
       }
 
+      // Linked size variants
+      if (linkedVariantsSettings.size_label.trim() || linkedVariantsSettings.variants.length > 0) {
+        specsObj.size_label = linkedVariantsSettings.size_label.trim();
+        specsObj.linked_variants = linkedVariantsSettings.variants;
+      }
+
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -585,6 +598,14 @@ export default function NewProductPage() {
             <ProductDeliveryPromiseEditor
               settings={deliverySettings}
               onChange={setDeliverySettings}
+            />
+
+            {/* Linked Sizes & Bottle Volumes (Searchable Dropdown) */}
+            <ProductLinkedVariantsEditor
+              settings={linkedVariantsSettings}
+              onChange={setLinkedVariantsSettings}
+              currentBrandId={formData.brand_id}
+              currentProductName={formData.name}
             />
 
             {/* Key-Value Product Specifications Editor */}

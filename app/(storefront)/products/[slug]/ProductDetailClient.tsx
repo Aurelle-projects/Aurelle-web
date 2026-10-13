@@ -641,6 +641,80 @@ export default function ProductDetailClient({
               </p>
             </div>
 
+            {/* Size / Volume Variant Selector (Linked Bottles) */}
+            {(() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const specs = (product.specifications as any) || {};
+              const currentSize = specs.size_label || "";
+              const linkedVariants: Array<{
+                product_id: string;
+                name: string;
+                slug: string;
+                size_label: string;
+                retail_price?: number;
+                is_out_of_stock?: boolean;
+              }> = Array.isArray(specs.linked_variants) ? specs.linked_variants : [];
+
+              if (linkedVariants.length === 0 && !currentSize) return null;
+
+              return (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#1D211F] flex items-center gap-1.5">
+                      <span>Bottle Size / Volume:</span>
+                      {currentSize && (
+                        <span className="text-[#183D2B] font-extrabold normal-case text-xs">
+                          {currentSize}
+                        </span>
+                      )}
+                    </label>
+                    <span className="text-[11px] text-[#8E9590]">Select size to view</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2.5">
+                    {/* Active Size Pill (This Product) */}
+                    <div
+                      className="px-3.5 py-2 text-xs font-bold rounded-lg border-2 border-[#183D2B] bg-[#183D2B]/8 text-[#183D2B] flex items-center gap-2 shadow-xs cursor-default ring-1 ring-[#183D2B]/30"
+                    >
+                      <span>{currentSize || "Selected"}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#183D2B]" />
+                      <span className="text-[11px] font-semibold opacity-90">
+                        AED {currentPrice.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Linked Sibling Sizes (Clickable redirect to that bottle) */}
+                    {linkedVariants.map((v, idx) => {
+                      const isOutOfStock = !!v.is_out_of_stock;
+                      return (
+                        <Link
+                          key={idx}
+                          href={`/products/${v.slug}`}
+                          className={`px-3.5 py-2 text-xs font-semibold rounded-lg border transition-all flex items-center gap-2 hover:border-[#183D2B] hover:text-[#183D2B] hover:bg-neutral-50 active:scale-[0.98] ${
+                            isOutOfStock
+                              ? "border-neutral-200 bg-neutral-100/70 text-neutral-400"
+                              : "border-[#DCCFB9] bg-white text-[#1D211F] shadow-xs"
+                          }`}
+                        >
+                          <span>{v.size_label}</span>
+                          {v.retail_price !== undefined && (
+                            <span className="text-[11px] text-[#5C6460] font-normal">
+                              AED {Number(v.retail_price).toFixed(2)}
+                            </span>
+                          )}
+                          {isOutOfStock && (
+                            <span className="text-[9px] uppercase font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.2 rounded">
+                              Out of stock
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Quick Description */}
             {product.description && (
               <p className="text-sm 2xl:text-base font-bold text-[#1D211F] leading-relaxed line-clamp-3 2xl:line-clamp-4">

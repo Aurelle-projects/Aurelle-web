@@ -40,10 +40,9 @@ export async function GET() {
     const supabase = createAdminClient() as any;
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, slug, category_id, subcategory_id")
-      .eq("is_published", true)
+      .select("id, name, slug, brand_id, category_id, subcategory_id, retail_price, is_out_of_stock, specifications")
       .order("name", { ascending: true })
-      .limit(300);
+      .limit(500);
     if (error) throw error;
     return NextResponse.json({ success: true, products: data ?? [] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -419,6 +418,59 @@ export async function PATCH(req: NextRequest) {
             console.error("[API] Cloudinary image cleanup error:", cldErr);
           }
         }
+      }
+    }
+
+    // Reciprocal sync for linked size variants
+    if (incomingSpecs?.linked_variants && Array.isArray(incomingSpecs.linked_variants)) {
+      try {
+        const currentProdSizeLabel = incomingSpecs.size_label || "";
+        const currentProdSlug = updatePayload.slug || "";
+        const currentProdName = updatePayload.name || "";
+        const currentProdPrice = updatePayload.retail_price;
+        const currentProdOutOfStock = updatePayload.is_out_of_stock;
+
+        for (const variant of incomingSpecs.linked_variants) {
+          if (!variant.product_id || variant.product_id === id) continue;
+
+          // Fetch the linked product's specifications
+          const { data: targetProd } = await supabase
+            .from("products")
+            .select("id, name, slug, specifications")
+            .eq("id", variant.product_id)
+            .maybeSingle();
+
+          if (targetProd) {
+            const targetSpecs = (targetProd.specifications && typeof targetProd.specifications === "object")
+              ? { ...targetProd.specifications }
+              : {};
+
+            const existingVariants: any[] = Array.isArray(targetSpecs.linked_variants)
+              ? targetSpecs.linked_variants.filter((v: any) => v.product_id !== id)
+              : [];
+
+            existingVariants.push({
+              product_id: id,
+              name: currentProdName || targetProd.name,
+              slug: currentProdSlug,
+              size_label: currentProdSizeLabel || "Other Size",
+              retail_price: currentProdPrice,
+              is_out_of_stock: currentProdOutOfStock,
+            });
+
+            targetSpecs.linked_variants = existingVariants;
+            if (!targetSpecs.size_label && variant.size_label) {
+              targetSpecs.size_label = variant.size_label;
+            }
+
+            await supabase
+              .from("products")
+              .update({ specifications: targetSpecs })
+              .eq("id", targetProd.id);
+          }
+        }
+      } catch (syncErr) {
+        console.warn("[API] Reciprocal linked variants sync warning:", syncErr);
       }
     }
 

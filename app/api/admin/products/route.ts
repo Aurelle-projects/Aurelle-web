@@ -129,8 +129,27 @@ export async function POST(req: NextRequest) {
     }
     const specifications = Object.keys(specificationsPayload).length > 0 ? specificationsPayload : null;
 
-    // Auto-generate SKU if empty (products.sku is NOT NULL in DB)
-    const autoSku = sku?.trim() || `AUR-${name.trim().slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Date.now().toString(36).toUpperCase()}`;
+    // Auto-generate unique serial number / SKU if empty (products.sku is NOT NULL in DB)
+    let autoSku = sku?.trim();
+    if (!autoSku) {
+      const { count } = await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true });
+      const nextNum = (count || 0) + 1;
+      const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const prefix = `AUR-${cleanName.slice(0, 4) || "PRD"}`;
+      autoSku = `${prefix}-${String(nextNum).padStart(4, "0")}`;
+
+      const { data: existing } = await supabase
+        .from("products")
+        .select("id")
+        .eq("sku", autoSku)
+        .maybeSingle();
+
+      if (existing) {
+        autoSku = `${prefix}-${String(nextNum).padStart(4, "0")}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+    }
     const cleanBaseSlug = slugify(slug?.trim() || name.trim());
     const finalSlug = await generateUniqueProductSlug(supabase, cleanBaseSlug);
 

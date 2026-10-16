@@ -15,6 +15,7 @@ import {
   Loader2,
   Plus,
   X,
+  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
@@ -197,16 +198,38 @@ export default function NewProductPage() {
     loadOptions();
   }, []);
 
+  const [isGeneratingSku, setIsGeneratingSku] = useState(false);
+
+  async function handleGenerateSerialSku() {
+    setIsGeneratingSku(true);
+    try {
+      const selectedBrandName = dbBrands.find((b) => b.id === formData.brand_id)?.name || "";
+      const res = await fetch(
+        `/api/admin/products/generate-sku?name=${encodeURIComponent(formData.name)}&brand=${encodeURIComponent(selectedBrandName)}`
+      );
+      const data = await res.json();
+      if (data.success && data.sku) {
+        setFormData((prev) => ({ ...prev, sku: data.sku }));
+      }
+    } catch (err) {
+      console.error("Failed to generate serial SKU:", err);
+    } finally {
+      setIsGeneratingSku(false);
+    }
+  }
+
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
     const autoSlug = slugify(val);
+    const cleanPrefix = val.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4) || "PRD";
     setFormData((prev) => ({
       ...prev,
       name: val,
       slug: isCustomSlug ? prev.slug : autoSlug,
-      sku: prev.sku === "" || prev.sku.startsWith("AUR-")
-        ? (autoSlug ? `AUR-${autoSlug.slice(0, 4).toUpperCase().replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}` : "")
-        : prev.sku,
+      sku:
+        prev.sku === "" || prev.sku.startsWith("AUR-")
+          ? (autoSlug ? `AUR-${cleanPrefix}-${Math.floor(1000 + Math.random() * 9000)}` : "")
+          : prev.sku,
     }));
   }
 
@@ -480,9 +503,39 @@ export default function NewProductPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">SKU Code</label>
-                  <input type="text" name="sku" value={formData.sku} onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none" />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider">
+                      Serial Number / SKU *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateSerialSku}
+                      disabled={isGeneratingSku}
+                      className="text-[11px] font-bold text-[#183D2B] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      title="Auto-generate a guaranteed unique serial number from database"
+                    >
+                      {isGeneratingSku ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" /> Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={11} /> Auto-Generate
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    name="sku"
+                    value={formData.sku}
+                    onChange={handleChange}
+                    placeholder="e.g. AUR-CERA-0039"
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono font-semibold text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B]"
+                  />
+                  <p className="mt-1 text-[11px] text-[#5C6460]">
+                    Unique product serial number / barcode code (auto-generated).
+                  </p>
                 </div>
               </div>
 

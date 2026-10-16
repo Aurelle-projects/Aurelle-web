@@ -622,6 +622,7 @@ export default function AdminProductsPage() {
                 <tr className="bg-[#F7F5EF] border-b border-[#DCCFB9]/60 text-[10px] font-bold text-[#5C6460] uppercase tracking-wider">
                   <th className="py-3 px-3 text-center w-12">#</th>
                   <th className="py-3 px-3.5">Product Details</th>
+                  <th className="py-3 px-3.5">Serial No. / SKU</th>
                   <th className="py-3 px-3.5">Category</th>
                   <th className="py-3 px-3.5">Brand</th>
                   <th className="py-3 px-3.5">Retail Price</th>
@@ -634,7 +635,7 @@ export default function AdminProductsPage() {
               <tbody className="divide-y divide-[#DCCFB9]/30 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="py-14 text-center text-[#5C6460]">
+                    <td colSpan={10} className="py-14 text-center text-[#5C6460]">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <div className="w-6 h-6 border-2 border-[#183D2B] border-t-transparent rounded-full animate-spin" />
                         <p className="font-semibold text-xs text-[#5C6460]">
@@ -645,7 +646,7 @@ export default function AdminProductsPage() {
                   </tr>
                 ) : paginatedProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-[#5C6460]">
+                    <td colSpan={10} className="py-12 text-center text-[#5C6460]">
                       <Package size={36} className="mx-auto mb-2.5 text-[#8E9590]" />
                       <p className="font-bold text-sm text-[#1D211F]">No products found</p>
                       <p className="text-xs text-[#8E9590] mt-1 max-w-sm mx-auto">
@@ -691,7 +692,7 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
 
-                        {/* 2. Product Name, Thumbnail, SKU & Copy ID */}
+                        {/* 2. Product Name, Thumbnail & Copy ID */}
                         <td className="py-3 px-3.5 max-w-sm">
                           <div className="flex items-center gap-3">
                             <Link
@@ -721,34 +722,51 @@ export default function AdminProductsPage() {
                                 {item.name}
                               </Link>
 
-                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#5C6460] flex-wrap">
-                                {item.sku ? (
-                                  <span className="font-mono bg-[#F7F5EF] px-1.5 py-0.2 rounded border border-[#DCCFB9]/60 text-[#1D211F] font-semibold">
-                                    SKU: {item.sku}
-                                  </span>
-                                ) : (
-                                  <span className="text-[#8E9590] italic">No SKU</span>
-                                )}
-
+                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#5C6460]">
                                 <button
                                   type="button"
-                                  onClick={() => handleCopy(item.id, item.id)}
+                                  onClick={() => handleCopy(item.id, `id-${item.id}`)}
                                   className="inline-flex items-center gap-0.5 text-[#8E9590] hover:text-[#183D2B] transition-colors font-mono cursor-pointer"
-                                  title="Click to copy full Product UUID"
+                                  title="Click to copy internal UUID"
                                 >
-                                  {copiedId === item.id ? (
+                                  {copiedId === `id-${item.id}` ? (
                                     <span className="text-emerald-700 font-bold inline-flex items-center gap-0.5">
                                       <Check size={10} /> Copied!
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center gap-0.5">
-                                      <Copy size={9} /> ...{item.id.slice(-6)}
+                                      <Copy size={9} /> ID: ...{item.id.slice(-6)}
                                     </span>
                                   )}
                                 </button>
                               </div>
                             </div>
                           </div>
+                        </td>
+
+                        {/* 3. Dedicated Serial No. / SKU */}
+                        <td className="py-3 px-3.5">
+                          {item.sku ? (
+                            <div className="inline-flex items-center gap-1.5 bg-[#F7F5EF] px-2 py-1 rounded border border-[#DCCFB9]/80">
+                              <span className="font-mono text-xs font-bold text-[#183D2B]">
+                                {item.sku}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(item.sku, `sku-${item.id}`)}
+                                className="text-[#8E9590] hover:text-[#183D2B] transition-colors p-0.5 rounded cursor-pointer"
+                                title="Copy Serial Number / SKU"
+                              >
+                                {copiedId === `sku-${item.id}` ? (
+                                  <Check size={11} className="text-emerald-700" />
+                                ) : (
+                                  <Copy size={11} />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-[#8E9590] italic">Unassigned</span>
+                          )}
                         </td>
 
                         {/* 3. Category & Subcategory */}

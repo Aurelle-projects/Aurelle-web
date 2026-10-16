@@ -6,7 +6,7 @@ import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 import CloudinaryUploader, { CloudinaryAsset } from "@/components/admin/CloudinaryUploader";
 import { createClient } from "@/lib/supabase/client";
-import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2, Plus, X } from "lucide-react";
+import { Save, ArrowLeft, Check, AlertCircle, Star, Trash2, Loader2, Plus, X, Sparkles } from "lucide-react";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 import { slugify } from "@/utils/slug";
 import { useAdminData } from "@/context/AdminDataContext";
@@ -91,6 +91,26 @@ export default function EditProductPage() {
     is_new_arrival: false,
     is_wholesale_available: true,
   });
+
+  const [isGeneratingSku, setIsGeneratingSku] = useState(false);
+
+  async function handleGenerateSerialSku() {
+    setIsGeneratingSku(true);
+    try {
+      const selectedBrandName = dbBrands.find((b) => b.id === formData.brand_id)?.name || "";
+      const res = await fetch(
+        `/api/admin/products/generate-sku?name=${encodeURIComponent(formData.name)}&brand=${encodeURIComponent(selectedBrandName)}`
+      );
+      const data = await res.json();
+      if (data.success && data.sku) {
+        setFormData((prev) => ({ ...prev, sku: data.sku }));
+      }
+    } catch (err) {
+      console.error("Failed to generate serial SKU:", err);
+    } finally {
+      setIsGeneratingSku(false);
+    }
+  }
 
   useEffect(() => {
     async function init() {
@@ -632,16 +652,39 @@ export default function EditProductPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider mb-1.5">
-                    SKU Code
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1D211F] uppercase tracking-wider">
+                      Serial Number / SKU *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateSerialSku}
+                      disabled={isGeneratingSku}
+                      className="text-[11px] font-bold text-[#183D2B] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      title="Auto-generate a guaranteed unique serial number from database"
+                    >
+                      {isGeneratingSku ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" /> Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={11} /> Auto-Generate
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     name="sku"
                     value={formData.sku}
                     onChange={handleChange}
-                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono text-[#1D211F] outline-none"
+                    placeholder="e.g. AUR-CERA-0039"
+                    className="w-full h-10 px-3.5 bg-[#F7F5EF] border border-[#DCCFB9] rounded-lg text-xs font-mono font-semibold text-[#1D211F] outline-none focus:bg-white focus:border-[#183D2B]"
                   />
+                  <p className="mt-1 text-[11px] text-[#5C6460]">
+                    Unique product serial number / barcode code (auto-generated).
+                  </p>
                 </div>
               </div>
 

@@ -12,9 +12,11 @@ export interface ProductRow {
   wholesale_price: number | null;
   category_name: string;
   subcategory_name?: string | null;
+  brand_name?: string | null;
   status: string;
   is_out_of_stock?: boolean;
   image_url?: string;
+  created_at?: string;
 }
 
 export interface AdminCategory {
@@ -260,9 +262,10 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await (supabase as any)
         .from("products")
         .select(`
-          id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock,
+          id, name, slug, sku, retail_price, wholesale_price, status, is_out_of_stock, created_at,
           category:categories(name),
           subcategory:subcategories(name),
+          brand:brands(name),
           product_images(secure_url, is_primary)
         `)
         .order("created_at", { ascending: false });
@@ -282,9 +285,11 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
             wholesale_price: p.wholesale_price,
             category_name: p.category?.name || "Unassigned",
             subcategory_name: p.subcategory?.name || null,
+            brand_name: p.brand?.name || null,
             status: p.status || "published",
             is_out_of_stock: p.is_out_of_stock ?? false,
             image_url: primaryImg,
+            created_at: p.created_at,
           };
         });
         setProducts(mapped);
